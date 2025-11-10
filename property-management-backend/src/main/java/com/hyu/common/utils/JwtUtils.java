@@ -15,14 +15,17 @@ import java.util.Map;
 @Component
 public class JwtUtils {
 
-    @Value("${property.jwt.secret}")
+    @Value("${jwt.secret}")
     private String secret;
 
-    @Value("${property.jwt.expiration}")
+    @Value("${jwt.expiration}")
     private Long expiration;
 
-    @Value("${property.jwt.header}")
+    @Value("${jwt.header}")
     private String header;
+
+    @Value("${jwt.prefix}")
+    private String prefix;
 
     /**
      * 生成JWT Token
@@ -31,7 +34,7 @@ public class JwtUtils {
         return Jwts.builder()
                 .claims(claims)
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + expiration * 1000))
+                .expiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(getSigningKey())
                 .compact();
     }
@@ -81,7 +84,35 @@ public class JwtUtils {
         return Keys.hmacShaKeyFor(secret.getBytes());
     }
 
+    /**
+     * 从请求头中获取Token
+     */
+    public String getTokenFromRequest(jakarta.servlet.http.HttpServletRequest request) {
+        String bearerToken = request.getHeader(header);
+        if (bearerToken != null && bearerToken.startsWith(prefix + " ")) {
+            return bearerToken.substring(prefix.length() + 1);
+        }
+        return null;
+    }
+
+    /**
+     * 刷新Token
+     */
+    public String refreshToken(String token) {
+        Claims claims = getClaimsFromToken(token);
+        claims.setIssuedAt(new Date());
+        claims.setExpiration(new Date(System.currentTimeMillis() + expiration));
+        return Jwts.builder()
+                .claims(claims)
+                .signWith(getSigningKey())
+                .compact();
+    }
+
     public String getHeader() {
         return header;
+    }
+
+    public String getPrefix() {
+        return prefix;
     }
 }

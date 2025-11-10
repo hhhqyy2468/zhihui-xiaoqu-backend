@@ -268,88 +268,353 @@ src/
 - 我的报修：报修记录列表、提交新报修、查看维修进度
 - 社区公告：公告列表、查看公告详情
 
-## 第五阶段：后端项目初始化与基础框架搭建
+## 第五阶段：后端项目初始化与基础框架搭建（修正版）
 
-### 5.1 创建Spring Boot项目
-使用Spring Initializr创建项目，选择以下依赖：
-- Spring Boot 3.2.x
-- Spring Web
-- Spring Security
-- Spring Data Redis
-- MySQL Driver
-- MyBatis Plus Boot Starter
-- Validation
-- Lombok
+### 5.1 环境准备与依赖管理
+**注意事项：**
+- 基于现有的 `property-management-backend` 项目进行开发
+- 使用现有的 `com.hyu` 包结构，保持一致性
+- 确保与现有 `property_management.sql` 数据库脚本兼容
 
-### 5.2 添加额外依赖
+### 5.2 核心依赖版本（兼容Spring Boot 3.2.x）
 ```xml
 <!-- Hutool工具类 -->
 <dependency>
     <groupId>cn.hutool</groupId>
     <artifactId>hutool-all</artifactId>
-    <version>5.8.25</version>
+    <version>5.8.26</version>
 </dependency>
 
-<!-- JWT -->
+<!-- JWT（使用Spring Boot 3兼容版本） -->
 <dependency>
     <groupId>io.jsonwebtoken</groupId>
     <artifactId>jjwt-api</artifactId>
-    <version>0.12.3</version>
+    <version>0.11.5</version>
+</dependency>
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-impl</artifactId>
+    <version>0.11.5</version>
+    <scope>runtime</scope>
+</dependency>
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-jackson</artifactId>
+    <version>0.11.5</version>
+    <scope>runtime</scope>
 </dependency>
 
-<!-- Knife4j接口文档 -->
+<!-- Knife4j接口文档（Spring Boot 3兼容版本） -->
 <dependency>
     <groupId>com.github.xiaoymin</groupId>
-    <artifactId>knife4j-openapi3-spring-boot-starter</artifactId>
+    <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
     <version>4.4.0</version>
 </dependency>
 
-<!-- FastJSON -->
+<!-- FastJSON2 -->
+<dependency>
+    <groupId>com.alibaba.fastjson2</groupId>
+    <artifactId>fastjson2</artifactId>
+    <version>2.0.47</version>
+</dependency>
+
+<!-- 文件上传 -->
+<dependency>
+    <groupId>commons-fileupload</groupId>
+    <artifactId>commons-fileupload</artifactId>
+    <version>1.5</version>
+</dependency>
+
+<!-- 参数校验（Spring Boot 3使用Jakarta） -->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-validation</artifactId>
+</dependency>
+
+<!-- Redis缓存 -->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-data-redis</artifactId>
+</dependency>
+
+<!-- 连接池 -->
 <dependency>
     <groupId>com.alibaba</groupId>
-    <artifactId>fastjson2</artifactId>
-    <version>2.0.44</version>
+    <artifactId>druid-spring-boot-3-starter</artifactId>
+    <version>1.2.20</version>
 </dependency>
 ```
 
-### 5.3 项目结构规划
+### 5.3 完整项目结构（基于现有项目扩展）
 ```
 src/main/java/com/hyu/
-├── common/              # 公共模块
-│   ├── config/         # 配置类
-│   ├── constant/       # 常量类
-│   ├── core/           # 核心组件
-│   ├── exception/      # 异常处理
-│   └── utils/          # 工具类
-├── framework/           # 框架核心
-│   ├── security/       # 安全配置
-│   ├── web/           # Web配置
-│   └── aspectj/       # 切面
-├── system/              # 系统管理模块
-│   ├── controller/     # 控制器
-│   ├── service/        # 服务层
-│   ├── mapper/         # 数据访问层
-│   └── domain/         # 实体类
-├── property/            # 物业管理模块
-│   ├── controller/
-│   ├── service/
-│   ├── mapper/
-│   └── domain/
-├── portal/              # 业主门户模块
-│   ├── controller/
-│   ├── service/
-│   ├── mapper/
-│   └── domain/
-└── PropertyApplication.java  # 启动类
+├── PropertyApplication.java          # 应用启动类
+├── common/                           # 公共模块
+│   ├── config/                       # 配置类
+│   │   ├── MybatisPlusConfig.java   # MyBatis Plus配置
+│   │   ├── RedisConfig.java         # Redis配置
+│   │   ├── WebMvcConfig.java        # Web MVC配置
+│   │   ├── CorsConfig.java          # 跨域配置
+│   │   └── Knife4jConfig.java       # 接口文档配置
+│   ├── constant/                     # 常量类
+│   │   ├── HttpStatus.java          # HTTP状态码
+│   │   ├── BusinessConstants.java   # 业务常量
+│   │   └── SecurityConstants.java   # 安全常量
+│   ├── core/                         # 核心组件
+│   │   ├── domain/                  # 核心领域对象
+│   │   │   ├── AjaxResult.java      # 统一响应结果
+│   │   │   ├── PageResult.java      # 分页结果
+│   │   │   ├── BaseEntity.java      # 基础实体
+│   │   │   └── TreeSelect.java      # 树形选择
+│   │   ├── text/                    # 文本处理
+│   │   └── page/                    # 分页处理
+│   ├── exception/                    # 异常处理
+│   │   ├── GlobalExceptionHandler.java # 全局异常处理
+│   │   ├── ServiceException.java   # 业务异常
+│   │   ├── ValidationException.java # 参数校验异常
+│   │   └── SecurityException.java   # 安全异常
+│   └── utils/                        # 工具类
+│       ├── JwtUtils.java            # JWT工具
+│       ├── StringUtils.java         # 字符串工具
+│       ├── DateUtils.java           # 日期工具
+│       ├── EncryptionUtils.java     # 加密工具
+│       ├── FileUploadUtils.java     # 文件上传工具
+│       └── RedisUtils.java          # Redis工具
+├── framework/                        # 框架核心
+│   ├── security/                     # 安全框架
+│   │   ├── config/                  # 安全配置
+│   │   │   ├── SecurityConfig.java  # Spring Security配置
+│   │   │   └── PasswordConfig.java  # 密码策略配置
+│   │   ├── filter/                  # 过滤器
+│   │   │   ├── JwtAuthenticationTokenFilter.java # JWT认证过滤器
+│   │   │   └── LoginFilter.java     # 登录过滤器
+│   │   ├── handle/                  # 处理器
+│   │   │   ├── AuthenticationEntryPointImpl.java # 认证入口点
+│   │   │   └── AccessDeniedHandlerImpl.java # 权限拒绝处理器
+│   │   └── service/                 # 安全服务
+│   │       ├── UserDetailsServiceImpl.java # 用户详情服务
+│   │       └── PermissionService.java # 权限服务
+│   ├── web/                         # Web配置
+│   │   ├── config/                  # Web配置类
+│   │   └── filter/                  # Web过滤器
+│   └── aspectj/                     # AOP切面
+│       ├── LogAspect.java           # 操作日志切面
+│       ├── DataScopeAspect.java     # 数据权限切面
+│       └── RateLimitAspect.java     # 限流切面
+├── system/                           # 系统管理模块
+│   ├── controller/                   # 控制器
+│   │   ├── SysLoginController.java  # 登录控制器
+│   │   ├── SysUserController.java   # 用户管理控制器
+│   │   ├── SysRoleController.java   # 角色管理控制器
+│   │   ├── SysMenuController.java   # 菜单管理控制器
+│   │   └── SysProfileController.java # 个人资料控制器
+│   ├── service/                      # 服务层
+│   │   ├── impl/                    # 服务实现
+│   │   └── interface/               # 服务接口
+│   ├── mapper/                       # 数据访问层
+│   │   ├── SysUserMapper.java       # 用户映射器
+│   │   ├── SysRoleMapper.java       # 角色映射器
+│   │   ├── SysMenuMapper.java       # 菜单映射器
+│   │   └── SysUserRoleMapper.java   # 用户角色映射器
+│   └── domain/                       # 实体类
+│       ├── SysUser.java             # 用户实体
+│       ├── SysRole.java             # 角色实体
+│       ├── SysMenu.java             # 菜单实体
+│       └── SysUserRole.java         # 用户角色实体
+├── property/                         # 物业管理模块
+│   ├── controller/                   # 控制器
+│   │   ├── BuildingController.java  # 楼栋管理控制器
+│   │   ├── UnitController.java      # 单元管理控制器
+│   │   ├── HouseController.java     # 房产管理控制器
+│   │   ├── ResidentController.java  # 住户管理控制器
+│   │   ├── FeeTypeController.java   # 费用类型控制器
+│   │   ├── BillController.java      # 账单管理控制器
+│   │   ├── ComplaintController.java # 投诉管理控制器
+│   │   ├── RepairController.java    # 维修管理控制器
+│   │   ├── ParkingController.java   # 停车管理控制器
+│   │   ├── NoticeController.java    # 公告管理控制器
+│   │   └── WalletController.java    # 钱包管理控制器
+│   ├── service/                      # 服务层
+│   │   ├── impl/                    # 服务实现
+│   │   └── interface/               # 服务接口
+│   ├── mapper/                       # 数据访问层
+│   │   ├── BuildingMapper.java      # 楼栋映射器
+│   │   ├── UnitMapper.java          # 单元映射器
+│   │   ├── HouseMapper.java         # 房产映射器
+│   │   └── ...其他映射器
+│   └── domain/                       # 实体类
+│       ├── Building.java            # 楼栋实体
+│       ├── Unit.java                # 单元实体
+│       ├── House.java               # 房产实体
+│       └── ...其他实体
+├── portal/                           # 业主门户模块
+│   ├── controller/                   # 控制器
+│   │   ├── PortalController.java    # 门户主页控制器
+│   │   ├── PortalBillController.java # 账单控制器
+│   │   ├── PortalWalletController.java # 钱包控制器
+│   │   └── PortalComplaintController.java # 投诉控制器
+│   ├── service/                      # 服务层
+│   ├── mapper/                       # 数据访问层
+│   └── domain/                       # 实体类
+└── resources/                        # 资源文件
+    ├── application.yml               # 主配置文件
+    ├── application-dev.yml           # 开发环境配置
+    ├── application-prod.yml          # 生产环境配置
+    ├── mapper/                       # MyBatis映射文件
+    │   ├── system/                   # 系统模块映射
+    │   └── property/                 # 物业模块映射
+    ├── static/                       # 静态资源
+    │   ├── upload/                   # 上传文件目录
+    │   └── images/                   # 图片资源
+    └── templates/                    # 模板文件
+        └── email/                    # 邮件模板
 ```
 
-### 5.4 基础配置
-- application.yml配置文件
-- MyBatis Plus配置
-- Redis配置
-- JWT配置
-- 跨域配置
-- Knife4j配置
+### 5.4 核心配置文件
+
+#### 5.4.1 application.yml 主配置
+```yaml
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 50MB
+
+spring:
+  application:
+    name: property-management-backend
+  profiles:
+    active: dev
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/property_management?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
+    username: root
+    password: 123456
+    druid:
+      initial-size: 5
+      min-idle: 5
+      max-active: 20
+      max-wait: 60000
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      validation-query: SELECT 1 FROM DUAL
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      pool-prepared-statements: true
+      max-pool-prepared-statement-per-connection-size: 20
+
+  redis:
+    host: localhost
+    port: 6379
+    password:
+    database: 0
+    timeout: 10s
+    lettuce:
+      pool:
+        max-active: 8
+        max-wait: -1ms
+        max-idle: 8
+        min-idle: 0
+
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+    serialization:
+      write-dates-as-timestamps: false
+
+mybatis-plus:
+  mapper-locations: classpath:mapper/**/*.xml
+  type-aliases-package: com.hyu.**.domain
+  configuration:
+    map-underscore-to-camel-case: true
+    cache-enabled: false
+    call-setters-on-nulls: true
+    jdbc-type-for-null: 'null'
+  global-config:
+    db-config:
+      id-type: AUTO
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+logging:
+  level:
+    com.hyu: debug
+    org.springframework.security: debug
+  pattern:
+    console: '%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n'
+    file: '%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n'
+  file:
+    name: logs/property-management.log
+    max-size: 10MB
+    max-history: 30
+
+knife4j:
+  enable: true
+  openapi:
+    title: 智慧小区物业管理系统 API
+    description: 物业管理系统后端接口文档
+    version: 1.0.0
+    concat: hhqyy2468@example.com
+  setting:
+    language: zh-CN
+    enable-swagger-models: true
+    enable-document-manage: true
+    swagger-model-name: 实体类列表
+    enable-version: false
+    enable-reload-cache-parameter: false
+    enable-after-script: true
+  production: false
+  basic:
+    enable: false
+```
+
+#### 5.4.2 JWT配置
+```yaml
+jwt:
+  secret: abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789
+  expiration: 86400000  # 24小时
+  header: Authorization
+  prefix: Bearer
+```
+
+#### 5.4.3 文件上传配置
+```yaml
+file:
+  upload:
+    path: D:/property-upload/
+    allowed-types: jpg,jpeg,png,gif,pdf,doc,docx,xls,xlsx
+    max-size: 10485760  # 10MB
+```
+
+### 5.5 数据库初始化
+1. **执行现有数据库脚本**
+   ```bash
+   mysql -u root -p < property_management.sql
+   ```
+
+2. **添加系统初始化数据**
+   - 管理员用户数据
+   - 基础权限数据
+   - 系统参数配置
+
+### 5.6 基础配置实现顺序
+1. ✅ 项目依赖配置（已完成）
+2. ⏳ 统一响应封装类
+3. ⏳ 全局异常处理器
+4. ⏳ Spring Security安全配置
+5. ⏳ JWT工具类和过滤器
+6. ⏳ MyBatis Plus配置
+7. ⏳ Redis配置和工具类
+8. ⏳ 文件上传配置
+9. ⏳ 跨域配置
+10. ⏳ Knife4j接口文档配置
+11. ⏳ 日志配置
+12. ⏳ 参数校验配置
 
 ## 第六阶段：后端基础框架开发
 

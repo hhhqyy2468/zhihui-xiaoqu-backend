@@ -11,7 +11,8 @@
       "Bash(git push:*)",
       "Bash(echo:*)",
       "Bash(src/directives/permission.js)",
-      "Bash(git remote add:*)"
+      "Bash(git remote add:*)",
+      "Bash(mvn clean:*)"
     ],
     "deny": [],
     "ask": []

@@ -26,29 +26,28 @@ public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        
-        // 获取请求头中的token
-        String authHeader = request.getHeader(jwtUtils.getHeader());
-        
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String authToken = authHeader.substring(7);
-            
+
+        // 从请求头中获取token
+        String token = jwtUtils.getTokenFromRequest(request);
+
+        if (token != null) {
             // 验证token
-            if (jwtUtils.validateToken(authToken)) {
+            if (jwtUtils.validateToken(token)) {
                 // 从token中获取用户信息
-                String username = jwtUtils.getClaimsFromToken(authToken).getSubject();
-                
+                io.jsonwebtoken.Claims claims = jwtUtils.getClaimsFromToken(token);
+                String username = claims.getSubject();
+
                 if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                     // 这里可以添加从数据库查询用户信息的逻辑
                     // 暂时使用简单的认证
-                    UsernamePasswordAuthenticationToken authentication = 
+                    UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(username, null, null);
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
             }
         }
-        
+
         chain.doFilter(request, response);
     }
 }
