@@ -32,9 +32,9 @@ public class JwtUtils {
      */
     public String generateToken(Map<String, Object> claims) {
         return Jwts.builder()
-                .claims(claims)
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + expiration))
+                .setClaims(claims)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(getSigningKey())
                 .compact();
     }
@@ -43,11 +43,11 @@ public class JwtUtils {
      * 从Token中获取Claims
      */
     public Claims getClaimsFromToken(String token) {
-        return Jwts.parser()
-                .verifyWith(getSigningKey())
+        return Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
                 .build()
-                .parseSignedClaims(token)
-                .getPayload();
+                .parseClaimsJws(token)
+                .getBody();
     }
 
     /**
@@ -103,7 +103,7 @@ public class JwtUtils {
         claims.setIssuedAt(new Date());
         claims.setExpiration(new Date(System.currentTimeMillis() + expiration));
         return Jwts.builder()
-                .claims(claims)
+                .setClaims(claims)
                 .signWith(getSigningKey())
                 .compact();
     }

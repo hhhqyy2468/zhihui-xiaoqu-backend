@@ -1,6 +1,7 @@
 package com.hyu.framework.security.filter;
 
 import com.hyu.common.utils.JwtUtils;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -34,7 +35,7 @@ public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
             // 验证token
             if (jwtUtils.validateToken(token)) {
                 // 从token中获取用户信息
-                io.jsonwebtoken.Claims claims = jwtUtils.getClaimsFromToken(token);
+                Claims claims = jwtUtils.getClaimsFromToken(token);
                 String username = claims.getSubject();
 
                 if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
