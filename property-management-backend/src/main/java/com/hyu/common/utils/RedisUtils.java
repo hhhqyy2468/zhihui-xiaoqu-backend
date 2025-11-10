@@ -63,9 +63,10 @@ public class RedisUtils {
      * @param key 缓存键值
      * @return 缓存键值对应的数据
      */
+    @SuppressWarnings("unchecked")
     public <T> T getCacheObject(final String key) {
-        ValueOperations<String, T> operation = (ValueOperations<String, T>) redisTemplate.opsForValue();
-        return operation.get(key);
+        ValueOperations<String, Object> operation = redisTemplate.opsForValue();
+        return (T) operation.get(key);
     }
 
     /**
@@ -111,8 +112,9 @@ public class RedisUtils {
      * @param key 缓存的键值
      * @return 缓存键值对应的数据
      */
+    @SuppressWarnings("unchecked")
     public <T> List<T> getCacheList(final String key) {
-        return redisTemplate.opsForList().range(key, 0, -1);
+        return (List<T>) redisTemplate.opsForList().range(key, 0, -1);
     }
 
     /**
@@ -122,9 +124,13 @@ public class RedisUtils {
      * @param dataSet 缓存的数据
      * @return 缓存数据的对象
      */
+    @SuppressWarnings("unchecked")
     public <T> BoundSetOperations<String, T> setCacheSet(final String key, final Set<T> dataSet) {
-        BoundSetOperations<String, T> setOperation = redisTemplate.boundSetOps(key);
-        setOperation.add(dataSet.toArray());
+        BoundSetOperations<String, T> setOperation = (BoundSetOperations<String, T>) redisTemplate.boundSetOps(key);
+        // 逐个添加元素，避免类型转换问题
+        for (T item : dataSet) {
+            setOperation.add(item);
+        }
         return setOperation;
     }
 
@@ -134,8 +140,9 @@ public class RedisUtils {
      * @param key
      * @return
      */
+    @SuppressWarnings("unchecked")
     public <T> Set<T> getCacheSet(final String key) {
-        return redisTemplate.opsForSet().members(key);
+        return (Set<T>) redisTemplate.opsForSet().members(key);
     }
 
     /**
@@ -156,8 +163,9 @@ public class RedisUtils {
      * @param key
      * @return
      */
+    @SuppressWarnings("unchecked")
     public <T> Map<String, T> getCacheMap(final String key) {
-        return redisTemplate.opsForHash().entries(key);
+        return (Map<String, T>) redisTemplate.opsForHash().entries(key);
     }
 
     /**
@@ -178,9 +186,10 @@ public class RedisUtils {
      * @param hKey Hash键
      * @return Hash中的对象
      */
+    @SuppressWarnings("unchecked")
     public <T> T getCacheMapValue(final String key, final String hKey) {
-        HashOperations<String, String, T> opsForHash = redisTemplate.opsForHash();
-        return opsForHash.get(key, hKey);
+        HashOperations<String, String, Object> opsForHash = redisTemplate.opsForHash();
+        return (T) opsForHash.get(key, hKey);
     }
 
     /**
@@ -190,8 +199,9 @@ public class RedisUtils {
      * @param hKeys Hash键集合
      * @return Hash对象集合
      */
+    @SuppressWarnings("unchecked")
     public <T> List<T> getMultiCacheMapValue(final String key, final Collection<Object> hKeys) {
-        return redisTemplate.opsForHash().multiGet(key, hKeys);
+        return (List<T>) redisTemplate.opsForHash().multiGet(key, hKeys);
     }
 
     /**
