@@ -1,0 +1,98 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api/v1
+
+spring:
+  application:
+    name: property-management
+  
+  # 数据源配置
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/property_management?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
+    username: root
+    password: 123456
+
+  # Redis配置
+  redis:
+    host: localhost
+    port: 6379
+    password:
+    database: 0
+    timeout: 10s
+    lettuce:
+      pool:
+        max-active: 200
+        max-wait: -1ms
+        max-idle: 10
+        min-idle: 0
+
+  # 安全配置
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          secret-key: hyu-property-management-jwt-secret-key-2024
+
+# Mybatis-Plus配置
+mybatis-plus:
+  configuration:
+    # 日志实现
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    # 驼峰命名
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      # 主键类型
+      id-type: auto
+      # 逻辑删除字段名
+      logic-delete-field: deleted
+      # 逻辑删除值
+      logic-delete-value: 1
+      # 逻辑未删除值
+      logic-not-delete-value: 0
+
+# Knife4j配置
+knife4j:
+  enable: true
+  setting:
+    language: zh-CN
+    enable-swagger-models: true
+    enable-document-manage: true
+    enable-version: true
+    enable-author: true
+    enable-footer: true
+    enable-footer-custom: true
+    footer-custom-content: MIT License | Copyright © 2024-HYU物业管理系统
+    enable-home-custom: true
+    home-custom-path: /doc.html
+    enable-search: true
+    enable-request-cache: true
+    enable-host: true
+    enable-host-text: http://localhost:${server.port}${server.servlet.context-path}
+
+# 日志配置
+logging:
+  level:
+    com.hyu: debug
+    org.springframework.security: debug
+
+# 自定义配置
+property:
+  # JWT配置
+  jwt:
+    secret: hyu-property-management-secret-key-2024
+    expiration: 86400
+    header: Authorization
+  
+  # 文件上传配置
+  file:
+    upload-path: ./upload/
+    max-size: 10MB
+    allowed-types: jpg,jpeg,png,gif,pdf,doc,docx
+
+  # 系统配置
+  system:
+    version: 1.0.0
+    name: 社区物业管理系统

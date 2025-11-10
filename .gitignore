@@ -1,0 +1,25 @@
+# 创建.gitignore
+cat > .gitignore << 'EOF'
+# Logs
+logs
+*.log
+
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# Environment files
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+EOF

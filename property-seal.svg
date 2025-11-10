@@ -1,0 +1,28 @@
+<!-- property-seal.svg -->
+<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="100" cy="100" r="95" fill="none" stroke="#C8102E" stroke-width="3"/>
+  <circle cx="100" cy="100" r="88" fill="none" stroke="#C8102E" stroke-width="1"/>
+  
+  <path d="M 100 35 L 110 65 L 142 65 L 116 83 L 126 113 L 100 95 L 74 113 L 84 83 L 58 65 L 90 65 Z" 
+        fill="#C8102E"/>
+  
+  <!-- 上弧形文字 -->
+  <path id="topArc" d="M 30,100 A 70,70 0 0,1 170,100" fill="none"/>
+  <text font-size="16" font-family="SimHei, sans-serif" font-weight="bold" fill="#C8102E">
+    <textPath href="#topArc" startOffset="50%" text-anchor="middle">
+      智慧物业管理有限公司
+    </textPath>
+  </text>
+  
+  <path id="bottomArc" d="M 170,100 A 70,70 0 0,1 30,100" fill="none"/>
+  <text font-size="14" font-family="Arial, sans-serif" fill="#C8102E">
+    <textPath href="#bottomArc" startOffset="50%" text-anchor="middle">
+      NO.202501001
+    </textPath>
+  </text>
+  
+  <text x="100" y="135" font-size="20" font-family="SimSun, serif" font-weight="bold" 
+        text-anchor="middle" fill="#C8102E">
+    电子专用章
+  </text>
+</svg>

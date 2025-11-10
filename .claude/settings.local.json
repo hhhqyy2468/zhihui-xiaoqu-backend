@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create:*)",
+      "Bash(npm init:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run dev)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(echo:*)",
+      "Bash(src/directives/permission.js)",
+      "Bash(git remote add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
