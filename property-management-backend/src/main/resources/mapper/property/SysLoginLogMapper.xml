@@ -124,7 +124,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         where login_time between #{startTime} and #{endTime}
     </select>
 
-    <delete id="deleteLoginLogsBefore" parameterType="LocalDateTime">
+    <delete id="deleteLoginLogsBefore" parameterType="java.time.LocalDateTime">
         delete from sys_login_log
         where login_time &lt; #{beforeTime}
     </delete>
