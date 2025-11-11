@@ -1,128 +1,112 @@
 package com.hyu.system.domain;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
-import java.time.LocalDate;
+import javax.validation.constraints.Email;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Pattern;
+import javax.validation.constraints.Size;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
- * 用户表实体类
+ * 用户对象 sys_user
+ *
+ * @author hyu
  */
 @Data
+@EqualsAndHashCode(callSuper = false)
 @TableName("sys_user")
 public class SysUser {
 
-    /**
-     * 用户ID
-     */
-    @TableId(type = IdType.AUTO)
-    private Long id;
+    private static final long serialVersionUID = 1L;
 
-    /**
-     * 用户名（登录账号）
-     */
+    /** 用户ID */
+    @TableId(value = "user_id", type = IdType.AUTO)
+    private Long userId;
+
+    /** 用户名 */
+    @NotBlank(message = "用户名不能为空")
+    @Size(min = 2, max = 50, message = "用户名长度必须在2-50之间")
+    @TableField("username")
     private String username;
 
-    /**
-     * 密码（BCrypt加密）
-     */
+    /** 密码 */
+    @TableField("password")
     private String password;
 
-    /**
-     * 真实姓名
-     */
+    /** 真实姓名 */
+    @NotBlank(message = "真实姓名不能为空")
+    @Size(min = 2, max = 20, message = "真实姓名长度必须在2-20之间")
+    @TableField("real_name")
     private String realName;
 
-    /**
-     * 手机号码
-     */
+    /** 手机号 */
+    @NotBlank(message = "手机号不能为空")
+    @Pattern(regexp = "^1[3-9]\\d{9}$", message = "手机号格式不正确")
+    @TableField("phone")
     private String phone;
 
-    /**
-     * 身份证号
-     */
-    private String idCard;
-
-    /**
-     * 邮箱
-     */
+    /** 邮箱 */
+    @Email(message = "邮箱格式不正确")
+    @TableField("email")
     private String email;
 
-    /**
-     * 性别：0-未知 1-男 2-女
-     */
-    private Integer gender;
-
-    /**
-     * 头像URL
-     */
-    private String avatar;
-
-    /**
-     * 住户类型：1-业主 2-租户（仅业主角色有值）
-     */
-    private Integer residentType;
-
-    /**
-     * 入住日期
-     */
-    private LocalDate checkInDate;
-
-    /**
-     * 住户状态：1-在住 2-已搬离
-     */
-    private Integer residentStatus;
-
-    /**
-     * 紧急联系人
-     */
-    private String emergencyContact;
-
-    /**
-     * 紧急联系电话
-     */
-    private String emergencyPhone;
-
-    /**
-     * 状态：0-禁用 1-启用
-     */
-    private Integer status;
-
-    /**
-     * 用户类型：1-系统管理员 2-物业管理员 3-业主 4-维修人员
-     */
+    /** 用户类型 1:管理员 2:物业管理员 3:业主 4:维修人员 */
+    @TableField("user_type")
     private Integer userType;
 
-    /**
-     * 备注
-     */
+    /** 状态 0:禁用 1:正常 */
+    @TableField("status")
+    private Integer status;
+
+    /** 部门ID */
+    @TableField("dept_id")
+    private Long deptId;
+
+    /** 头像URL */
+    @TableField("avatar")
+    private String avatar;
+
+    /** 最后登录时间 */
+    @TableField("last_login_time")
+    private LocalDateTime lastLoginTime;
+
+    /** 最后登录IP */
+    @TableField("last_login_ip")
+    private String lastLoginIp;
+
+    /** 备注 */
+    @TableField("remark")
     private String remark;
 
-    /**
-     * 删除标记：0-未删除 1-已删除
-     */
-    private Integer deleted;
-
-    /**
-     * 创建人
-     */
+    /** 创建者 */
+    @TableField(value = "create_by", fill = FieldFill.INSERT)
     private String createBy;
 
-    /**
-     * 创建时间
-     */
+    /** 创建时间 */
+    @TableField(value = "create_time", fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
-    /**
-     * 更新人
-     */
+    /** 更新者 */
+    @TableField(value = "update_by", fill = FieldFill.INSERT_UPDATE)
     private String updateBy;
 
-    /**
-     * 更新时间
-     */
+    /** 更新时间 */
+    @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
+
+    /** 角色列表 */
+    @TableField(exist = false)
+    private List<String> roles;
+
+    /** 权限列表 */
+    @TableField(exist = false)
+    private List<String> permissions;
+
+    /** 部门名称 */
+    @TableField(exist = false)
+    private String deptName;
 }

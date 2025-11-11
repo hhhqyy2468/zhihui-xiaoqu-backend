@@ -1,14 +1,17 @@
 package com.hyu.common.utils;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.BoundSetOperations;
-import org.springframework.data.redis.core.HashOperations;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.core.HashOperations;
+import org.springframework.data.redis.core.ListOperations;
+import org.springframework.data.redis.core.SetOperations;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.Resource;
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -16,201 +19,317 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Redis工具类
+ *
+ * @author hyu
  */
+@Slf4j
 @Component
 public class RedisUtils {
 
-    @Autowired
-    public RedisTemplate<String, Object> redisTemplate;
+    @Resource
+    private RedisTemplate<String, Object> redisTemplate;
 
     /**
-     * 缓存基本的对象，Integer、String、实体类等
-     *
-     * @param key 缓存的键值
-     * @param value 缓存的值
-     * @return 缓存的对象
+     * 默认过期时长，单位：秒
      */
-    public <T> void setCacheObject(final String key, final T value) {
-        redisTemplate.opsForValue().set(key, value);
-    }
+    public static final long DEFAULT_EXPIRE = 60 * 60 * 24;
 
     /**
-     * 缓存基本的对象，Integer、String、实体类等
-     *
-     * @param key 缓存的键值
-     * @param value 缓存的值
-     * @param timeout 时间
-     * @param timeUnit 时间颗粒度
+     * 不设置过期时长
      */
-    public <T> void setCacheObject(final String key, final T value, final Integer timeout, final TimeUnit timeUnit) {
-        redisTemplate.opsForValue().set(key, value, timeout, timeUnit);
-    }
+    public static final long NOT_EXPIRE = -1;
 
     /**
-     * 设置有效时间
+     * 设置缓存
      *
-     * @param key Redis键
-     * @param timeout 超时时间
-     * @return true=设置成功；false=设置失败
-     */
-    public boolean expire(final String key, final long timeout, final TimeUnit unit) {
-        return Boolean.TRUE.equals(redisTemplate.expire(key, timeout, unit));
-    }
-
-    /**
-     * 获得缓存的基本对象。
-     *
-     * @param key 缓存键值
-     * @return 缓存键值对应的数据
-     */
-    @SuppressWarnings("unchecked")
-    public <T> T getCacheObject(final String key) {
-        ValueOperations<String, Object> operation = redisTemplate.opsForValue();
-        return (T) operation.get(key);
-    }
-
-    /**
-     * 删除单个对象
-     *
-     * @param key
-     */
-    public boolean deleteObject(final String key) {
-        return Boolean.TRUE.equals(redisTemplate.delete(key));
-    }
-
-    /**
-     * 删除集合对象
-     *
-     * @param collection 多个对象
-     * @return
-     */
-    public long deleteObject(final Collection collection) {
-        try {
-            Long count = redisTemplate.delete(collection);
-            return count != null ? count : 0;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return 0;
-        }
-    }
-
-    /**
-     * 缓存List数据
-     *
-     * @param key 缓存的键值
-     * @param dataList 待缓存的List数据
-     * @return 缓存的对象
-     */
-    public <T> long setCacheList(final String key, final List<T> dataList) {
-        Long count = redisTemplate.opsForList().rightPushAll(key, dataList);
-        return count != null ? count : 0;
-    }
-
-    /**
-     * 获得缓存的list对象
-     *
-     * @param key 缓存的键值
-     * @return 缓存键值对应的数据
-     */
-    @SuppressWarnings("unchecked")
-    public <T> List<T> getCacheList(final String key) {
-        return (List<T>) redisTemplate.opsForList().range(key, 0, -1);
-    }
-
-    /**
-     * 缓存Set
-     *
-     * @param key 缓存键值
-     * @param dataSet 缓存的数据
-     * @return 缓存数据的对象
-     */
-    @SuppressWarnings("unchecked")
-    public <T> BoundSetOperations<String, T> setCacheSet(final String key, final Set<T> dataSet) {
-        BoundSetOperations<String, T> setOperation = (BoundSetOperations<String, T>) redisTemplate.boundSetOps(key);
-        // 逐个添加元素，避免类型转换问题
-        for (T item : dataSet) {
-            setOperation.add(item);
-        }
-        return setOperation;
-    }
-
-    /**
-     * 获得缓存的set
-     *
-     * @param key
-     * @return
-     */
-    @SuppressWarnings("unchecked")
-    public <T> Set<T> getCacheSet(final String key) {
-        return (Set<T>) redisTemplate.opsForSet().members(key);
-    }
-
-    /**
-     * 缓存Map
-     *
-     * @param key
-     * @param dataMap
-     */
-    public <T> void setCacheMap(final String key, final Map<String, T> dataMap) {
-        if (dataMap != null) {
-            redisTemplate.opsForHash().putAll(key, dataMap);
-        }
-    }
-
-    /**
-     * 获得缓存的Map
-     *
-     * @param key
-     * @return
-     */
-    @SuppressWarnings("unchecked")
-    public <T> Map<String, T> getCacheMap(final String key) {
-        return (Map<String, T>) redisTemplate.opsForHash().entries(key);
-    }
-
-    /**
-     * 往Hash中存入数据
-     *
-     * @param key Redis键
-     * @param hKey Hash键
+     * @param key   键
      * @param value 值
      */
-    public <T> void setCacheMapValue(final String key, final String hKey, final T value) {
-        redisTemplate.opsForHash().put(key, hKey, value);
+    public void set(String key, Object value) {
+        set(key, value, DEFAULT_EXPIRE);
     }
 
     /**
-     * 获取Hash中的数据
+     * 设置缓存
      *
-     * @param key Redis键
-     * @param hKey Hash键
-     * @return Hash中的对象
+     * @param key      键
+     * @param value    值
+     * @param expire   过期时间（秒）
      */
-    @SuppressWarnings("unchecked")
-    public <T> T getCacheMapValue(final String key, final String hKey) {
-        HashOperations<String, String, Object> opsForHash = redisTemplate.opsForHash();
-        return (T) opsForHash.get(key, hKey);
+    public void set(String key, Object value, long expire) {
+        try {
+            if (expire == NOT_EXPIRE) {
+                redisTemplate.opsForValue().set(key, value);
+            } else {
+                redisTemplate.opsForValue().set(key, value, expire, TimeUnit.SECONDS);
+            }
+        } catch (Exception e) {
+            log.error("Redis设置缓存失败，key：{}，value：{}，expire：{}", key, value, expire, e);
+            throw new RuntimeException("Redis设置缓存失败");
+        }
     }
 
     /**
-     * 获取多个Hash中的数据
+     * 获取缓存
      *
-     * @param key Redis键
-     * @param hKeys Hash键集合
-     * @return Hash对象集合
+     * @param key 键
+     * @return 值
      */
-    @SuppressWarnings("unchecked")
-    public <T> List<T> getMultiCacheMapValue(final String key, final Collection<Object> hKeys) {
-        return (List<T>) redisTemplate.opsForHash().multiGet(key, hKeys);
+    public Object get(String key) {
+        try {
+            return redisTemplate.opsForValue().get(key);
+        } catch (Exception e) {
+            log.error("Redis获取缓存失败，key：{}", key, e);
+            return null;
+        }
     }
 
     /**
-     * 获得缓存的基本对象列表
+     * 获取缓存（指定类型）
      *
-     * @param pattern 字符串前缀
-     * @return 对象列表
+     * @param key   键
+     * @param clazz 类型
+     * @param <T>   泛型
+     * @return 值
      */
-    public Collection<String> keys(final String pattern) {
-        return redisTemplate.keys(pattern);
+    public <T> T get(String key, Class<T> clazz) {
+        try {
+            Object value = redisTemplate.opsForValue().get(key);
+            if (value != null) {
+                return clazz.cast(value);
+            }
+            return null;
+        } catch (Exception e) {
+            log.error("Redis获取缓存失败，key：{}，clazz：{}", key, clazz.getName(), e);
+            return null;
+        }
+    }
+
+    /**
+     * 删除缓存
+     *
+     * @param key 键
+     */
+    public void delete(String key) {
+        try {
+            redisTemplate.delete(key);
+        } catch (Exception e) {
+            log.error("Redis删除缓存失败，key：{}", key, e);
+            throw new RuntimeException("Redis删除缓存失败");
+        }
+    }
+
+    /**
+     * 批量删除缓存
+     *
+     * @param keys 键集合
+     */
+    public void delete(Collection<String> keys) {
+        try {
+            redisTemplate.delete(keys);
+        } catch (Exception e) {
+            log.error("Redis批量删除缓存失败，keys：{}", keys, e);
+            throw new RuntimeException("Redis批量删除缓存失败");
+        }
+    }
+
+    /**
+     * 是否存在key
+     *
+     * @param key 键
+     * @return 是否存在
+     */
+    public Boolean hasKey(String key) {
+        try {
+            return redisTemplate.hasKey(key);
+        } catch (Exception e) {
+            log.error("Redis判断key是否存在失败，key：{}", key, e);
+            return false;
+        }
+    }
+
+    /**
+     * 设置过期时间
+     *
+     * @param key    键
+     * @param expire 过期时间（秒）
+     */
+    public void expire(String key, long expire) {
+        try {
+            redisTemplate.expire(key, expire, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.error("Redis设置过期时间失败，key：{}，expire：{}", key, expire, e);
+            throw new RuntimeException("Redis设置过期时间失败");
+        }
+    }
+
+    /**
+     * 获取过期时间
+     *
+     * @param key 键
+     * @return 过期时间（秒）
+     */
+    public Long getExpire(String key) {
+        try {
+            return redisTemplate.getExpire(key, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.error("Redis获取过期时间失败，key：{}", key, e);
+            return -1L;
+        }
+    }
+
+    /**
+     * 递增
+     *
+     * @param key   键
+     * @param delta 递增值
+     * @return 递增后的值
+     */
+    public Long increment(String key, long delta) {
+        try {
+            return redisTemplate.opsForValue().increment(key, delta);
+        } catch (Exception e) {
+            log.error("Redis递增失败，key：{}，delta：{}", key, delta, e);
+            throw new RuntimeException("Redis递增失败");
+        }
+    }
+
+    /**
+     * 递减
+     *
+     * @param key   键
+     * @param delta 递减值
+     * @return 递减后的值
+     */
+    public Long decrement(String key, long delta) {
+        try {
+            return redisTemplate.opsForValue().increment(key, -delta);
+        } catch (Exception e) {
+            log.error("Redis递减失败，key：{}，delta：{}", key, delta, e);
+            throw new RuntimeException("Redis递减失败");
+        }
+    }
+
+    /**
+     * Hash操作 - 设置
+     *
+     * @param key     键
+     * @param hashKey Hash键
+     * @param value   值
+     */
+    public void hSet(String key, String hashKey, Object value) {
+        try {
+            redisTemplate.opsForHash().put(key, hashKey, value);
+        } catch (Exception e) {
+            log.error("Redis Hash设置失败，key：{}，hashKey：{}，value：{}", key, hashKey, value, e);
+            throw new RuntimeException("Redis Hash设置失败");
+        }
+    }
+
+    /**
+     * Hash操作 - 获取
+     *
+     * @param key     键
+     * @param hashKey Hash键
+     * @return 值
+     */
+    public Object hGet(String key, String hashKey) {
+        try {
+            return redisTemplate.opsForHash().get(key, hashKey);
+        } catch (Exception e) {
+            log.error("Redis Hash获取失败，key：{}，hashKey：{}", key, hashKey, e);
+            return null;
+        }
+    }
+
+    /**
+     * Hash操作 - 获取所有
+     *
+     * @param key 键
+     * @return Map
+     */
+    public Map<Object, Object> hGetAll(String key) {
+        try {
+            return redisTemplate.opsForHash().entries(key);
+        } catch (Exception e) {
+            log.error("Redis Hash获取所有失败，key：{}", key, e);
+            return null;
+        }
+    }
+
+    /**
+     * Hash操作 - 删除
+     *
+     * @param key     键
+     * @param hashKeys Hash键集合
+     */
+    public void hDelete(String key, Object... hashKeys) {
+        try {
+            redisTemplate.opsForHash().delete(key, hashKeys);
+        } catch (Exception e) {
+            log.error("Redis Hash删除失败，key：{}，hashKeys：{}", key, hashKeys, e);
+            throw new RuntimeException("Redis Hash删除失败");
+        }
+    }
+
+    /**
+     * Set操作 - 添加
+     *
+     * @param key   键
+     * @param value 值
+     */
+    public void sAdd(String key, Object value) {
+        try {
+            redisTemplate.opsForSet().add(key, value);
+        } catch (Exception e) {
+            log.error("Redis Set添加失败，key：{}，value：{}", key, value, e);
+            throw new RuntimeException("Redis Set添加失败");
+        }
+    }
+
+    /**
+     * Set操作 - 获取所有成员
+     *
+     * @param key 键
+     * @return Set
+     */
+    public Set<Object> sMembers(String key) {
+        try {
+            return redisTemplate.opsForSet().members(key);
+        } catch (Exception e) {
+            log.error("Redis Set获取所有成员失败，key：{}", key, e);
+            return null;
+        }
+    }
+
+    /**
+     * Set操作 - 判断是否存在
+     *
+     * @param key   键
+     * @param value 值
+     * @return 是否存在
+     */
+    public Boolean sIsMember(String key, Object value) {
+        try {
+            return redisTemplate.opsForSet().isMember(key, value);
+        } catch (Exception e) {
+            log.error("Redis Set判断是否存在失败，key：{}，value：{}", key, value, e);
+            return false;
+        }
+    }
+
+    /**
+     * Set操作 - 删除
+     *
+     * @param key   键
+     * @param value 值
+     */
+    public void sRemove(String key, Object value) {
+        try {
+            redisTemplate.opsForSet().remove(key, value);
+        } catch (Exception e) {
+            log.error("Redis Set删除失败，key：{}，value：{}", key, value, e);
+            throw new RuntimeException("Redis Set删除失败");
+        }
     }
 }

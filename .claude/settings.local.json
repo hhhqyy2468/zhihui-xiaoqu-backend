@@ -12,7 +12,18 @@
       "Bash(echo:*)",
       "Bash(src/directives/permission.js)",
       "Bash(git remote add:*)",
-      "Bash(mvn clean:*)"
+      "Bash(mvn clean:*)",
+      "Bash(mvn spring-boot:run:*)",
+      "Bash(java:*)",
+      "Bash(gradle bootRun:*)",
+      "Bash(javac:*)",
+      "Bash(curl:*)",
+      "Bash(taskkill:*)",
+      "Bash(start-springboot.bat:*)",
+      "Bash(del:*)",
+      "Bash(mvn compile:*)",
+      "Bash(find:*)",
+      "Bash(mvn:*)"
     ],
     "deny": [],
     "ask": []

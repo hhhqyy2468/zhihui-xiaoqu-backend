@@ -11,13 +11,15 @@ import org.springframework.context.annotation.Configuration;
 import java.time.LocalDateTime;
 
 /**
- * Mybatis-Plus配置类
+ * MyBatis Plus 配置
+ *
+ * @author hyu
  */
 @Configuration
 public class MybatisPlusConfig {
 
     /**
-     * 分页插件
+     * 添加分页插件
      */
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor() {
@@ -36,21 +38,14 @@ public class MybatisPlusConfig {
             public void insertFill(MetaObject metaObject) {
                 this.strictInsertFill(metaObject, "createTime", LocalDateTime.class, LocalDateTime.now());
                 this.strictInsertFill(metaObject, "updateTime", LocalDateTime.class, LocalDateTime.now());
-                this.strictInsertFill(metaObject, "createBy", String.class, getCurrentUsername());
-                this.strictInsertFill(metaObject, "updateBy", String.class, getCurrentUsername());
-                this.strictInsertFill(metaObject, "deleted", Integer.class, 0);
+                this.strictInsertFill(metaObject, "createBy", String.class, "system");
+                this.strictInsertFill(metaObject, "updateBy", String.class, "system");
             }
 
             @Override
             public void updateFill(MetaObject metaObject) {
                 this.strictUpdateFill(metaObject, "updateTime", LocalDateTime.class, LocalDateTime.now());
-                this.strictUpdateFill(metaObject, "updateBy", String.class, getCurrentUsername());
-            }
-
-            private String getCurrentUsername() {
-                // 这里可以从SecurityContext中获取当前登录用户
-                // 暂时返回默认值
-                return "system";
+                this.strictUpdateFill(metaObject, "updateBy", String.class, "system");
             }
         };
     }

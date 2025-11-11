@@ -1,88 +1,98 @@
 package com.hyu.common.core.domain;
 
 import lombok.Data;
-
-import java.io.Serializable;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
 /**
  * 统一响应结果
+ *
+ * @author hyu
  */
 @Data
-public class AjaxResult<T> implements Serializable {
+@NoArgsConstructor
+@AllArgsConstructor
+public class AjaxResult {
 
-    private static final long serialVersionUID = 1L;
+    /** 状态码 */
+    private Integer code;
 
-    /**
-     * 状态码
-     */
-    private int code;
-
-    /**
-     * 响应消息
-     */
+    /** 返回消息 */
     private String msg;
 
-    /**
-     * 响应数据
-     */
-    private T data;
+    /** 数据对象 */
+    private Object data;
 
-    public AjaxResult() {
+    /** 时间戳 */
+    private Long timestamp;
+
+    public AjaxResult(Integer code, String msg) {
+        this.code = code;
+        this.msg = msg;
+        this.timestamp = System.currentTimeMillis();
     }
 
-    public AjaxResult(int code, String msg, T data) {
+    public AjaxResult(Integer code, String msg, Object data) {
         this.code = code;
         this.msg = msg;
         this.data = data;
+        this.timestamp = System.currentTimeMillis();
     }
 
     /**
-     * 成功响应
+     * 操作成功
      */
-    public static <T> AjaxResult<T> success() {
-        return success(null);
+    public static AjaxResult success() {
+        return new AjaxResult(200, "操作成功");
     }
 
     /**
-     * 成功响应
+     * 操作成功
      */
-    public static <T> AjaxResult<T> success(T data) {
-        return new AjaxResult<>(200, "操作成功", data);
+    public static AjaxResult success(String msg) {
+        return new AjaxResult(200, msg);
     }
 
     /**
-     * 成功响应
+     * 操作成功
      */
-    public static <T> AjaxResult<T> success(String msg, T data) {
-        return new AjaxResult<>(200, msg, data);
+    public static AjaxResult success(Object data) {
+        return new AjaxResult(200, "操作成功", data);
     }
 
     /**
-     * 失败响应
+     * 操作成功
      */
-    public static <T> AjaxResult<T> error() {
-        return error("操作失败");
+    public static AjaxResult success(String msg, Object data) {
+        return new AjaxResult(200, msg, data);
     }
 
     /**
-     * 失败响应
+     * 操作失败
      */
-    public static <T> AjaxResult<T> error(String msg) {
-        return error(500, msg);
+    public static AjaxResult error() {
+        return new AjaxResult(500, "操作失败");
     }
 
     /**
-     * 失败响应
+     * 操作失败
      */
-    public static <T> AjaxResult<T> error(int code, String msg) {
-        return new AjaxResult<>(code, msg, null);
+    public static AjaxResult error(String msg) {
+        return new AjaxResult(500, msg);
     }
 
     /**
-     * 构建响应
+     * 操作失败
      */
-    public static <T> AjaxResult<T> build(int code, String msg, T data) {
-        return new AjaxResult<>(code, msg, data);
+    public static AjaxResult error(Integer code, String msg) {
+        return new AjaxResult(code, msg);
+    }
+
+    /**
+     * 参数验证失败
+     */
+    public static AjaxResult error(Integer code, String msg, Object data) {
+        return new AjaxResult(code, msg, data);
     }
 
     /**

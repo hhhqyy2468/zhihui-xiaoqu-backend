@@ -159,15 +159,171 @@
 }
 ```
 
+**响应数据：**
+```json
+{
+  "code": 200,
+  "msg": "刷新成功",
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",  // 新JWT令牌
+    "refreshToken": "new_refresh_token_string",          // 新刷新令牌
+    "expiresIn": 7200  // 过期时间（秒）
+  }
+}
+```
+
 ### 1.3 用户登出
 **接口地址：** `POST /api/v1/auth/logout`
-**接口描述：** 用户登出
+**接口描述：** 用户登出，将token加入黑名单
 **是否认证：** 是
+
+**请求头：**
+```
+Authorization: Bearer {token}
+```
+
+**响应数据：**
+```json
+{
+  "code": 200,
+  "msg": "登出成功",
+  "data": null
+}
+```
 
 ### 1.4 获取当前用户信息
 **接口地址：** `GET /api/v1/auth/info`
 **接口描述：** 获取当前登录用户信息
 **是否认证：** 是
+
+**请求头：**
+```
+Authorization: Bearer {token}
+```
+
+**响应数据：**
+```json
+{
+  "code": 200,
+  "msg": "查询成功",
+  "data": {
+    "userId": 1,
+    "username": "admin",
+    "realName": "系统管理员",
+    "phone": "13800138000",
+    "email": "admin@example.com",
+    "userType": 1,  // 1:管理员 2:物业管理员 3:业主 4:维修人员
+    "avatar": "http://example.com/avatar.jpg",
+    "dept": {
+      "deptId": 1,
+      "deptName": "物业总公司"
+    },
+    "roles": ["admin"],
+    "permissions": ["system:user:view", "system:user:add"],
+    "lastLoginTime": "2025-01-09 10:00:00",
+    "lastLoginIp": "192.168.1.100",
+    "createTime": "2025-01-01 09:00:00"
+  }
+}
+```
+
+### 1.5 修改密码
+**接口地址：** `PUT /api/v1/auth/password`
+**接口描述：** 修改当前用户密码
+**是否认证：** 是
+
+**请求参数：**
+```json
+{
+  "oldPassword": "string",     // 原密码，必填
+  "newPassword": "string",     // 新密码，必填，长度6-20
+  "confirmPassword": "string"  // 确认新密码，必填
+}
+```
+
+**响应数据：**
+```json
+{
+  "code": 200,
+  "msg": "密码修改成功",
+  "data": null
+}
+```
+
+### 1.6 修改个人信息
+**接口地址：** `PUT /api/v1/auth/profile`
+**接口描述：** 修改当前用户个人信息
+**是否认证：** 是
+
+**请求参数：**
+```json
+{
+  "realName": "string",    // 真实姓名，选填，长度2-20
+  "phone": "string",       // 手机号，选填，11位数字
+  "email": "string",       // 邮箱，选填
+  "avatar": "string",      // 头像URL，选填
+  "remark": "string"       // 备注，选填，长度0-500
+}
+```
+
+**响应数据：**
+```json
+{
+  "code": 200,
+  "msg": "信息修改成功",
+  "data": {
+    "userId": 1,
+    "username": "admin",
+    "realName": "系统管理员",
+    "phone": "13800138000",
+    "email": "admin@example.com",
+    "avatar": "http://example.com/avatar.jpg",
+    "updateTime": "2025-01-09 10:30:00"
+  }
+}
+```
+
+### 1.7 获取验证码
+**接口地址：** `GET /api/v1/auth/captcha`
+**接口描述：** 获取登录验证码图片
+**是否认证：** 否
+
+**响应数据：**
+```json
+{
+  "code": 200,
+  "msg": "获取成功",
+  "data": {
+    "captchaId": "captcha_20250109_001",
+    "captchaImage": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...",  // Base64图片
+    "expireTime": 300  // 验证码过期时间（秒）
+  }
+}
+```
+
+### 1.8 验证token有效性
+**接口地址：** `GET /api/v1/auth/verify`
+**接口描述：** 验证token是否有效
+**是否认证：** 是
+
+**请求头：**
+```
+Authorization: Bearer {token}
+```
+
+**响应数据：**
+```json
+{
+  "code": 200,
+  "msg": "Token有效",
+  "data": {
+    "valid": true,
+    "userId": 1,
+    "username": "admin",
+    "expireTime": 1704797999000  // 过期时间戳
+  }
+}
+```
 
 ---
 

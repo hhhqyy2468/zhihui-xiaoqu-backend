@@ -1,39 +1,48 @@
 package com.hyu.framework.security.config;
 
 import com.hyu.framework.security.filter.JwtAuthenticationTokenFilter;
+import com.hyu.framework.security.handle.AuthenticationEntryPointImpl;
+import com.hyu.framework.security.handle.AccessDeniedHandlerImpl;
+import com.hyu.framework.security.service.UserDetailsServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import java.util.Arrays;
 
 /**
  * Spring Security配置
+ *
+ * @author hyu
  */
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity(prePostEnabled = true)
-public class SecurityConfig {
+@EnableGlobalMethodSecurity(prePostEnabled = true)
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+    @Autowired
+    private UserDetailsServiceImpl userDetailsService;
+
+    @Autowired
+    private AuthenticationEntryPointImpl unauthorizedHandler;
+
+    @Autowired
+    private AccessDeniedHandlerImpl accessDeniedHandler;
 
     @Autowired
     private JwtAuthenticationTokenFilter jwtAuthenticationTokenFilter;
 
     /**
-     * 密码加密器
+     * 密码编码器
      */
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -43,60 +52,66 @@ public class SecurityConfig {
     /**
      * 认证管理器
      */
+    @Override
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
-        return authenticationConfiguration.getAuthenticationManager();
+    public AuthenticationManager authenticationManagerBean() throws Exception {
+        return super.authenticationManagerBean();
     }
 
     /**
-     * 安全过滤器链
+     * 认证提供者
      */
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public DaoAuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+        authProvider.setUserDetailsService(userDetailsService);
+        authProvider.setPasswordEncoder(passwordEncoder());
+        return authProvider;
+    }
+
+    /**
+     * 配置HTTP安全
+     */
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
         http
             // 禁用CSRF
-            .csrf(csrf -> csrf.disable())
+            .csrf().disable()
+            // 启用CORS
+            .cors().and()
             // 基于token，不需要session
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            // 授权请求
-            .authorizeHttpRequests(authz -> authz
-                // 允许对于网站静态资源的无授权访问
-                .requestMatchers(
-                    "/",
+            .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS).and()
+            // 请求权限配置
+            .authorizeRequests()
+                // 允许访问的端点
+                .antMatchers(
+                    "/api/v1/auth/login",
+                    "/api/v1/auth/register",
+                    "/api/v1/auth/captcha",
+                    "/api/v1/auth/refresh",
+                    "/doc.html",
                     "/webjars/**",
                     "/swagger-resources/**",
-                    "/v3/api-docs/**",
-                    "/doc.html",
-                    "/favicon.ico"
+                    "/v2/api-docs",
+                    "/swagger-ui/**"
                 ).permitAll()
-                // 允许登录接口的匿名访问
-                .requestMatchers("/auth/login").permitAll()
-                // 允许获取验证码的匿名访问
-                .requestMatchers("/auth/captchaImage").permitAll()
-                // 静态资源
-                .requestMatchers(HttpMethod.GET, "/", "/*.html", "/*/*.html", "/*/*.css", "/*/*.js").permitAll()
                 // 除上面外的所有请求全部需要鉴权认证
                 .anyRequest().authenticated()
-            )
-            // 添加JWT filter
-            .addFilterBefore(jwtAuthenticationTokenFilter, UsernamePasswordAuthenticationFilter.class);
+            .and()
+            // 异常处理
+            .exceptionHandling()
+                .authenticationEntryPoint(unauthorizedHandler)
+                .accessDeniedHandler(accessDeniedHandler);
 
-        return http.build();
+        // 添加JWT过滤器
+        http.addFilterBefore(jwtAuthenticationTokenFilter, UsernamePasswordAuthenticationFilter.class);
     }
 
     /**
-     * 跨域配置
+     * 配置认证管理器
      */
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("*"));
-        configuration.setAllowCredentials(true);
-        
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
+    @Override
+    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+        auth.authenticationProvider(authenticationProvider());
     }
 }
