@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hyu.property.mapper.NoticeMapper">
+
+    <resultMap type="NoticeVO" id="NoticeResult">
+        <result property="id" column="id"/>
+        <result property="noticeTitle" column="notice_title"/>
+        <result property="noticeType" column="notice_type"/>
+        <result property="noticeContent" column="notice_content"/>
+        <result property="attachmentUrls" column="attachment_urls"/>
+        <result property="isTop" column="is_top"/>
+        <result property="publishScope" column="publish_scope"/>
+        <result property="targetBuildingIds" column="target_building_ids"/>
+        <result property="targetUnitIds" column="target_unit_ids"/>
+        <result property="effectiveStartTime" column="effective_start_time"/>
+        <result property="effectiveEndTime" column="effective_end_time"/>
+        <result property="noticeStatus" column="notice_status"/>
+        <result property="publisherId" column="publisher_id"/>
+        <result property="publisherName" column="publisher_name"/>
+        <result property="readCount" column="read_count"/>
+        <result property="publishTime" column="publish_time"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <sql id="selectNoticeVo">
+        select id, notice_title, notice_type, notice_content, attachment_urls, is_top,
+               publish_scope, target_building_ids, target_unit_ids, effective_start_time,
+               effective_end_time, notice_status, publisher_id, publisher_name, read_count,
+               publish_time, create_by, create_time, update_by, update_time
+        from notice
+    </sql>
+
+    <select id="selectNoticeList" parameterType="Notice" resultMap="NoticeResult">
+        <include refid="selectNoticeVo"/>
+        <where>
+            deleted = 0
+            <if test="noticeTitle != null and noticeTitle != ''">
+                and notice_title like concat('%', #{noticeTitle}, '%')
+            </if>
+            <if test="noticeType != null and noticeType != ''">
+                and notice_type = #{noticeType}
+            </if>
+            <if test="noticeStatus != null">
+                and notice_status = #{noticeStatus}
+            </if>
+            <if test="isTop != null">
+                and is_top = #{isTop}
+            </if>
+            <if test="publishScope != null">
+                and publish_scope = #{publishScope}
+            </if>
+            <if test="publisherId != null">
+                and publisher_id = #{publisherId}
+            </if>
+            <if test="params.beginTime != null and params.beginTime != ''">
+                and date_format(publish_time,'%y%m%d') &gt;= date_format(#{params.beginTime},'%y%m%d')
+            </if>
+            <if test="params.endTime != null and params.endTime != ''">
+                and date_format(publish_time,'%y%m%d') &lt;= date_format(#{params.endTime},'%y%m%d')
+            </if>
+        </where>
+        order by is_top desc, publish_time desc
+    </select>
+
+    <select id="selectNoticeById" parameterType="Long" resultMap="NoticeResult">
+        <include refid="selectNoticeVo"/>
+        where id = #{id} and deleted = 0
+    </select>
+
+    <select id="selectTopNoticeList" resultMap="NoticeResult">
+        <include refid="selectNoticeVo"/>
+        where deleted = 0 and is_top = 1 and notice_status = 1
+        order by publish_time desc
+    </select>
+
+    <select id="selectNoticeListForUser" resultMap="NoticeResult">
+        <include refid="selectNoticeVo"/>
+        where deleted = 0 and notice_status = 1
+        and (publish_scope = 1
+             or (publish_scope = 2 and find_in_set(#{buildingId}, target_building_ids))
+             or (publish_scope = 3 and find_in_set(#{unitId}, target_unit_ids)))
+        and (effective_start_time is null or effective_start_time &lt;= now())
+        and (effective_end_time is null or effective_end_time &gt;= now())
+        order by is_top desc, publish_time desc
+    </select>
+
+    <select id="selectExpiredNotices" resultType="Notice">
+        select id from notice
+        where notice_status = 1 and effective_end_time is not null and effective_end_time &lt; now()
+    </select>
+
+    <select id="selectNoticeTypeStats" resultType="NoticeVO">
+        select notice_type as noticeTypeName, count(*) as noticeCount
+        from notice
+        where deleted = 0
+        group by notice_type
+        order by noticeCount desc
+    </select>
+
+    <select id="selectTopReadNotices" resultType="NoticeVO">
+        select id, notice_title, read_count
+        from notice
+        where deleted = 0 and notice_status = 1
+        order by read_count desc
+        <if test="limit != null">
+            limit #{limit}
+        </if>
+    </select>
+
+    <select id="countTopNotices" resultType="Integer">
+        select count(*) from notice
+        where deleted = 0 and is_top = 1 and notice_status = 1
+    </select>
+
+    <update id="incrementReadCount">
+        update notice set read_count = read_count + 1, update_time = now()
+        where id = #{id}
+    </update>
+
+    <update id="updateNoticeStatus">
+        update notice set notice_status = #{noticeStatus}, update_time = now()
+        where id = #{id}
+    </update>
+
+    <update id="updateTopStatus">
+        update notice set is_top = #{isTop}, update_time = now()
+        where id = #{id}
+    </update>
+
+    <update id="batchUpdateToExpired">
+        update notice set notice_status = 2, update_time = now()
+        where id in
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
+
+</mapper>
