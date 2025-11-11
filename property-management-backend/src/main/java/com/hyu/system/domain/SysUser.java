@@ -106,7 +106,15 @@ public class SysUser {
     @TableField(exist = false)
     private List<String> permissions;
 
-    /** 部门名称 */
+    /** 角色ID数组 */
     @TableField(exist = false)
-    private String deptName;
+    private Long[] roleIds;
+
+    /** 创建时间开始范围（查询用） */
+    @TableField(exist = false)
+    private String beginTime;
+
+    /** 创建时间结束范围（查询用） */
+    @TableField(exist = false)
+    private String endTime;
 }
