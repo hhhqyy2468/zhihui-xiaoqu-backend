@@ -3,7 +3,7 @@ import request from '@/utils/request'
 // 登录
 export function login(data) {
   return request({
-    url: '/auth/login',
+    url: '/api/v1/auth/login',
     method: 'post',
     data
   })
@@ -12,7 +12,7 @@ export function login(data) {
 // 登出
 export function logout() {
   return request({
-    url: '/auth/logout',
+    url: '/api/v1/auth/logout',
     method: 'post'
   })
 }
@@ -20,7 +20,7 @@ export function logout() {
 // 获取用户信息
 export function getUserInfo() {
   return request({
-    url: '/auth/userInfo',
+    url: '/api/v1/auth/info',
     method: 'get'
   })
 }
@@ -28,7 +28,7 @@ export function getUserInfo() {
 // 刷新token
 export function refreshToken() {
   return request({
-    url: '/auth/refresh',
+    url: '/api/v1/auth/refresh',
     method: 'post'
   })
 }

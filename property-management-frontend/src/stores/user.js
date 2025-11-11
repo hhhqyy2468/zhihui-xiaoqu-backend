@@ -1,309 +1,192 @@
+/**
+ * 简化的用户状态管理
+ * 移除复杂的权限系统，专注于基础功能
+ */
+
 import { defineStore } from 'pinia'
-import { login, logout, getUserInfo } from '@/api/auth'
-import { PERMISSIONS, ROLES, USER_TYPES } from '@/utils/permission'
+import api from '../api/modules'
 
 export const useUserStore = defineStore('user', {
   state: () => ({
     token: localStorage.getItem('token') || '',
     userInfo: JSON.parse(localStorage.getItem('userInfo') || '{}'),
-    permissions: [],
-    roles: []
+    permissions: JSON.parse(localStorage.getItem('permissions') || '[]'),
+    roles: JSON.parse(localStorage.getItem('roles') || '[]')
   }),
 
   getters: {
-    isLogin: (state) => !!state.token,
+    isLoggedIn: (state) => !!state.token,
+    realName: (state) => state.userInfo.realName || '用户',
+    userType: (state) => state.userInfo.userType || 1,
     username: (state) => state.userInfo.username || '',
-    realName: (state) => state.userInfo.realName || '',
-    userType: (state) => state.userInfo.userType || '',
-    avatar: (state) => state.userInfo.avatar || '',
+    userId: (state) => state.userInfo.userId || state.userInfo.id || null,
+    permissions: (state) => state.permissions,
+    roles: (state) => state.roles,
     hasPermission: (state) => (permission) => {
-      return state.permissions.includes(permission)
-    },
-    hasRole: (state) => (role) => {
-      return state.roles.includes(role)
+      if (!permission) return true
+      if (typeof permission === 'string') {
+        return state.permissions.includes(permission)
+      }
+      if (Array.isArray(permission)) {
+        return permission.some(p => state.permissions.includes(p))
+      }
+      return false
     }
   },
 
   actions: {
-    // 登录
-    async login(loginForm) {
+    // 简化的登录
+    async login(credentials) {
       try {
-        // 开发环境下使用模拟登录
-        if (import.meta.env.DEV) {
-          return this.mockLogin(loginForm)
+        // 构造后端期望的登录数据格式
+        const loginData = {
+          '@class': 'com.hyu.common.domain.LoginBody',
+          username: credentials.username,
+          password: credentials.password
         }
 
-        const response = await login(loginForm)
+        const response = await api.auth.login(loginData)
         const { token } = response.data
 
         this.token = token
         localStorage.setItem('token', token)
 
         // 获取用户信息
-        await this.getUserInfo()
+        await this.fetchUserInfo()
 
-        return response
+        return { success: true }
       } catch (error) {
-        // 如果API调用失败，尝试使用模拟登录
-        if (import.meta.env.DEV) {
-          return this.mockLogin(loginForm)
-        }
+        console.error('登录失败:', error)
         throw error
       }
     },
 
-    // 模拟登录（开发环境）
-    mockLogin(loginForm) {
-      return new Promise((resolve, reject) => {
-        // 模拟API延迟
-        setTimeout(() => {
-          // 简单的用户验证逻辑
-          const mockUsers = {
-            'admin': {
-              id: 1,
-              username: 'admin',
-              password: '123456',
-              realName: '系统管理员',
-              userType: USER_TYPES.ADMIN,
-              avatar: '',
-              phone: '13800138000',
-              email: 'admin@example.com'
-            },
-            'manager': {
-              id: 2,
-              username: 'manager',
-              password: '123456',
-              realName: '物业经理',
-              userType: USER_TYPES.MANAGER,
-              avatar: '',
-              phone: '13800138001',
-              email: 'manager@example.com'
-            },
-            'owner': {
-              id: 3,
-              username: 'owner',
-              password: '123456',
-              realName: '张三',
-              userType: USER_TYPES.OWNER,
-              avatar: '',
-              phone: '13800138002',
-              email: 'owner@example.com'
-            },
-            'worker': {
-              id: 4,
-              username: 'worker',
-              password: '123456',
-              realName: '维修师傅',
-              userType: USER_TYPES.WORKER,
-              avatar: '',
-              phone: '13800138003',
-              email: 'worker@example.com'
-            }
-          }
+    // 模拟登录（用于测试）
+    mockLogin(username, password = '123456') {
+      console.log('尝试登录:', username, password)
 
-          const user = mockUsers[loginForm.username]
+      const mockUsers = {
+        admin: {
+          id: 1,
+          username: 'admin',
+          realName: '系统管理员',
+          userType: 1, // 管理员
+          phone: '13800138000'
+        },
+        manager: {
+          id: 2,
+          username: 'manager',
+          realName: '物业经理',
+          userType: 2, // 物业管理员
+          phone: '13800138001'
+        },
+        owner: {
+          id: 3,
+          username: 'owner',
+          realName: '张三',
+          userType: 3, // 业主
+          phone: '13800138002'
+        },
+        worker: {
+          id: 4,
+          username: 'worker',
+          realName: '维修师傅',
+          userType: 4, // 维修人员
+          phone: '13800138003'
+        },
+        // 支持真实数据库用户 worker_a
+        worker_a: {
+          id: 5,
+          username: 'worker_a',
+          realName: '维修工A',
+          userType: 4, // 维修人员
+          phone: '13800138005'
+        }
+      }
 
-          if (!user || user.password !== loginForm.password) {
-            reject(new Error('用户名或密码错误'))
-            return
-          }
+      const user = mockUsers[username]
+      console.log('找到用户:', user)
 
-          // 生成模拟token
-          const token = `mock_token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      if (!user) {
+        console.error('用户不存在:', username)
+        throw new Error('用户不存在，请使用: admin, manager, owner, worker, worker_a')
+      }
 
-          // 根据用户类型设置权限和角色
-          let permissions = []
-          let roles = []
+      // 简化密码验证，只要密码不是空就通过
+      if (!password || password.trim() === '') {
+        throw new Error('密码不能为空')
+      }
 
-          switch (user.userType) {
-            case USER_TYPES.ADMIN:
-              roles = [ROLES.ADMIN]
-              permissions = Object.values(PERMISSIONS) // 管理员拥有所有权限
-              break
-            case USER_TYPES.MANAGER:
-              roles = [ROLES.PROPERTY_MANAGER]
-              permissions = [
-                // 物业管理相关权限
-                PERMISSIONS.PROPERTY_BUILDING_VIEW,
-                PERMISSIONS.PROPERTY_BUILDING_ADD,
-                PERMISSIONS.PROPERTY_BUILDING_EDIT,
-                PERMISSIONS.PROPERTY_BUILDING_DELETE,
-                PERMISSIONS.PROPERTY_UNIT_VIEW,
-                PERMISSIONS.PROPERTY_UNIT_ADD,
-                PERMISSIONS.PROPERTY_UNIT_EDIT,
-                PERMISSIONS.PROPERTY_UNIT_DELETE,
-                PERMISSIONS.PROPERTY_HOUSE_VIEW,
-                PERMISSIONS.PROPERTY_HOUSE_ADD,
-                PERMISSIONS.PROPERTY_HOUSE_EDIT,
-                PERMISSIONS.PROPERTY_HOUSE_DELETE,
-                PERMISSIONS.PROPERTY_RESIDENT_VIEW,
-                PERMISSIONS.PROPERTY_RESIDENT_ADD,
-                PERMISSIONS.PROPERTY_RESIDENT_EDIT,
-                PERMISSIONS.PROPERTY_RESIDENT_DELETE,
-                PERMISSIONS.PROPERTY_FEE_TYPE_VIEW,
-                PERMISSIONS.PROPERTY_FEE_TYPE_ADD,
-                PERMISSIONS.PROPERTY_FEE_TYPE_EDIT,
-                PERMISSIONS.PROPERTY_FEE_TYPE_DELETE,
-                PERMISSIONS.PROPERTY_BILL_VIEW,
-                PERMISSIONS.PROPERTY_BILL_ADD,
-                PERMISSIONS.PROPERTY_BILL_EDIT,
-                PERMISSIONS.PROPERTY_BILL_DELETE,
-                PERMISSIONS.PROPERTY_BILL_GENERATE,
-                PERMISSIONS.PROPERTY_WALLET_VIEW,
-                PERMISSIONS.PROPERTY_WALLET_FREEZE,
-                PERMISSIONS.PROPERTY_WALLET_RESET_PASSWORD,
-                PERMISSIONS.PROPERTY_COMPLAINT_VIEW,
-                PERMISSIONS.PROPERTY_COMPLAINT_ADD,
-                PERMISSIONS.PROPERTY_COMPLAINT_EDIT,
-                PERMISSIONS.PROPERTY_COMPLAINT_DELETE,
-                PERMISSIONS.PROPERTY_COMPLAINT_ASSIGN,
-                PERMISSIONS.PROPERTY_COMPLAINT_HANDLE,
-                PERMISSIONS.PROPERTY_REPAIR_VIEW,
-                PERMISSIONS.PROPERTY_REPAIR_ADD,
-                PERMISSIONS.PROPERTY_REPAIR_EDIT,
-                PERMISSIONS.PROPERTY_REPAIR_DELETE,
-                PERMISSIONS.PROPERTY_REPAIR_ASSIGN,
-                PERMISSIONS.PROPERTY_PARKING_VIEW,
-                PERMISSIONS.PROPERTY_PARKING_ADD,
-                PERMISSIONS.PROPERTY_PARKING_EDIT,
-                PERMISSIONS.PROPERTY_PARKING_DELETE,
-                PERMISSIONS.PROPERTY_PARKING_AUDIT,
-                PERMISSIONS.PROPERTY_NOTICE_VIEW,
-                PERMISSIONS.PROPERTY_NOTICE_ADD,
-                PERMISSIONS.PROPERTY_NOTICE_EDIT,
-                PERMISSIONS.PROPERTY_NOTICE_DELETE,
-                PERMISSIONS.PROPERTY_NOTICE_PUBLISH,
-                // 数据分析权限
-                PERMISSIONS.ANALYTICS_DASHBOARD_VIEW,
-                PERMISSIONS.ANALYTICS_REPORT_VIEW,
-                PERMISSIONS.ANALYTICS_REPORT_GENERATE,
-                // 消息通知权限
-                PERMISSIONS.NOTIFICATION_CENTER_VIEW,
-                PERMISSIONS.NOTIFICATION_CENTER_SEND,
-                PERMISSIONS.NOTIFICATION_TEMPLATE_VIEW,
-                PERMISSIONS.NOTIFICATION_TEMPLATE_ADD,
-                PERMISSIONS.NOTIFICATION_TEMPLATE_EDIT,
-                PERMISSIONS.NOTIFICATION_TEMPLATE_DELETE,
-                PERMISSIONS.NOTIFICATION_SETTINGS_VIEW,
-                PERMISSIONS.NOTIFICATION_SETTINGS_EDIT,
-                // 业主门户查看权限（管理员可以查看业主门户）
-                PERMISSIONS.PORTAL_VIEW,
-                PERMISSIONS.PORTAL_DASHBOARD_VIEW,
-                PERMISSIONS.PORTAL_BILL_VIEW,
-                // 系统配置权限
-                PERMISSIONS.SYSTEM_CONFIG_VIEW,
-                PERMISSIONS.SYSTEM_CONFIG_EDIT,
-                PERMISSIONS.SYSTEM_CONFIG_BACKUP,
-                PERMISSIONS.SYSTEM_CONFIG_RESTORE,
-                // 字典管理权限
-                PERMISSIONS.SYSTEM_DICT_VIEW,
-                PERMISSIONS.SYSTEM_DICT_ADD,
-                PERMISSIONS.SYSTEM_DICT_EDIT,
-                PERMISSIONS.SYSTEM_DICT_DELETE,
-                PERMISSIONS.SYSTEM_DICT_REFRESH,
-                // 系统日志权限
-                PERMISSIONS.SYSTEM_LOG_VIEW,
-                PERMISSIONS.SYSTEM_LOG_EXPORT,
-                PERMISSIONS.SYSTEM_LOG_CLEAR,
-                // 业主管理权限
-                PERMISSIONS.PROPERTY_OWNER_VIEW,
-                PERMISSIONS.PROPERTY_OWNER_ADD,
-                PERMISSIONS.PROPERTY_OWNER_EDIT,
-                PERMISSIONS.PROPERTY_OWNER_DELETE,
-                PERMISSIONS.PROPERTY_OWNER_IMPORT,
-                PERMISSIONS.PROPERTY_OWNER_EXPORT
-              ]
-              break
-            case USER_TYPES.OWNER:
-              roles = [ROLES.OWNER]
-              permissions = [
-                // 业主门户权限
-                PERMISSIONS.PORTAL_VIEW,
-                PERMISSIONS.PORTAL_DASHBOARD_VIEW,
-                PERMISSIONS.PORTAL_BILL_VIEW,
-                PERMISSIONS.PORTAL_BILL_PAY,
-                PERMISSIONS.PORTAL_PROFILE_VIEW,
-                PERMISSIONS.PORTAL_PROFILE_EDIT,
-                PERMISSIONS.PORTAL_SERVICE_APPLY,
-                // 财务相关权限
-                PERMISSIONS.PROPERTY_BILL_VIEW,
-                PERMISSIONS.PROPERTY_BILL_PAY,
-                PERMISSIONS.PROPERTY_WALLET_VIEW,
-                PERMISSIONS.PROPERTY_WALLET_RECHARGE,
-                // 服务相关权限
-                PERMISSIONS.PROPERTY_COMPLAINT_ADD,
-                PERMISSIONS.PROPERTY_COMPLAINT_RATE,
-                PERMISSIONS.PROPERTY_REPAIR_ADD,
-                PERMISSIONS.PROPERTY_REPAIR_ACCEPT,
-                // 信息查看权限
-                PERMISSIONS.PROPERTY_NOTICE_VIEW
-              ]
-              break
-            case USER_TYPES.WORKER:
-              roles = [ROLES.WORKER]
-              permissions = [
-                PERMISSIONS.PROPERTY_REPAIR_VIEW,
-                PERMISSIONS.PROPERTY_REPAIR_HANDLE,
-                PERMISSIONS.PROPERTY_NOTICE_VIEW
-              ]
-              break
-          }
+      const token = `mock_token_${Date.now()}`
 
-          // 设置用户信息
-          this.token = token
-          this.userInfo = { ...user }
-          this.permissions = permissions
-          this.roles = roles
+      this.token = token
+      this.userInfo = user
 
-          // 保存到localStorage
-          localStorage.setItem('token', token)
-          localStorage.setItem('userInfo', JSON.stringify(user))
+      localStorage.setItem('token', token)
+      localStorage.setItem('userInfo', JSON.stringify(user))
 
-          resolve({
-            data: { token },
-            msg: '登录成功'
-          })
-        }, 500)
-      })
+      console.log('登录成功:', user.realName)
+      return { success: true }
     },
 
-    // 获取用户信息
-    async getUserInfo() {
+    // 获取用户信息和权限
+    async fetchUserInfo() {
       try {
-        // 开发环境下如果token是mock token，返回缓存的用户信息
-        if (import.meta.env.DEV && this.token.startsWith('mock_token_')) {
-          const cachedUser = JSON.parse(localStorage.getItem('userInfo') || '{}')
-          return {
-            data: {
-              user: cachedUser,
-              permissions: this.permissions,
-              roles: this.roles
-            }
+        // 先获取基本信息
+        const userResponse = await api.auth.getUserInfo()
+        this.userInfo = userResponse.data
+        localStorage.setItem('userInfo', JSON.stringify(userResponse.data))
+
+        // 再获取权限信息
+        await this.fetchPermissions()
+      } catch (error) {
+        console.error('获取用户信息失败:', error)
+        // 如果获取失败，尝试使用缓存的信息
+        const cached = localStorage.getItem('userInfo')
+        if (cached) {
+          this.userInfo = JSON.parse(cached)
+        }
+        const cachedPermissions = localStorage.getItem('permissions')
+        if (cachedPermissions) {
+          this.permissions = JSON.parse(cachedPermissions)
+        }
+      }
+    },
+
+    // 获取权限信息
+    async fetchPermissions() {
+      try {
+        // 调用权限测试接口获取权限
+        const response = await fetch('/test/permission/current', {
+          headers: {
+            'Authorization': `Bearer ${this.token}`
+          }
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          if (data.success && data.data) {
+            this.permissions = data.data.permissions || []
+            this.roles = data.data.roles || []
+            localStorage.setItem('permissions', JSON.stringify(this.permissions))
+            localStorage.setItem('roles', JSON.stringify(this.roles))
+            console.log('获取权限成功:', this.permissions)
           }
         }
-
-        const response = await getUserInfo()
-        const { user, permissions, roles } = response.data
-
-        this.userInfo = user
-        this.permissions = permissions || []
-        this.roles = roles || []
-
-        localStorage.setItem('userInfo', JSON.stringify(user))
-
-        return response
       } catch (error) {
-        this.logout()
-        throw error
+        console.error('获取权限信息失败:', error)
+        // 如果获取失败，尝试使用缓存
+        const cachedPermissions = localStorage.getItem('permissions')
+        if (cachedPermissions) {
+          this.permissions = JSON.parse(cachedPermissions)
+        }
       }
     },
 
     // 登出
     async logout() {
       try {
-        if (!this.token.startsWith('mock_token_')) {
-          await logout()
-        }
+        await api.auth.logout()
       } catch (error) {
         console.error('登出接口调用失败:', error)
       } finally {
@@ -311,169 +194,72 @@ export const useUserStore = defineStore('user', {
         this.userInfo = {}
         this.permissions = []
         this.roles = []
-
         localStorage.removeItem('token')
         localStorage.removeItem('userInfo')
+        localStorage.removeItem('permissions')
+        localStorage.removeItem('roles')
       }
     },
 
-    // 重置状态
-    resetState() {
-      this.token = ''
-      this.userInfo = {}
-      this.permissions = []
-      this.roles = []
-
-      localStorage.removeItem('token')
-      localStorage.removeItem('userInfo')
-    },
-
-    // 更新用户信息
-    updateUserInfo(userInfo) {
-      this.userInfo = { ...this.userInfo, ...userInfo }
-      localStorage.setItem('userInfo', JSON.stringify(this.userInfo))
-    },
-
-    // 初始化用户状态（页面刷新时调用）
-    initializeAuth() {
+    // 初始化用户状态（页面刷新时）
+    initUserState() {
       const token = localStorage.getItem('token')
-      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+      const userInfo = localStorage.getItem('userInfo')
+      const permissions = localStorage.getItem('permissions')
+      const roles = localStorage.getItem('roles')
 
-      if (token && userInfo.username) {
+      if (token && userInfo) {
         this.token = token
-        this.userInfo = userInfo
-
-        // 根据用户类型重新设置权限和角色
-        let permissions = []
-        let roles = []
-
-        switch (userInfo.userType) {
-          case USER_TYPES.ADMIN:
-            roles = [ROLES.ADMIN]
-            permissions = Object.values(PERMISSIONS) // 管理员拥有所有权限
-            break
-          case USER_TYPES.MANAGER:
-            roles = [ROLES.PROPERTY_MANAGER]
-            permissions = [
-              // 物业管理相关权限
-              PERMISSIONS.PROPERTY_BUILDING_VIEW,
-              PERMISSIONS.PROPERTY_BUILDING_ADD,
-              PERMISSIONS.PROPERTY_BUILDING_EDIT,
-              PERMISSIONS.PROPERTY_BUILDING_DELETE,
-              PERMISSIONS.PROPERTY_UNIT_VIEW,
-              PERMISSIONS.PROPERTY_UNIT_ADD,
-              PERMISSIONS.PROPERTY_UNIT_EDIT,
-              PERMISSIONS.PROPERTY_UNIT_DELETE,
-              PERMISSIONS.PROPERTY_HOUSE_VIEW,
-              PERMISSIONS.PROPERTY_HOUSE_ADD,
-              PERMISSIONS.PROPERTY_HOUSE_EDIT,
-              PERMISSIONS.PROPERTY_HOUSE_DELETE,
-              PERMISSIONS.PROPERTY_RESIDENT_VIEW,
-              PERMISSIONS.PROPERTY_RESIDENT_ADD,
-              PERMISSIONS.PROPERTY_RESIDENT_EDIT,
-              PERMISSIONS.PROPERTY_RESIDENT_DELETE,
-              PERMISSIONS.PROPERTY_FEE_TYPE_VIEW,
-              PERMISSIONS.PROPERTY_FEE_TYPE_ADD,
-              PERMISSIONS.PROPERTY_FEE_TYPE_EDIT,
-              PERMISSIONS.PROPERTY_FEE_TYPE_DELETE,
-              PERMISSIONS.PROPERTY_BILL_VIEW,
-              PERMISSIONS.PROPERTY_BILL_ADD,
-              PERMISSIONS.PROPERTY_BILL_EDIT,
-              PERMISSIONS.PROPERTY_BILL_DELETE,
-              PERMISSIONS.PROPERTY_BILL_GENERATE,
-              PERMISSIONS.PROPERTY_BILL_PAY,
-              PERMISSIONS.PROPERTY_WALLET_VIEW,
-              PERMISSIONS.PROPERTY_WALLET_RECHARGE,
-              PERMISSIONS.PROPERTY_WALLET_FREEZE,
-              PERMISSIONS.PROPERTY_WALLET_RESET_PASSWORD,
-              PERMISSIONS.PROPERTY_COMPLAINT_VIEW,
-              PERMISSIONS.PROPERTY_COMPLAINT_ADD,
-              PERMISSIONS.PROPERTY_COMPLAINT_EDIT,
-              PERMISSIONS.PROPERTY_COMPLAINT_DELETE,
-              PERMISSIONS.PROPERTY_COMPLAINT_ASSIGN,
-              PERMISSIONS.PROPERTY_COMPLAINT_HANDLE,
-              PERMISSIONS.PROPERTY_COMPLAINT_RATE,
-              PERMISSIONS.PROPERTY_REPAIR_VIEW,
-              PERMISSIONS.PROPERTY_REPAIR_ADD,
-              PERMISSIONS.PROPERTY_REPAIR_EDIT,
-              PERMISSIONS.PROPERTY_REPAIR_DELETE,
-              PERMISSIONS.PROPERTY_REPAIR_ASSIGN,
-              PERMISSIONS.PROPERTY_REPAIR_HANDLE,
-              PERMISSIONS.PROPERTY_REPAIR_ACCEPT,
-              PERMISSIONS.PROPERTY_PARKING_VIEW,
-              PERMISSIONS.PROPERTY_PARKING_ADD,
-              PERMISSIONS.PROPERTY_PARKING_EDIT,
-              PERMISSIONS.PROPERTY_PARKING_DELETE,
-              PERMISSIONS.PROPERTY_PARKING_RENT,
-              PERMISSIONS.PROPERTY_PARKING_AUDIT,
-              PERMISSIONS.PROPERTY_PARKING_RENEW,
-              PERMISSIONS.PROPERTY_PARKING_RETURN,
-              PERMISSIONS.PROPERTY_NOTICE_VIEW,
-              PERMISSIONS.PROPERTY_NOTICE_ADD,
-              PERMISSIONS.PROPERTY_NOTICE_EDIT,
-              PERMISSIONS.PROPERTY_NOTICE_DELETE,
-              PERMISSIONS.PROPERTY_NOTICE_PUBLISH,
-              PERMISSIONS.PROPERTY_NOTICE_WITHDRAW,
-              // 数据分析权限
-              PERMISSIONS.ANALYTICS_DASHBOARD_VIEW,
-              PERMISSIONS.ANALYTICS_DASHBOARD_EXPORT,
-              PERMISSIONS.ANALYTICS_REPORT_VIEW,
-              PERMISSIONS.ANALYTICS_REPORT_GENERATE,
-              PERMISSIONS.ANALYTICS_REPORT_DOWNLOAD,
-              PERMISSIONS.ANALYTICS_REPORT_SHARE,
-              PERMISSIONS.ANALYTICS_REPORT_DELETE,
-              PERMISSIONS.ANALYTICS_REPORT_TEMPLATE,
-              PERMISSIONS.ANALYTICS_REPORT_SCHEDULE,
-              // 消息通知权限
-              PERMISSIONS.NOTIFICATION_CENTER_VIEW,
-              PERMISSIONS.NOTIFICATION_CENTER_SEND,
-              PERMISSIONS.NOTIFICATION_CENTER_DELETE,
-              PERMISSIONS.NOTIFICATION_CENTER_BATCH,
-              PERMISSIONS.NOTIFICATION_TEMPLATE_VIEW,
-              PERMISSIONS.NOTIFICATION_TEMPLATE_ADD,
-              PERMISSIONS.NOTIFICATION_TEMPLATE_EDIT,
-              PERMISSIONS.NOTIFICATION_TEMPLATE_DELETE,
-              PERMISSIONS.NOTIFICATION_SETTINGS_VIEW,
-              PERMISSIONS.NOTIFICATION_SETTINGS_EDIT,
-              // 系统配置权限
-              PERMISSIONS.SYSTEM_CONFIG_VIEW,
-              PERMISSIONS.SYSTEM_CONFIG_EDIT,
-              PERMISSIONS.SYSTEM_CONFIG_BACKUP,
-              PERMISSIONS.SYSTEM_CONFIG_RESTORE
-            ]
-            break
-          case USER_TYPES.OWNER:
-            roles = [ROLES.OWNER]
-            permissions = [
-              // 业主门户权限
-              PERMISSIONS.PORTAL_VIEW,
-              PERMISSIONS.PORTAL_DASHBOARD_VIEW,
-              PERMISSIONS.PORTAL_BILL_VIEW,
-              PERMISSIONS.PORTAL_BILL_PAY,
-              PERMISSIONS.PORTAL_SERVICE_APPLY,
-              PERMISSIONS.PORTAL_PROFILE_VIEW,
-              PERMISSIONS.PORTAL_PROFILE_EDIT,
-              // 基础查看权限
-              PERMISSIONS.PROPERTY_NOTICE_VIEW,
-              PERMISSIONS.ANALYTICS_DASHBOARD_VIEW
-            ]
-            break
-          case USER_TYPES.WORKER:
-            roles = [ROLES.WORKER]
-            permissions = [
-              // 维修相关权限
-              PERMISSIONS.PROPERTY_REPAIR_VIEW,
-              PERMISSIONS.PROPERTY_REPAIR_HANDLE,
-              PERMISSIONS.PROPERTY_REPAIR_ACCEPT,
-              // 基础权限
-              PERMISSIONS.NOTIFICATION_CENTER_VIEW
-            ]
-            break
-        }
-
-        this.permissions = permissions
-        this.roles = roles
+        this.userInfo = JSON.parse(userInfo)
+        this.permissions = permissions ? JSON.parse(permissions) : []
+        this.roles = roles ? JSON.parse(roles) : []
       }
+    },
+
+    // 检查权限（简化版本）
+    hasMenuAccess(menuPath) {
+      const { userType } = this
+
+      // 菜单权限映射
+      const menuPermissions = {
+        // 系统管理 - 仅管理员
+        '/system': [1],
+        // 物业管理 - 管理员和物业管理员
+        '/property': [1, 2],
+        '/property/building': [1, 2],
+        '/property/unit': [1, 2],
+        '/property/house': [1, 2],
+        '/property/owner': [1, 2],
+        // 财务管理 - 管理员和物业管理员
+        '/finance': [1, 2],
+        '/finance/feetype': [1, 2],
+        '/finance/bill': [1, 2],
+        '/finance/wallet': [1, 2],
+        // 服务管理 - 管理员和物业管理员
+        '/service': [1, 2],
+        '/service/complaint': [1, 2],
+        '/service/repair': [1, 2],
+        // 停车管理 - 管理员和物业管理员
+        '/parking': [1, 2],
+        '/parking/space': [1, 2],
+        '/parking/rental': [1, 2],
+        // 公告管理 - 管理员和物业管理员
+        '/notice': [1, 2],
+        '/notice/publish': [1, 2],
+        // 系统日志 - 仅管理员
+        '/log': [1],
+        // 业主门户 - 仅业主
+        '/portal': [3],
+        // 我的工作 - 仅维修人员
+        '/work': [4],
+        // 社区公告 - 维修人员可见
+        '/community-notice': [4],
+        // 工作台 - 所有角色
+        '/dashboard': [1, 2, 3, 4]
+      }
+
+      const allowedTypes = menuPermissions[menuPath]
+      return allowedTypes ? allowedTypes.includes(userType) : false
     }
   }
 })
