@@ -25,7 +25,8 @@
       "Bash(find:*)",
       "Bash(mvn:*)",
       "Bash(start-dev.bat)",
-      "Bash(cmd.exe:*)"
+      "Bash(cmd.exe:*)",
+      "Bash(dir:*)"
     ],
     "deny": [],
     "ask": []
