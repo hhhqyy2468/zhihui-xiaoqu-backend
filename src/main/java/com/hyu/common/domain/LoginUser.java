@@ -103,6 +103,11 @@ public class LoginUser implements UserDetails {
      */
     private Set<String> roles;
 
+    /**
+     * 用户唯一标识
+     */
+    private String userKey;
+
     public LoginUser(SysUser user, Set<String> permissions) {
         this.userId = user.getUserId();
         this.username = user.getUsername();
@@ -113,7 +118,7 @@ public class LoginUser implements UserDetails {
         this.userType = user.getUserType();
         this.avatar = user.getAvatar();
         this.deptId = user.getDeptId();
-        this.deptName = user.getDeptName();
+        // this.deptName = user.getDeptName(); // 项目不需要部门管理，注释掉
         this.status = user.getStatus();
         this.permissions = permissions;
     }

@@ -30,4 +30,8 @@ public class PageResult<T> {
     public static <T> PageResult<T> build(List<T> rows, Long total) {
         return new PageResult<>(rows, total);
     }
+
+    public static <T> PageResult<T> success(Long total, List<T> rows) {
+        return new PageResult<>(rows, total);
+    }
 }

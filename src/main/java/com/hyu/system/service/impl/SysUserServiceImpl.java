@@ -143,4 +143,37 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         SysUser info = selectUserByEmail(user.getEmail());
         return info == null || info.getUserId().equals(userId);
     }
+
+    @Override
+    public boolean deleteUserRoleInfo(Long userId) {
+        return baseMapper.deleteUserRoleByUserId(userId) > 0;
+    }
+
+    @Override
+    public boolean deleteUserRoleInfo(Long roleId, Long[] userIds) {
+        int result = 0;
+        for (Long userId : userIds) {
+            java.util.Map<String, Object> userRole = new java.util.HashMap<>();
+            userRole.put("userId", userId);
+            userRole.put("roleId", roleId);
+            result += baseMapper.deleteUserRoleByUserId(userId);
+        }
+        return result > 0;
+    }
+
+    @Override
+    public boolean insertAuthRoleUsers(Long roleId, Long[] userIds) {
+        // 先删除原有的角色用户关联
+        baseMapper.deleteUserRoleByUserIds(userIds);
+
+        // 批量插入新的关联关系
+        int result = 0;
+        for (Long userId : userIds) {
+            java.util.Map<String, Object> userRole = new java.util.HashMap<>();
+            userRole.put("userId", userId);
+            userRole.put("roleId", roleId);
+            result += baseMapper.insertUserRole(userRole);
+        }
+        return result > 0;
+    }
 }

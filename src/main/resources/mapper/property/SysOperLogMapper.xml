@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hyu.property.mapper.SysOperLogMapper">
+
+    <resultMap type="SysOperLogVO" id="SysOperLogResult">
+        <result property="id" column="id"/>
+        <result property="title" column="title"/>
+        <result property="businessType" column="business_type"/>
+        <result property="method" column="method"/>
+        <result property="requestMethod" column="request_method"/>
+        <result property="operatorType" column="operator_type"/>
+        <result property="operName" column="oper_name"/>
+        <result property="operUserId" column="oper_user_id"/>
+        <result property="operUrl" column="oper_url"/>
+        <result property="operIp" column="oper_ip"/>
+        <result property="operLocation" column="oper_location"/>
+        <result property="operParam" column="oper_param"/>
+        <result property="jsonResult" column="json_result"/>
+        <result property="status" column="status"/>
+        <result property="errorMsg" column="error_msg"/>
+        <result property="operTime" column="oper_time"/>
+        <result property="userName" column="user_name"/>
+        <result property="userType" column="user_type"/>
+    </resultMap>
+
+    <sql id="selectSysOperLogVo">
+        select ol.id, ol.title, ol.business_type, ol.method, ol.request_method,
+               ol.operator_type, ol.oper_name, ol.oper_user_id, ol.oper_url,
+               ol.oper_ip, ol.oper_location, ol.oper_param, ol.json_result,
+               ol.status, ol.error_msg, ol.oper_time,
+               u.real_name as user_name, u.user_type
+        from sys_oper_log ol
+        left join sys_user u on ol.oper_user_id = u.id
+    </sql>
+
+    <select id="selectOperLogList" parameterType="SysOperLog" resultMap="SysOperLogResult">
+        <include refid="selectSysOperLogVo"/>
+        <where>
+            <if test="operName != null and operName != ''">
+                and ol.oper_name like concat('%', #{operName}, '%')
+            </if>
+            <if test="businessType != null">
+                and ol.business_type = #{businessType}
+            </if>
+            <if test="status != null">
+                and ol.status = #{status}
+            </if>
+            <if test="params.beginTime != null and params.beginTime != ''">
+                and date_format(ol.oper_time,'%y%m%d') &gt;= date_format(#{params.beginTime},'%y%m%d')
+            </if>
+            <if test="params.endTime != null and params.endTime != ''">
+                and date_format(ol.oper_time,'%y%m%d') &lt;= date_format(#{params.endTime},'%y%m%d')
+            </if>
+        </where>
+        order by ol.oper_time desc
+    </select>
+
+    <select id="selectOperLogById" parameterType="Long" resultMap="SysOperLogResult">
+        <include refid="selectSysOperLogVo"/>
+        where ol.id = #{id}
+    </select>
+
+    <select id="selectOperLogsByUserId" parameterType="Long" resultMap="SysOperLogResult">
+        <include refid="selectSysOperLogVo"/>
+        where ol.oper_user_id = #{userId}
+        order by ol.oper_time desc
+    </select>
+
+    <select id="selectAbnormalOperLogs" resultMap="SysOperLogResult">
+        <include refid="selectSysOperLogVo"/>
+        where ol.status = 1 or ol.error_msg is not null
+        order by ol.oper_time desc
+    </select>
+
+    <select id="selectHighFrequencyOperLogs" resultType="SysOperLogVO">
+        select ol.oper_name as operName, count(*) as operationCount
+        from sys_oper_log ol
+        group by ol.oper_name
+        having count(*) > 10
+        order by operationCount desc
+        <if test="limit != null">
+            limit #{limit}
+        </if>
+    </select>
+
+    <select id="selectBusinessTypeStatistics" resultType="SysOperLogVO">
+        select ol.business_type as businessTypeName, count(*) as operationCount
+        from sys_oper_log ol
+        group by ol.business_type
+        order by operationCount desc
+    </select>
+
+    <select id="selectUserOperationStatistics" resultType="SysOperLogVO">
+        select ol.oper_name as operName, ol.oper_user_id as operUserId, count(*) as operationCount
+        from sys_oper_log ol
+        group by ol.oper_name, ol.oper_user_id
+        order by operationCount desc
+    </select>
+
+    <delete id="deleteOperLogsBefore" parameterType="java.time.LocalDateTime">
+        delete from sys_oper_log
+        where oper_time &lt; #{beforeTime}
+    </delete>
+
+    <select id="selectOperLogsByTimeRange" resultMap="SysOperLogResult">
+        <include refid="selectSysOperLogVo"/>
+        where ol.oper_time between #{startTime} and #{endTime}
+        order by ol.oper_time desc
+    </select>
+
+    <select id="selectTodayStatistics" resultType="SysOperLogVO">
+        select
+            count(*) as id,
+            sum(case when status = 0 then 1 else 0 end) as businessType,
+            sum(case when status = 1 then 1 else 0 end) as operator_type
+        from sys_oper_log
+        where date(oper_time) = curdate()
+    </select>
+
+    <select id="selectRecentOperLogsByUser" resultMap="SysOperLogResult">
+        <include refid="selectSysOperLogVo"/>
+        where ol.oper_user_id = #{userId}
+        order by ol.oper_time desc
+        <if test="limit != null">
+            limit #{limit}
+        </if>
+    </select>
+
+</mapper>

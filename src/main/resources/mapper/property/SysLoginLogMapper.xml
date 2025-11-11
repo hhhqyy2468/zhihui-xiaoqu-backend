@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hyu.property.mapper.SysLoginLogMapper">
+
+    <resultMap type="SysLoginLogVO" id="SysLoginLogResult">
+        <result property="id" column="id"/>
+        <result property="username" column="username"/>
+        <result property="userId" column="user_id"/>
+        <result property="ipaddr" column="ipaddr"/>
+        <result property="loginLocation" column="login_location"/>
+        <result property="browser" column="browser"/>
+        <result property="os" column="os"/>
+        <result property="status" column="status"/>
+        <result property="msg" column="msg"/>
+        <result property="loginTime" column="login_time"/>
+        <result property="userName" column="user_name"/>
+        <result property="userType" column="user_type"/>
+    </resultMap>
+
+    <sql id="selectSysLoginLogVo">
+        select ll.id, ll.username, ll.user_id, ll.ipaddr, ll.login_location,
+               ll.browser, ll.os, ll.status, ll.msg, ll.login_time,
+               u.real_name as user_name, u.user_type
+        from sys_login_log ll
+        left join sys_user u on ll.user_id = u.id
+    </sql>
+
+    <select id="selectLoginLogList" parameterType="SysLoginLog" resultMap="SysLoginLogResult">
+        <include refid="selectSysLoginLogVo"/>
+        <where>
+            <if test="username != null and username != ''">
+                and ll.username like concat('%', #{username}, '%')
+            </if>
+            <if test="status != null">
+                and ll.status = #{status}
+            </if>
+            <if test="params.beginTime != null and params.beginTime != ''">
+                and date_format(ll.login_time,'%y%m%d') &gt;= date_format(#{params.beginTime},'%y%m%d')
+            </if>
+            <if test="params.endTime != null and params.endTime != ''">
+                and date_format(ll.login_time,'%y%m%d') &lt;= date_format(#{params.endTime},'%y%m%d')
+            </if>
+        </where>
+        order by ll.login_time desc
+    </select>
+
+    <select id="selectLoginLogById" parameterType="Long" resultMap="SysLoginLogResult">
+        <include refid="selectSysLoginLogVo"/>
+        where ll.id = #{id}
+    </select>
+
+    <select id="selectLoginLogsByUserId" parameterType="Long" resultMap="SysLoginLogResult">
+        <include refid="selectSysLoginLogVo"/>
+        where ll.user_id = #{userId}
+        order by ll.login_time desc
+    </select>
+
+    <select id="selectLoginLogsByIpaddr" parameterType="String" resultMap="SysLoginLogResult">
+        <include refid="selectSysLoginLogVo"/>
+        where ll.ipaddr = #{ipaddr}
+        order by ll.login_time desc
+    </select>
+
+    <select id="selectFailedLoginLogs" resultMap="SysLoginLogResult">
+        <include refid="selectSysLoginLogVo"/>
+        where ll.status = 1
+        order by ll.login_time desc
+    </select>
+
+    <select id="selectAbnormalLoginLogs" resultMap="SysLoginLogResult">
+        <include refid="selectSysLoginLogVo"/>
+        where ll.status = 1
+        order by ll.login_time desc
+        limit 100
+    </select>
+
+    <select id="countLoginFrequencyByIp" resultType="Integer">
+        select count(*) from sys_login_log
+        where ipaddr = #{ipaddr}
+        and login_time &gt;= DATE_SUB(#{loginTime}, INTERVAL 1 DAY)
+    </select>
+
+    <select id="checkIsNewDevice" resultType="Boolean">
+        select count(*) = 0
+        from sys_login_log
+        where user_id = #{userId} and ipaddr = #{ipaddr}
+        and browser = #{browser} and os = #{os}
+    </select>
+
+    <select id="selectUserLoginStatistics" resultType="SysLoginLogVO">
+        select ll.username, ll.user_id, count(*) as loginCount
+        from sys_login_log ll
+        where ll.status = 0
+        group by ll.username, ll.user_id
+        order by loginCount desc
+    </select>
+
+    <select id="selectTimeSlotStatistics" resultType="SysLoginLogVO">
+        select
+            case
+                when hour(login_time) between 6 and 8 then '06:00-08:00'
+                when hour(login_time) between 9 and 11 then '09:00-11:00'
+                when hour(login_time) between 12 and 14 then '12:00-14:00'
+                when hour(login_time) between 15 and 17 then '15:00-17:00'
+                when hour(login_time) between 18 and 20 then '18:00-20:00'
+                when hour(login_time) between 21 and 23 then '21:00-23:00'
+                else '00:00-05:00'
+            end as timeSlot,
+            count(*) as loginCount
+        from sys_login_log
+        where status = 0
+        group by timeSlot
+        order by loginCount desc
+    </select>
+
+    <select id="selectLoginRateStatistics" resultType="SysLoginLogVO">
+        select
+            count(*) as id,
+            sum(case when status = 0 then 1 else 0 end) as status,
+            sum(case when status = 1 then 1 else 0 end) as user_id
+        from sys_login_log
+        where login_time between #{startTime} and #{endTime}
+    </select>
+
+    <delete id="deleteLoginLogsBefore" parameterType="java.time.LocalDateTime">
+        delete from sys_login_log
+        where login_time &lt; #{beforeTime}
+    </delete>
+
+    <select id="selectLoginLogsByTimeRange" resultMap="SysLoginLogResult">
+        <include refid="selectSysLoginLogVo"/>
+        where ll.login_time between #{startTime} and #{endTime}
+        order by ll.login_time desc
+    </select>
+
+    <select id="selectTodayLoginStatistics" resultType="SysLoginLogVO">
+        select
+            count(*) as id,
+            sum(case when status = 0 then 1 else 0 end) as status,
+            sum(case when status = 1 then 1 else 0 end) as user_id,
+            count(distinct user_id) as userType
+        from sys_login_log
+        where date(login_time) = curdate()
+    </select>
+
+    <select id="selectHighRiskLoginLogs" resultMap="SysLoginLogResult">
+        <include refid="selectSysLoginLogVo"/>
+        where ll.status = 1
+        order by ll.login_time desc
+        limit 50
+    </select>
+
+    <select id="selectRecentLoginLogsByUser" resultMap="SysLoginLogResult">
+        <include refid="selectSysLoginLogVo"/>
+        where ll.user_id = #{userId}
+        order by ll.login_time desc
+        <if test="limit != null">
+            limit #{limit}
+        </if>
+    </select>
+
+</mapper>

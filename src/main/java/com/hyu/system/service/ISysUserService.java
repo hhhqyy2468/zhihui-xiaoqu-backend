@@ -84,4 +84,30 @@ public interface ISysUserService extends IService<SysUser> {
      * @return 结果
      */
     boolean checkEmailUnique(SysUser user);
+
+    /**
+     * 通过用户ID删除用户和角色关联
+     *
+     * @param userId 用户ID
+     * @return 结果
+     */
+    boolean deleteUserRoleInfo(Long userId);
+
+    /**
+     * 批量取消授权用户角色
+     *
+     * @param roleId 角色ID
+     * @param userIds 需要取消授权的用户数据ID
+     * @return 结果
+     */
+    boolean deleteUserRoleInfo(Long roleId, Long[] userIds);
+
+    /**
+     * 批量选择用户授权角色
+     *
+     * @param roleId 角色ID
+     * @param userIds 需要授权的用户数据ID
+     * @return 结果
+     */
+    boolean insertAuthRoleUsers(Long roleId, Long[] userIds);
 }
