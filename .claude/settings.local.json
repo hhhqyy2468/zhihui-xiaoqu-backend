@@ -23,7 +23,9 @@
       "Bash(del:*)",
       "Bash(mvn compile:*)",
       "Bash(find:*)",
-      "Bash(mvn:*)"
+      "Bash(mvn:*)",
+      "Bash(start-dev.bat)",
+      "Bash(cmd.exe:*)"
     ],
     "deny": [],
     "ask": []
