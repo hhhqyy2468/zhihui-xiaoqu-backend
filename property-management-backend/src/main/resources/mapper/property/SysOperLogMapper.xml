@@ -99,7 +99,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         order by operationCount desc
     </select>
 
-    <delete id="deleteOperLogsBefore" parameterType="LocalDateTime">
+    <delete id="deleteOperLogsBefore" parameterType="java.time.LocalDateTime">
         delete from sys_oper_log
         where oper_time &lt; #{beforeTime}
     </delete>
