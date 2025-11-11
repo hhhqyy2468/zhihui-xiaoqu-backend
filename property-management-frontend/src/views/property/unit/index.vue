@@ -1,37 +1,347 @@
 <template>
-  <div class="app-container">
+  <div class="log-container">
+    <!-- 页面头部 -->
+    <div class="page-header">
+      <h2 class="page-title">单元管理</h2>
+      <el-breadcrumb separator="/">
+        <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
+        <el-breadcrumb-item>物业管理</el-breadcrumb-item>
+        <el-breadcrumb-item>单元管理</el-breadcrumb-item>
+      </el-breadcrumb>
+    </div>
+
+    <!-- 统计卡片 -->
+    <el-row :gutter="20" class="statistics-cards">
+      <el-col :span="6">
+        <el-card class="stat-card total-units">
+          <div class="stat-content">
+            <div class="stat-icon">
+              <el-icon><Grid /></el-icon>
+            </div>
+            <div class="stat-info">
+              <div class="stat-value">{{ statistics.totalUnits }}</div>
+              <div class="stat-label">单元总数</div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card class="stat-card total-houses">
+          <div class="stat-content">
+            <div class="stat-icon">
+              <el-icon><HomeFilled /></el-icon>
+            </div>
+            <div class="stat-info">
+              <div class="stat-value">{{ statistics.totalHouses }}</div>
+              <div class="stat-label">房产总数</div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card class="stat-card occupied-houses">
+          <div class="stat-content">
+            <div class="stat-icon">
+              <el-icon><User /></el-icon>
+            </div>
+            <div class="stat-info">
+              <div class="stat-value">{{ statistics.occupiedHouses }}</div>
+              <div class="stat-label">已入住</div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card class="stat-card occupancy-rate">
+          <div class="stat-content">
+            <div class="stat-icon">
+              <el-icon><TrendCharts /></el-icon>
+            </div>
+            <div class="stat-info">
+              <div class="stat-value">{{ statistics.occupancyRate }}%</div>
+              <div class="stat-label">入住率</div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <!-- 操作按钮 -->
+    <div class="action-section">
+      <el-button type="primary" @click="handleAdd" v-permission="'property:unit:add'">
+        <el-icon><Plus /></el-icon>
+        新增单元
+      </el-button>
+      <el-button type="warning" @click="handleBatchDelete" :disabled="selectedRows.length === 0" v-permission="'property:unit:delete'">
+        <el-icon><Delete /></el-icon>
+        批量删除
+      </el-button>
+      <el-button @click="handleExport">
+        <el-icon><Download /></el-icon>
+        导出Excel
+      </el-button>
+    </div>
+
     <!-- 搜索区域 -->
-    <el-card class="search-card">
+    <div class="search-section">
       <el-form
         ref="searchFormRef"
-        :model="searchForm"
+        :model="queryParams"
         inline
         class="search-form"
       >
-        <el-form-item label="单元编号" prop="unitCode">
-          <el-input
-            v-model="searchForm.unitCode"
-            placeholder="请输入单元编号"
-            clearable
-            style="width: 200px"
-          />
-        </el-form-item>
+        <el-row :gutter="20">
+          <el-col :span="6">
+            <el-form-item label="单元编号" prop="unitCode">
+              <el-input
+                v-model="queryParams.unitCode"
+                placeholder="请输入单元编号"
+                clearable
+                prefix-icon="Search"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="6">
+            <el-form-item label="单元名称" prop="unitName">
+              <el-input
+                v-model="queryParams.unitName"
+                placeholder="请输入单元名称"
+                clearable
+                prefix-icon="Search"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="6">
+            <el-form-item label="所属楼栋" prop="buildingId">
+              <el-select
+                v-model="queryParams.buildingId"
+                placeholder="请选择楼栋"
+                clearable
+                style="width: 100%"
+              >
+                <el-option
+                  v-for="item in buildingOptions"
+                  :key="item.buildingId"
+                  :label="item.buildingName"
+                  :value="item.buildingId"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="6">
+            <el-form-item>
+              <el-button type="primary" @click="handleSearch" :loading="loading">
+                <el-icon><Search /></el-icon>
+                搜索
+              </el-button>
+              <el-button @click="handleReset">
+                <el-icon><Refresh /></el-icon>
+                重置
+              </el-button>
+            </el-form-item>
+          </el-col>
+        </el-row>
+      </el-form>
+    </div>
 
-        <el-form-item label="单元名称" prop="unitName">
-          <el-input
-            v-model="searchForm.unitName"
-            placeholder="请输入单元名称"
-            clearable
-            style="width: 200px"
-          />
-        </el-form-item>
+    <!-- 数据表格 -->
+    <div class="table-section">
 
+      <el-table
+        ref="tableRef"
+        v-loading="loading"
+        :data="unitList"
+        stripe
+        border
+        @selection-change="handleSelectionChange"
+        @sort-change="handleSortChange"
+        class="data-table"
+      >
+        <el-table-column type="selection" width="55" align="center" />
+        <el-table-column type="index" label="#" width="60" align="center" />
+
+        <el-table-column
+          prop="unitCode"
+          label="单元编号"
+          width="140"
+          sortable="custom"
+          align="center"
+        >
+          <template #default="{ row }">
+            <el-tag type="primary">{{ row.unitCode }}</el-tag>
+          </template>
+        </el-table-column>
+
+        <el-table-column
+          prop="unitName"
+          label="单元名称"
+          width="120"
+          sortable="custom"
+          align="center"
+        />
+
+        <el-table-column
+          prop="buildingName"
+          label="所属楼栋"
+          width="120"
+          align="center"
+        >
+          <template #default="{ row }">
+            <el-tag type="info">{{ row.buildingName }}</el-tag>
+          </template>
+        </el-table-column>
+
+        <el-table-column
+          prop="floorCount"
+          label="楼层数"
+          width="100"
+          align="center"
+        >
+          <template #default="{ row }">
+            <span class="floor-cell">{{ row.floorCount }}层</span>
+          </template>
+        </el-table-column>
+
+        <el-table-column
+          prop="roomsPerFloor"
+          label="每层户数"
+          width="120"
+          align="center"
+        />
+
+        <el-table-column
+          prop="totalRooms"
+          label="总户数"
+          width="100"
+          align="center"
+        >
+          <template #default="{ row }">
+            <span class="number-cell">{{ row.totalRooms || 0 }}</span>
+          </template>
+        </el-table-column>
+
+        <el-table-column
+          prop="occupiedRooms"
+          label="已入住"
+          width="100"
+          align="center"
+        >
+          <template #default="{ row }">
+            <span class="occupied-cell">{{ row.occupiedRooms || 0 }}</span>
+          </template>
+        </el-table-column>
+
+        <el-table-column
+          prop="occupancyRate"
+          label="入住率"
+          width="120"
+          align="center"
+        >
+          <template #default="{ row }">
+            <div class="occupancy-rate">
+              <el-progress
+                :percentage="row.occupancyRate || 0"
+                :color="getOccupancyRateColor(row.occupancyRate || 0)"
+                :stroke-width="8"
+                text-inside
+              />
+            </div>
+          </template>
+        </el-table-column>
+
+        <el-table-column
+          prop="remark"
+          label="备注"
+          min-width="150"
+          show-overflow-tooltip
+        />
+
+        <el-table-column
+          prop="createTime"
+          label="创建时间"
+          width="180"
+          sortable="custom"
+          align="center"
+        >
+          <template #default="{ row }">
+            <span class="time-cell">{{ formatDateTime(row.createTime) }}</span>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="操作" width="220" align="center" fixed="right">
+          <template #default="{ row }">
+            <el-button
+              link
+              type="primary"
+              @click="handleEdit(row)"
+              v-permission="'property:unit:edit'"
+            >
+              <el-icon><Edit /></el-icon>
+              编辑
+            </el-button>
+            <el-button
+              link
+              type="info"
+              @click="handleViewHouses(row)"
+            >
+              <el-icon><View /></el-icon>
+              房产
+            </el-button>
+            <el-button
+              link
+              type="success"
+              @click="handleViewStats(row)"
+            >
+              <el-icon><DataLine /></el-icon>
+              统计
+            </el-button>
+            <el-button
+              link
+              type="danger"
+              @click="handleDelete(row)"
+              v-permission="'property:unit:delete'"
+            >
+              <el-icon><Delete /></el-icon>
+              删除
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <!-- 分页组件 -->
+      <div class="pagination-wrapper">
+        <el-pagination
+          v-model:current-page="queryParams.pageNum"
+          v-model:page-size="queryParams.pageSize"
+          :page-sizes="[10, 20, 50, 100]"
+          :total="total"
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+        />
+      </div>
+    </el-card>
+
+    <!-- 新增/编辑对话框 -->
+    <el-dialog
+      v-model="dialogVisible"
+      :title="dialogTitle"
+      width="600px"
+      :close-on-click-modal="false"
+      @close="handleDialogClose"
+    >
+      <el-form
+        ref="formRef"
+        :model="form"
+        :rules="formRules"
+        label-width="100px"
+        class="unit-form"
+      >
         <el-form-item label="所属楼栋" prop="buildingId">
           <el-select
-            v-model="searchForm.buildingId"
+            v-model="form.buildingId"
             placeholder="请选择所属楼栋"
-            clearable
-            style="width: 200px"
+            style="width: 100%"
           >
             <el-option
               v-for="item in buildingOptions"
@@ -42,115 +352,77 @@
           </el-select>
         </el-form-item>
 
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">
-            <el-icon><Search /></el-icon>
-            搜索
-          </el-button>
-          <el-button @click="handleReset">
-            <el-icon><Refresh /></el-icon>
-            重置
-          </el-button>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="单元编号" prop="unitCode">
+              <el-input
+                v-model="form.unitCode"
+                placeholder="请输入单元编号（如：A01-1）"
+                :disabled="isEdit"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="单元名称" prop="unitName">
+              <el-input
+                v-model="form.unitName"
+                placeholder="请输入单元名称（如：1单元）"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="楼层数" prop="floorCount">
+              <el-input-number
+                v-model="form.floorCount"
+                :min="1"
+                :max="99"
+                placeholder="请输入楼层数"
+                style="width: 100%"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="每层户数" prop="roomsPerFloor">
+              <el-input-number
+                v-model="form.roomsPerFloor"
+                :min="1"
+                :max="10"
+                placeholder="请输入每层户数"
+                style="width: 100%"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-form-item label="单元类型" prop="unitType">
+          <el-select v-model="form.unitType" placeholder="请选择单元类型" style="width: 100%">
+            <el-option label="住宅单元" value="住宅" />
+            <el-option label="商业单元" value="商业" />
+            <el-option label="办公单元" value="办公" />
+            <el-option label="综合单元" value="综合" />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item label="备注" prop="remark">
+          <el-input
+            v-model="form.remark"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入备注信息，如：一梯三户，南北通透"
+          />
         </el-form-item>
       </el-form>
-    </el-card>
-
-    <!-- 表格区域 -->
-    <el-card class="table-card">
-      <template #header>
-        <div class="card-header">
-          <span>单元列表</span>
-          <div class="header-actions">
-            <el-button
-              type="primary"
-              v-permission="'property:unit:add'"
-              @click="handleAdd"
-            >
-              <el-icon><Plus /></el-icon>
-              新增单元
-            </el-button>
-            <el-button
-              type="danger"
-              v-permission="'property:unit:delete'"
-              :disabled="selectedRows.length === 0"
-              @click="handleBatchDelete"
-            >
-              <el-icon><Delete /></el-icon>
-              批量删除
-            </el-button>
-            <el-button @click="handleExport">
-              <el-icon><Download /></el-icon>
-              导出
-            </el-button>
-          </div>
-        </div>
-      </template>
-
-      <Table
-        ref="tableRef"
-        :data="tableData"
-        :columns="tableColumns"
-        :loading="loading"
-        :pagination="pagination"
-        @selection-change="handleSelectionChange"
-        @page-change="handlePageChange"
-        @sort-change="handleSortChange"
-      >
-        <!-- 操作列 -->
-        <template #operation="{ row }">
-          <el-button
-            link
-            type="primary"
-            v-permission="'property:unit:edit'"
-            @click="handleEdit(row)"
-          >
-            编辑
-          </el-button>
-          <el-button
-            link
-            type="info"
-            @click="handleViewHouses(row)"
-          >
-            查看房产
-          </el-button>
-          <el-button
-            link
-            type="danger"
-            v-permission="'property:unit:delete'"
-            @click="handleDelete(row)"
-          >
-            删除
-          </el-button>
-        </template>
-      </Table>
-    </el-card>
-
-    <!-- 新增/编辑对话框 -->
-    <el-dialog
-      v-model="dialogVisible"
-      :title="dialogTitle"
-      width="600px"
-      @close="handleDialogClose"
-    >
-      <Form
-        ref="formRef"
-        :model="form"
-        :rules="formRules"
-        :items="formItems"
-        label-width="100px"
-      />
 
       <template #footer>
-        <span class="dialog-footer">
+        <div class="dialog-footer">
           <el-button @click="dialogVisible = false">取消</el-button>
-          <el-button
-            type="primary"
-            :loading="submitLoading"
-            @click="handleSubmit"
-          >
+          <el-button type="primary" @click="handleSubmit" :loading="submitLoading">
             确定
           </el-button>
-        </span>
+        </div>
       </template>
     </el-dialog>
 
@@ -158,56 +430,176 @@
     <el-dialog
       v-model="houseDialogVisible"
       title="房产列表"
-      width="900px"
+      width="1000px"
+      @close="houseDialogVisible = false"
     >
-      <el-table :data="houseData" border max-height="400">
-        <el-table-column prop="houseCode" label="房产编号" width="120" />
-        <el-table-column prop="roomNum" label="门牌号" width="100" />
-        <el-table-column prop="floorNum" label="楼层" width="80" />
-        <el-table-column prop="houseType" label="户型" width="100" />
-        <el-table-column prop="buildArea" label="建筑面积" width="120">
-          <template #default="{ row }">
-            {{ row.buildArea }}m²
-          </template>
-        </el-table-column>
-        <el-table-column prop="useArea" label="使用面积" width="120">
-          <template #default="{ row }">
-            {{ row.useArea }}m²
-          </template>
-        </el-table-column>
-        <el-table-column prop="houseStatus" label="房产状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="getHouseStatusTag(row.houseStatus)">
-              {{ getHouseStatusName(row.houseStatus) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="ownerName" label="产权人" width="120" />
-        <el-table-column prop="createTime" label="创建时间" width="180" />
-        <el-table-column label="操作" width="120" fixed="right">
-          <template #default="{ row }">
-            <el-button link type="primary" @click="handleViewHouseDetail(row)">
-              查看详情
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+      <div class="house-list-content">
+        <div class="unit-info">
+          <el-tag type="primary">{{ currentUnit.unitName }}</el-tag>
+          <span class="unit-code">{{ currentUnit.unitCode }}</span>
+          <span class="building-name">{{ currentUnit.buildingName }}</span>
+          <el-tag type="info">总户数: {{ currentUnit.totalRooms }}</el-tag>
+          <el-tag type="success">已入住: {{ currentUnit.occupiedRooms }}</el-tag>
+        </div>
+
+        <el-table :data="houseList" border stripe v-loading="houseLoading">
+          <el-table-column type="index" label="#" width="60" align="center" />
+          <el-table-column prop="houseCode" label="房产编号" width="140" align="center">
+            <template #default="{ row }">
+              <el-tag type="primary" size="small">{{ row.houseCode }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="roomNum" label="门牌号" width="100" align="center" />
+          <el-table-column prop="floorNum" label="楼层" width="80" align="center" />
+          <el-table-column prop="houseType" label="户型" width="120" align="center">
+            <template #default="{ row }">
+              <el-tag type="warning" size="small">{{ row.houseType }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="buildArea" label="建筑面积" width="120" align="center">
+            <template #default="{ row }">
+              <span class="area-cell">{{ row.buildArea }}m²</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="houseStatus" label="房产状态" width="120" align="center">
+            <template #default="{ row }">
+              <el-tag :type="getHouseStatusTag(row.houseStatus)" size="small">
+                {{ getHouseStatusName(row.houseStatus) }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="ownerName" label="产权人" width="120" show-overflow-tooltip />
+          <el-table-column prop="createTime" label="创建时间" width="180" align="center">
+            <template #default="{ row }">
+              <span class="time-cell">{{ formatDateTime(row.createTime) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="120" align="center">
+            <template #default="{ row }">
+              <el-button link type="primary" @click="handleViewHouseDetail(row)">
+                查看详情
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
 
       <template #footer>
-        <span class="dialog-footer">
+        <div class="dialog-footer">
           <el-button @click="houseDialogVisible = false">关闭</el-button>
-        </span>
+        </div>
+      </template>
+    </el-dialog>
+
+    <!-- 统计信息对话框 -->
+    <el-dialog
+      v-model="statsDialogVisible"
+      title="单元统计信息"
+      width="600px"
+      @close="statsDialogVisible = false"
+    >
+      <div class="stats-content">
+        <div class="stats-header">
+          <h3>{{ currentUnit.unitName }} ({{ currentUnit.unitCode }})</h3>
+          <p>{{ currentUnit.buildingName }}</p>
+        </div>
+
+        <el-row :gutter="20" class="stats-cards">
+          <el-col :span="8">
+            <el-card class="stats-card">
+              <div class="stats-item">
+                <div class="stats-value">{{ currentUnit.totalRooms || 0 }}</div>
+                <div class="stats-label">总户数</div>
+              </div>
+            </el-card>
+          </el-col>
+          <el-col :span="8">
+            <el-card class="stats-card">
+              <div class="stats-item">
+                <div class="stats-value occupied">{{ currentUnit.occupiedRooms || 0 }}</div>
+                <div class="stats-label">已入住</div>
+              </div>
+            </el-card>
+          </el-col>
+          <el-col :span="8">
+            <el-card class="stats-card">
+              <div class="stats-item">
+                <div class="stats-value vacant">{{ (currentUnit.totalRooms || 0) - (currentUnit.occupiedRooms || 0) }}</div>
+                <div class="stats-label">空置</div>
+              </div>
+            </el-card>
+          </el-col>
+        </el-row>
+
+        <div class="occupancy-chart">
+          <h4>入住率分析</h4>
+          <el-progress
+            type="dashboard"
+            :percentage="currentUnit.occupancyRate || 0"
+            :color="getOccupancyRateColor(currentUnit.occupancyRate || 0)"
+            :width="200"
+          >
+            <template #default="{ percentage }">
+              <span class="percentage-value">{{ percentage }}%</span>
+              <span class="percentage-label">入住率</span>
+            </template>
+          </el-progress>
+        </div>
+
+        <div class="house-status-chart">
+          <h4>房产状态分布</h4>
+          <el-row :gutter="20">
+            <el-col :span="6" v-for="status in houseStatusStats" :key="status.value">
+              <div class="status-item">
+                <el-tag :type="getHouseStatusTag(status.value)" size="large">
+                  {{ status.count }}
+                </el-tag>
+                <span class="status-label">{{ status.label }}</span>
+              </div>
+            </el-col>
+          </el-row>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="statsDialogVisible = false">关闭</el-button>
+        </div>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, Plus, Delete, Download } from '@element-plus/icons-vue'
-import Table from '@/components/Table/index.vue'
-import Form from '@/components/Form/index.vue'
+import {
+  OfficeBuilding,
+  Search,
+  Refresh,
+  Plus,
+  Delete,
+  Download,
+  Edit,
+  View,
+  DataLine,
+  Grid,
+  HomeFilled,
+  TrendCharts,
+  User
+} from '@element-plus/icons-vue'
+import {
+  getUnitList,
+  getUnitDetail,
+  addUnit,
+  updateUnit,
+  deleteUnit,
+  batchDeleteUnit,
+  getUnitStats
+} from '@/api/unit'
+import { getBuildingList } from '@/api/building'
+import { getHousesByUnit } from '@/api/house'
+import { handleResponse, handleError } from '@/utils/response'
 
 // 响应式数据
 const searchFormRef = ref()
@@ -215,105 +607,35 @@ const tableRef = ref()
 const formRef = ref()
 const loading = ref(false)
 const submitLoading = ref(false)
+const houseLoading = ref(false)
 const dialogVisible = ref(false)
 const houseDialogVisible = ref(false)
+const statsDialogVisible = ref(false)
 const selectedRows = ref([])
 const isEdit = ref(false)
-const houseData = ref([])
+const unitList = ref([])
+const buildingOptions = ref([])
+const houseList = ref([])
+const total = ref(0)
+const currentUnit = ref({})
+const houseStatusStats = ref([])
 
-// 搜索表单
-const searchForm = reactive({
+// 统计数据
+const statistics = ref({
+  totalUnits: 0,
+  totalHouses: 0,
+  occupiedHouses: 0,
+  occupancyRate: 0
+})
+
+// 查询参数
+const queryParams = reactive({
+  pageNum: 1,
+  pageSize: 10,
   unitCode: '',
   unitName: '',
   buildingId: ''
 })
-
-// 表格数据
-const tableData = ref([])
-
-// 分页配置
-const pagination = reactive({
-  current: 1,
-  pageSize: 10,
-  total: 0
-})
-
-// 表格列配置
-const tableColumns = [
-  {
-    type: 'selection',
-    width: '55'
-  },
-  {
-    prop: 'unitCode',
-    label: '单元编号',
-    width: '120',
-    sortable: true
-  },
-  {
-    prop: 'unitName',
-    label: '单元名称',
-    width: '120',
-    sortable: true
-  },
-  {
-    prop: 'buildingName',
-    label: '所属楼栋',
-    width: '120'
-  },
-  {
-    prop: 'floors',
-    label: '楼层数',
-    width: '100'
-  },
-  {
-    prop: 'roomsPerFloor',
-    label: '每层房间数',
-    width: '120'
-  },
-  {
-    prop: 'totalRooms',
-    label: '总房间数',
-    width: '100'
-  },
-  {
-    prop: 'occupiedRooms',
-    label: '已入住房间',
-    width: '120'
-  },
-  {
-    prop: 'occupancyRate',
-    label: '入住率',
-    width: '100',
-    formatter: (row) => `${row.occupancyRate}%`
-  },
-  {
-    prop: 'remark',
-    label: '备注',
-    showOverflowTooltip: true
-  },
-  {
-    prop: 'createTime',
-    label: '创建时间',
-    width: '180',
-    sortable: true
-  },
-  {
-    prop: 'operation',
-    label: '操作',
-    width: '220',
-    slot: 'operation',
-    fixed: 'right'
-  }
-]
-
-// 楼栋选项
-const buildingOptions = ref([
-  { buildingId: 1, buildingName: '1号楼' },
-  { buildingId: 2, buildingName: '2号楼' },
-  { buildingId: 3, buildingName: '3号楼' },
-  { buildingId: 4, buildingName: '4号楼' }
-])
 
 // 表单数据
 const form = reactive({
@@ -321,12 +643,21 @@ const form = reactive({
   buildingId: '',
   unitCode: '',
   unitName: '',
-  floors: 1,
+  floorCount: 1,
   roomsPerFloor: 3,
+  unitType: '住宅',
   remark: ''
 })
 
-// 表单规则
+// 房产状态选项
+const houseStatusOptions = [
+  { label: '空置', value: 1 },
+  { label: '已售', value: 2 },
+  { label: '已租', value: 3 },
+  { label: '自住', value: 4 }
+]
+
+// 表单验证规则
 const formRules = {
   buildingId: [
     { required: true, message: '请选择所属楼栋', trigger: 'change' }
@@ -339,70 +670,31 @@ const formRules = {
     { required: true, message: '请输入单元名称', trigger: 'blur' },
     { min: 2, max: 20, message: '单元名称长度在2到20个字符', trigger: 'blur' }
   ],
-  floors: [
+  floorCount: [
     { required: true, message: '请输入楼层数', trigger: 'blur' },
     { type: 'number', min: 1, max: 99, message: '楼层数必须在1-99之间', trigger: 'blur' }
   ],
   roomsPerFloor: [
-    { required: true, message: '请输入每层房间数', trigger: 'blur' },
-    { type: 'number', min: 1, max: 10, message: '每层房间数必须在1-10之间', trigger: 'blur' }
+    { required: true, message: '请输入每层户数', trigger: 'blur' },
+    { type: 'number', min: 1, max: 10, message: '每层户数必须在1-10之间', trigger: 'blur' }
   ]
 }
-
-// 表单项配置
-const formItems = computed(() => [
-  {
-    prop: 'buildingId',
-    label: '所属楼栋',
-    type: 'select',
-    options: buildingOptions.value,
-    placeholder: '请选择所属楼栋'
-  },
-  {
-    prop: 'unitCode',
-    label: '单元编号',
-    type: 'input',
-    placeholder: '请输入单元编号（如：A01-1）',
-    disabled: isEdit.value
-  },
-  {
-    prop: 'unitName',
-    label: '单元名称',
-    type: 'input',
-    placeholder: '请输入单元名称（如：1单元）'
-  },
-  {
-    prop: 'floors',
-    label: '楼层数',
-    type: 'input',
-    inputType: 'number',
-    placeholder: '请输入楼层数'
-  },
-  {
-    prop: 'roomsPerFloor',
-    label: '每层房间数',
-    type: 'input',
-    inputType: 'number',
-    placeholder: '请输入每层房间数'
-  },
-  {
-    prop: 'remark',
-    label: '备注',
-    type: 'textarea',
-    placeholder: '请输入备注信息'
-  }
-])
 
 // 计算属性
 const dialogTitle = computed(() => isEdit.value ? '编辑单元' : '新增单元')
 
-// 房产状态选项
-const houseStatusOptions = [
-  { label: '空置', value: 1 },
-  { label: '已售', value: 2 },
-  { label: '已租', value: 3 },
-  { label: '自住', value: 4 }
-]
+// 格式化日期时间
+const formatDateTime = (dateTime) => {
+  if (!dateTime) return '-'
+  return new Date(dateTime).toLocaleString('zh-CN')
+}
+
+// 获取入住率颜色
+const getOccupancyRateColor = (rate) => {
+  if (rate >= 90) return '#67c23a'
+  if (rate >= 70) return '#e6a23c'
+  return '#f56c6c'
+}
 
 // 获取房产状态名称
 const getHouseStatusName = (status) => {
@@ -421,209 +713,204 @@ const getHouseStatusTag = (status) => {
   return tagMap[status] || 'info'
 }
 
-// 获取模拟数据
-const getMockData = () => {
-  const mockUnits = [
-    {
-      unitId: 1,
-      buildingId: 1,
-      unitCode: 'A01-1',
-      unitName: '1单元',
-      buildingName: '1号楼',
-      floors: 18,
-      roomsPerFloor: 3,
-      totalRooms: 54,
-      occupiedRooms: 42,
-      occupancyRate: 78,
-      remark: '一梯三户，南北通透',
-      createTime: '2024-01-01 10:00:00'
-    },
-    {
-      unitId: 2,
-      buildingId: 1,
-      unitCode: 'A01-2',
-      unitName: '2单元',
-      buildingName: '1号楼',
-      floors: 18,
-      roomsPerFloor: 3,
-      totalRooms: 54,
-      occupiedRooms: 48,
-      occupancyRate: 89,
-      remark: '一梯三户，南北通透',
-      createTime: '2024-01-01 10:00:00'
-    },
-    {
-      unitId: 3,
-      buildingId: 1,
-      unitCode: 'A01-3',
-      unitName: '3单元',
-      buildingName: '1号楼',
-      floors: 18,
-      roomsPerFloor: 3,
-      totalRooms: 54,
-      occupiedRooms: 36,
-      occupancyRate: 67,
-      remark: '一梯三户，南北通透',
-      createTime: '2024-01-01 10:00:00'
-    },
-    {
-      unitId: 4,
-      buildingId: 2,
-      unitCode: 'A02-1',
-      unitName: '1单元',
-      buildingName: '2号楼',
-      floors: 24,
-      roomsPerFloor: 4,
-      totalRooms: 96,
-      occupiedRooms: 72,
-      occupancyRate: 75,
-      remark: '一梯四户，高层住宅',
-      createTime: '2024-01-02 10:00:00'
-    }
-  ]
-
-  // 模拟分页
-  pagination.total = mockUnits.length
-  return mockUnits
+// 获取楼栋列表
+const getBuildingOptions = async () => {
+  try {
+    const response = await getBuildingList({ pageNum: 1, pageSize: 1000 })
+    const data = handleResponse(response)
+    buildingOptions.value = data.list || data.records || []
+  } catch (error) {
+    handleError(error, '获取楼栋列表失败')
+    buildingOptions.value = []
+  }
 }
 
-// 获取模拟房产数据
-const getMockHouseData = (unitId) => {
-  const houses = []
-
-  // 为指定单元生成房产数据
-  const houseLayouts = ['一室一厅', '两室一厅', '三室两厅', '四室两厅']
-  const houseStatuses = [1, 2, 3, 4]
-  const ownerNames = ['张三', '李四', '王五', '赵六', '钱七', '孙八']
-
-  for (let floor = 1; floor <= 18; floor++) {
-    for (let room = 1; room <= 3; room++) {
-      const houseStatus = houseStatuses[Math.floor(Math.random() * houseStatuses.length)]
-      const layout = houseLayouts[Math.floor(Math.random() * houseLayouts.length)]
-      const buildArea = 80 + Math.floor(Math.random() * 100)
-      const useArea = Math.floor(buildArea * 0.8)
-
-      houses.push({
-        houseId: `${unitId}-${floor}-${room}`,
-        unitId: unitId,
-        houseCode: `${unitId}-${floor.toString().padStart(2, '0')}${room.toString().padStart(2, '0')}`,
-        roomNum: `${floor}0${room}`,
-        floorNum: floor,
-        houseType: layout,
-        buildArea: buildArea,
-        useArea: useArea,
-        houseStatus: houseStatus,
-        ownerName: houseStatus > 1 ? ownerNames[Math.floor(Math.random() * ownerNames.length)] : '',
-        createTime: '2024-01-01 10:00:00'
-      })
-    }
+// 获取单元列表
+const getUnitListData = async () => {
+  loading.value = true
+  try {
+    const response = await getUnitList(queryParams)
+    const data = handleResponse(response)
+    unitList.value = data.list || data.records || []
+    total.value = data.total || 0
+  } catch (error) {
+    handleError(error, '获取单元列表失败')
+    unitList.value = []
+    total.value = 0
+  } finally {
+    loading.value = false
   }
+}
 
-  return houses
+// 获取单元的房产列表
+const getHouseListByUnit = async (unitId) => {
+  houseLoading.value = true
+  try {
+    const response = await getHousesByUnit(unitId)
+    houseList.value = handleResponse(response)
+  } catch (error) {
+    handleError(error, '获取房产列表失败')
+    houseList.value = []
+  } finally {
+    houseLoading.value = false
+  }
 }
 
 // 搜索
 const handleSearch = () => {
-  pagination.current = 1
-  fetchData()
+  queryParams.pageNum = 1
+  getUnitListData()
 }
 
-// 重置
+// 重置搜索
 const handleReset = () => {
-  searchFormRef.value?.resetFields()
-  handleSearch()
+  queryParams.pageNum = 1
+  queryParams.unitCode = ''
+  queryParams.unitName = ''
+  queryParams.buildingId = ''
+  getUnitListData()
 }
 
-// 获取数据
-const fetchData = async () => {
-  loading.value = true
-  try {
-    // 模拟API请求
-    setTimeout(() => {
-      tableData.value = getMockData()
-      loading.value = false
-    }, 500)
-  } catch (error) {
-    loading.value = false
-    ElMessage.error('获取数据失败')
-  }
+// 分页大小变化
+const handleSizeChange = (val) => {
+  queryParams.pageSize = val
+  queryParams.pageNum = 1
+  getUnitListData()
 }
 
-// 分页变化
-const handlePageChange = (page) => {
-  pagination.current = page
-  fetchData()
+// 当前页变化
+const handleCurrentChange = (val) => {
+  queryParams.pageNum = val
+  getUnitListData()
 }
 
 // 排序变化
-const handleSortChange = (sort) => {
-  console.log('排序变化:', sort)
-  fetchData()
+const handleSortChange = ({ column, prop, order }) => {
+  // 这里可以处理排序逻辑
+  console.log('排序变化:', { column, prop, order })
+  getUnitListData()
 }
 
-// 选择变化
+// 表格选择变化
 const handleSelectionChange = (selection) => {
   selectedRows.value = selection
 }
 
-// 新增
+// 新增单元
 const handleAdd = () => {
   isEdit.value = false
   resetForm()
   dialogVisible.value = true
 }
 
-// 编辑
-const handleEdit = (row) => {
+// 编辑单元
+const handleEdit = async (row) => {
   isEdit.value = true
-  Object.assign(form, { ...row })
-  dialogVisible.value = true
+  try {
+    const response = await getUnitDetail(row.unitId)
+    const data = handleResponse(response)
+    Object.assign(form, data)
+    dialogVisible.value = true
+  } catch (error) {
+    handleError(error, '获取单元详情失败')
+  }
 }
 
-// 删除
+// 删除单元
 const handleDelete = async (row) => {
   try {
     await ElMessageBox.confirm(
-      `确定要删除单元"${row.unitName}"吗？`,
-      '提示',
-      { type: 'warning' }
+      `确定要删除单元"${row.unitName}"吗？删除后不可恢复！`,
+      '删除确认',
+      {
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
     )
+
+    await deleteUnit(row.unitId)
     ElMessage.success('删除成功')
-    fetchData()
+    getUnitListData()
   } catch (error) {
-    // 用户取消操作
+    if (error !== 'cancel') {
+      handleError(error, '删除失败')
+    }
   }
 }
 
 // 批量删除
 const handleBatchDelete = async () => {
+  if (selectedRows.value.length === 0) {
+    ElMessage.warning('请选择要删除的单元')
+    return
+  }
+
   try {
     await ElMessageBox.confirm(
-      `确定要删除选中的${selectedRows.value.length}个单元吗？`,
-      '提示',
-      { type: 'warning' }
+      `确定要删除选中的${selectedRows.value.length}个单元吗？删除后不可恢复！`,
+      '批量删除确认',
+      {
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
     )
+
+    const unitIds = selectedRows.value.map(row => row.unitId)
+    await batchDeleteUnit(unitIds)
     ElMessage.success('批量删除成功')
-    fetchData()
+    getUnitListData()
   } catch (error) {
-    // 用户取消操作
+    if (error !== 'cancel') {
+      handleError(error, '批量删除失败')
+    }
   }
 }
 
 // 查看房产
-const handleViewHouses = (row) => {
-  houseData.value = getMockHouseData(row.unitId)
+const handleViewHouses = async (row) => {
+  currentUnit.value = row
   houseDialogVisible.value = true
+  await getHouseListByUnit(row.unitId)
+}
+
+// 查看统计
+const handleViewStats = async (row) => {
+  currentUnit.value = row
+  try {
+    const response = await getUnitStats(row.unitId)
+    const data = handleResponse(response)
+
+    // 设置房产状态统计
+    houseStatusStats.value = [
+      { label: '空置', value: 1, count: data.vacantCount || 0 },
+      { label: '已售', value: 2, count: data.soldCount || 0 },
+      { label: '已租', value: 3, count: data.rentedCount || 0 },
+      { label: '自住', value: 4, count: data.ownerOccupiedCount || 0 }
+    ]
+  } catch (error) {
+    handleError(error, '获取统计信息失败')
+    // 设置默认统计数据
+    houseStatusStats.value = [
+      { label: '空置', value: 1, count: 0 },
+      { label: '已售', value: 2, count: 0 },
+      { label: '已租', value: 3, count: 0 },
+      { label: '自住', value: 4, count: 0 }
+    ]
+  }
+  statsDialogVisible.value = true
 }
 
 // 查看房产详情
 const handleViewHouseDetail = (row) => {
   ElMessage.info(`查看房产${row.houseCode}的详细信息`)
+  // 这里可以跳转到房产详情页面
 }
 
-// 导出
+// 导出Excel
 const handleExport = () => {
-  ElMessage.success('导出成功')
+  ElMessage.info('导出功能开发中...')
 }
 
 // 提交表单
@@ -634,17 +921,19 @@ const handleSubmit = async () => {
     await formRef.value.validate()
     submitLoading.value = true
 
-    // 获取楼栋名称
-    const building = buildingOptions.value.find(b => b.buildingId === form.buildingId)
+    if (isEdit.value) {
+      await updateUnit(form)
+      ElMessage.success('编辑成功')
+    } else {
+      await addUnit(form)
+      ElMessage.success('新增成功')
+    }
 
-    // 模拟API请求
-    setTimeout(() => {
-      ElMessage.success(isEdit.value ? '编辑成功' : '新增成功')
-      dialogVisible.value = false
-      fetchData()
-      submitLoading.value = false
-    }, 1000)
+    dialogVisible.value = false
+    getUnitListData()
   } catch (error) {
+    handleError(error, isEdit.value ? '编辑失败' : '新增失败')
+  } finally {
     submitLoading.value = false
   }
 }
@@ -656,8 +945,9 @@ const resetForm = () => {
     buildingId: '',
     unitCode: '',
     unitName: '',
-    floors: 1,
+    floorCount: 1,
     roomsPerFloor: 3,
+    unitType: '住宅',
     remark: ''
   })
 }
@@ -670,35 +960,392 @@ const handleDialogClose = () => {
 
 // 组件挂载
 onMounted(() => {
-  fetchData()
+  getBuildingOptions()
+  getUnitListData()
 })
 </script>
 
 <style lang="scss" scoped>
-.app-container {
+.log-container {
   padding: 20px;
+  min-height: 100vh;
+  background-color: #f5f7fa;
+}
 
-  .search-card {
-    margin-bottom: 20px;
+// 页面头部
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 20px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 
-    .search-form {
-      .el-form-item {
-        margin-bottom: 0;
+  .page-title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+    color: #303133;
+  }
+}
+
+// 操作按钮区域
+.action-section {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 16px 20px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+// 搜索区域
+.search-section {
+  margin-bottom: 20px;
+  padding: 20px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+  .el-form-item {
+    margin-bottom: 0;
+  }
+}
+
+// 表格区域
+.table-section {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+}
+
+// 统计卡片
+.statistics-cards {
+  margin-bottom: 20px;
+
+  .stat-card {
+    .stat-content {
+      display: flex;
+      align-items: center;
+      padding: 10px;
+    }
+
+    .stat-icon {
+      width: 60px;
+      height: 60px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 16px;
+      font-size: 24px;
+      color: white;
+    }
+
+    .stat-info {
+      flex: 1;
+
+      .stat-value {
+        font-size: 28px;
+        font-weight: bold;
+        margin-bottom: 4px;
+      }
+
+      .stat-label {
+        font-size: 14px;
+        color: #909399;
+      }
+    }
+
+    &.total-units {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+
+      .stat-icon {
+        background: rgba(255, 255, 255, 0.2);
+      }
+    }
+
+    &.total-houses {
+      background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+      color: white;
+
+      .stat-icon {
+        background: rgba(255, 255, 255, 0.2);
+      }
+    }
+
+    &.occupied-houses {
+      background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%);
+      color: white;
+
+      .stat-icon {
+        background: rgba(255, 255, 255, 0.2);
+      }
+    }
+
+    &.occupancy-rate {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+
+      .stat-icon {
+        background: rgba(255, 255, 255, 0.2);
+      }
+    }
+  }
+}
+
+
+// 表格内部样式
+.table-section {
+  .el-table {
+    margin-bottom: 16px;
+
+    .number-cell {
+      font-weight: 600;
+      color: #409eff;
+    }
+
+    .time-cell {
+      font-size: 13px;
+      color: #909399;
+    }
+
+    .floor-cell {
+      font-weight: 600;
+      color: #409eff;
+    }
+
+    .occupied-cell {
+      font-weight: 600;
+      color: #e6a23c;
+    }
+
+    .occupancy-rate {
+      .el-progress {
+        .el-progress__text {
+          font-size: 12px;
+          font-weight: 600;
+        }
       }
     }
   }
 
-  .table-card {
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+  .pagination-wrapper {
+    display: flex;
+    justify-content: center;
+    padding: 16px 0;
+  }
+}
 
-      .header-actions {
-        display: flex;
-        gap: 10px;
+  .unit-form {
+  .el-form-item {
+    margin-bottom: 18px;
+  }
+}
+
+.house-list-content {
+  .unit-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding: 12px;
+    background: #f5f7fa;
+    border-radius: 4px;
+
+    .unit-code {
+      font-weight: 600;
+      color: #303133;
+    }
+
+    .building-name {
+      color: #666;
+    }
+  }
+
+  .area-cell {
+    font-weight: 600;
+    color: #67c23a;
+  }
+
+  .time-cell {
+    font-size: 13px;
+    color: #909399;
+  }
+}
+
+.stats-content {
+  .stats-header {
+    text-align: center;
+    margin-bottom: 24px;
+
+    h3 {
+      margin: 0 0 8px 0;
+      color: #303133;
+      font-size: 20px;
+    }
+
+    p {
+      margin: 0;
+      color: #666;
+    }
+  }
+
+  .stats-cards {
+    margin-bottom: 32px;
+
+    .stats-card {
+      text-align: center;
+
+      .stats-item {
+        padding: 16px;
+
+        .stats-value {
+          font-size: 32px;
+          font-weight: bold;
+          color: #409eff;
+          margin-bottom: 8px;
+
+          &.occupied {
+            color: #67c23a;
+          }
+
+          &.vacant {
+            color: #f56c6c;
+          }
+        }
+
+        .stats-label {
+          color: #666;
+          font-size: 14px;
+        }
       }
     }
+  }
+
+  .occupancy-chart {
+    text-align: center;
+    margin-bottom: 32px;
+
+    h4 {
+      margin-bottom: 20px;
+      color: #303133;
+    }
+
+    .percentage-value {
+      display: block;
+      font-size: 28px;
+      font-weight: bold;
+      color: #409eff;
+    }
+
+    .percentage-label {
+      display: block;
+      font-size: 14px;
+      color: #666;
+      margin-top: 4px;
+    }
+  }
+
+  .house-status-chart {
+    h4 {
+      margin-bottom: 16px;
+      color: #303133;
+    }
+
+    .status-item {
+      text-align: center;
+      margin-bottom: 12px;
+
+      .el-tag {
+        margin-bottom: 8px;
+        font-size: 20px;
+        font-weight: bold;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .status-label {
+        display: block;
+        color: #666;
+        font-size: 14px;
+      }
+    }
+  }
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+// 表格样式优化
+:deep(.el-table) {
+  .el-table__header {
+    th {
+      background-color: #fafafa;
+      font-weight: 600;
+      color: #303133;
+    }
+  }
+
+  .el-table__body {
+    tr:hover > td {
+      background-color: #f5f7fa;
+    }
+  }
+}
+
+// 卡片样式优化
+:deep(.el-card) {
+  border-radius: 8px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+
+  .el-card__header {
+    border-bottom: 1px solid #ebeef5;
+    padding: 16px 20px;
+  }
+
+  .el-card__body {
+    padding: 20px;
+  }
+}
+
+// 按钮样式优化
+:deep(.el-button) {
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+// 输入框样式优化
+:deep(.el-input__wrapper) {
+  border-radius: 6px;
+}
+
+// 标签样式优化
+:deep(.el-tag) {
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+// 进度条样式优化
+:deep(.el-progress) {
+  .el-progress-bar__outer {
+    border-radius: 4px;
+  }
+
+  .el-progress-bar__inner {
+    border-radius: 4px;
   }
 }
 </style>

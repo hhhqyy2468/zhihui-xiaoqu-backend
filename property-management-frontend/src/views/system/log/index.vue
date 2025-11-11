@@ -364,9 +364,13 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Delete, Download } from '@element-plus/icons-vue'
+
+const route = useRoute()
+const router = useRouter()
 
 // 响应式数据
 const activeTab = ref('operation')
@@ -517,6 +521,14 @@ const loadLoginLogs = () => {
 
 // 标签页切换
 const handleTabChange = (tabName) => {
+  // 更新路由
+  const targetPath = tabName === 'operation' ? '/log/operation' : '/log/login'
+  if (route.path !== targetPath) {
+    // 使用replace避免产生历史记录
+    router.replace(targetPath)
+  }
+
+  // 加载对应的数据
   if (tabName === 'operation') {
     loadOperationLogs()
   } else {
@@ -641,7 +653,25 @@ const handleLoginCurrentChange = (val) => {
 }
 
 onMounted(() => {
-  loadOperationLogs()
+  // 根据当前路由路径设置对应的标签页
+  if (route.path.includes('/login')) {
+    activeTab.value = 'login'
+    loadLoginLogs()
+  } else {
+    activeTab.value = 'operation'
+    loadOperationLogs()
+  }
+})
+
+// 监听路由变化
+watch(() => route.path, (newPath) => {
+  if (newPath.includes('/login')) {
+    activeTab.value = 'login'
+    loadLoginLogs()
+  } else {
+    activeTab.value = 'operation'
+    loadOperationLogs()
+  }
 })
 </script>
 

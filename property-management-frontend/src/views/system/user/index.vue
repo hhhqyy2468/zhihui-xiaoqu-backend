@@ -1,113 +1,231 @@
 <template>
-  <div class="app-container">
+  <div class="log-container">
+    <!-- 页面标题 -->
+    <div class="page-header">
+      <h2 class="page-title">用户管理</h2>
+      <el-breadcrumb separator="/">
+        <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
+        <el-breadcrumb-item>系统管理</el-breadcrumb-item>
+        <el-breadcrumb-item>用户管理</el-breadcrumb-item>
+      </el-breadcrumb>
+    </div>
+
+    <!-- 统计卡片 -->
+    <el-row :gutter="20" class="statistics-cards">
+      <el-col :span="6">
+        <el-card class="stat-card total-users">
+          <div class="stat-content">
+            <div class="stat-icon">
+              <el-icon><User /></el-icon>
+            </div>
+            <div class="stat-info">
+              <div class="stat-value">{{ statistics.totalUsers }}</div>
+              <div class="stat-label">用户总数</div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card class="stat-card active-users">
+          <div class="stat-content">
+            <div class="stat-icon">
+              <el-icon><CircleCheck /></el-icon>
+            </div>
+            <div class="stat-info">
+              <div class="stat-value">{{ statistics.activeUsers }}</div>
+              <div class="stat-label">活跃用户</div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card class="stat-card admin-users">
+          <div class="stat-content">
+            <div class="stat-icon">
+              <el-icon><UserFilled /></el-icon>
+            </div>
+            <div class="stat-info">
+              <div class="stat-value">{{ statistics.adminUsers }}</div>
+              <div class="stat-label">管理员</div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card class="stat-card new-users">
+          <div class="stat-content">
+            <div class="stat-icon">
+              <el-icon><Plus /></el-icon>
+            </div>
+            <div class="stat-info">
+              <div class="stat-value">{{ statistics.newUsers }}</div>
+              <div class="stat-label">本月新增</div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <!-- 操作按钮 -->
+    <div class="action-section">
+      <el-button type="primary" @click="handleAdd" v-permission="'system:user:add'">
+        <el-icon><Plus /></el-icon>
+        新增用户
+      </el-button>
+      <el-button type="warning" @click="handleBatchDelete" :disabled="selectedRows.length === 0" v-permission="'system:user:delete'">
+        <el-icon><Delete /></el-icon>
+        批量删除
+      </el-button>
+      <el-button type="success" @click="handleExport">
+        <el-icon><Download /></el-icon>
+        导出Excel
+      </el-button>
+    </div>
+
     <!-- 搜索区域 -->
-    <el-card class="search-card">
-      <el-form
-        ref="searchFormRef"
-        :model="searchForm"
-        inline
-        class="search-form"
-      >
-        <el-form-item label="用户名" prop="username">
-          <el-input
-            v-model="searchForm.username"
-            placeholder="请输入用户名"
-            clearable
-            style="width: 200px"
-          />
-        </el-form-item>
-
-        <el-form-item label="真实姓名" prop="realName">
-          <el-input
-            v-model="searchForm.realName"
-            placeholder="请输入真实姓名"
-            clearable
-            style="width: 200px"
-          />
-        </el-form-item>
-
-        <el-form-item label="手机号" prop="phone">
-          <el-input
-            v-model="searchForm.phone"
-            placeholder="请输入手机号"
-            clearable
-            style="width: 200px"
-          />
-        </el-form-item>
-
-        <el-form-item label="用户类型" prop="userType">
-          <el-select
-            v-model="searchForm.userType"
-            placeholder="请选择用户类型"
-            clearable
-            style="width: 150px"
-          >
-            <el-option
-              v-for="item in userTypeOptions"
-              :key="item.value"
-              :label="item.label"
-              :value="item.value"
+    <div class="search-section">
+        <el-form :model="searchForm" inline @submit.prevent>
+          <el-form-item label="用户名">
+            <el-input
+              v-model="searchForm.username"
+              placeholder="请输入用户名"
+              clearable
+              style="width: 200px"
             />
-          </el-select>
-        </el-form-item>
+          </el-form-item>
+          <el-form-item label="真实姓名">
+            <el-input
+              v-model="searchForm.realName"
+              placeholder="请输入真实姓名"
+              clearable
+              style="width: 200px"
+            />
+          </el-form-item>
+          <el-form-item label="手机号">
+            <el-input
+              v-model="searchForm.phone"
+              placeholder="请输入手机号"
+              clearable
+              style="width: 200px"
+            />
+          </el-form-item>
+          <el-form-item label="用户类型">
+            <el-select
+              v-model="searchForm.userType"
+              placeholder="请选择用户类型"
+              clearable
+              style="width: 150px"
+            >
+              <el-option
+                v-for="item in userTypeOptions"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="状态">
+            <el-select
+              v-model="searchForm.status"
+              placeholder="请选择状态"
+              clearable
+              style="width: 120px"
+            >
+              <el-option label="启用" :value="1" />
+              <el-option label="禁用" :value="0" />
+            </el-select>
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="handleSearch">
+              <el-icon><Search /></el-icon>
+              搜索
+            </el-button>
+            <el-button @click="handleReset">
+              <el-icon><Refresh /></el-icon>
+              重置
+            </el-button>
+          </el-form-item>
+        </el-form>
+      </div>
 
-        <el-form-item label="状态" prop="status">
-          <el-select
-            v-model="searchForm.status"
-            placeholder="请选择状态"
-            clearable
-            style="width: 120px"
-          >
-            <el-option label="启用" :value="1" />
-            <el-option label="禁用" :value="0" />
-          </el-select>
-        </el-form-item>
+      <!-- 数据表格 -->
+      <div class="table-section">
+        <el-table
+          v-loading="loading"
+          :data="userList"
+          stripe
+          @selection-change="handleSelectionChange"
+        >
+          <el-table-column type="selection" width="55" />
+          <el-table-column prop="username" label="用户名" width="120" />
+          <el-table-column prop="realName" label="真实姓名" width="120" />
+          <el-table-column prop="userType" label="用户类型" width="100">
+            <template #default="{ row }">
+              <el-tag :type="getUserTypeTag(row.userType)">
+                {{ getUserTypeText(row.userType) }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="phone" label="手机号" width="140" />
+          <el-table-column prop="email" label="邮箱" width="180" show-overflow-tooltip />
+          <el-table-column prop="status" label="状态" width="80">
+            <template #default="{ row }">
+              <el-tag :type="row.status === 1 ? 'success' : 'danger'">
+                {{ row.status === 1 ? '启用' : '禁用' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="lastLoginTime" label="最后登录" width="160" />
+          <el-table-column prop="createTime" label="创建时间" width="160" />
+          <el-table-column label="操作" width="200" fixed="right">
+            <template #default="{ row }">
+              <el-button type="primary" link @click="handleView(row)">
+                <el-icon><View /></el-icon>
+                详情
+              </el-button>
+              <el-button type="success" link @click="handleEdit(row)" v-permission="'system:user:edit'">
+                <el-icon><Edit /></el-icon>
+                编辑
+              </el-button>
+              <el-button type="warning" link @click="handleResetPassword(row)" v-permission="'system:user:reset'">
+                <el-icon><Key /></el-icon>
+                重置密码
+              </el-button>
+              <el-button type="danger" link @click="handleDelete(row)" v-permission="'system:user:delete'">
+                <el-icon><Delete /></el-icon>
+                删除
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
 
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">
-            <el-icon><Search /></el-icon>
-            搜索
-          </el-button>
-          <el-button @click="handleReset">
-            <el-icon><Refresh /></el-icon>
-            重置
-          </el-button>
-        </el-form-item>
-      </el-form>
+        <!-- 分页 -->
+        <el-pagination
+          v-model:current-page="searchForm.page"
+          v-model:page-size="searchForm.size"
+          :page-sizes="[10, 20, 50, 100]"
+          :total="total"
+          background
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="handleSearch"
+          @current-change="handleSearch"
+        />
+      </div>
+
+      <!-- 批量操作 -->
+      <div v-if="selectedRows.length > 0" class="batch-actions">
+        <div class="batch-info">
+          已选择 {{ selectedRows.length }} 项
+        </div>
+        <div class="batch-buttons">
+          <el-button type="success" @click="batchEnable">批量启用</el-button>
+          <el-button type="warning" @click="batchDisable">批量禁用</el-button>
+          <el-button type="danger" @click="handleBatchDelete">批量删除</el-button>
+        </div>
+      </div>
     </el-card>
 
-    <!-- 表格区域 -->
-    <el-card class="table-card">
-      <template #header>
-        <div class="card-header">
-          <span>用户列表</span>
-          <div class="header-actions">
-            <el-button
-              type="primary"
-              v-permission="'system:user:add'"
-              @click="handleAdd"
-            >
-              <el-icon><Plus /></el-icon>
-              新增用户
-            </el-button>
-            <el-button
-              type="danger"
-              v-permission="'system:user:delete'"
-              :disabled="selectedRows.length === 0"
-              @click="handleBatchDelete"
-            >
-              <el-icon><Delete /></el-icon>
-              批量删除
-            </el-button>
-            <el-button @click="handleExport">
-              <el-icon><Download /></el-icon>
-              导出
-            </el-button>
-          </div>
-        </div>
-      </template>
-
-      <Table
+    <Table
         ref="tableRef"
         :data="tableData"
         :columns="tableColumns"
@@ -167,9 +285,8 @@
           </el-button>
         </template>
       </Table>
-    </el-card>
 
-    <!-- 新增/编辑对话框 -->
+    <!-- 新增/编辑对话框 - Fixed template syntax -->
     <el-dialog
       v-model="dialogVisible"
       :title="dialogTitle"

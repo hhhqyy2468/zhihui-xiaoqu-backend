@@ -1,6 +1,6 @@
 <template>
-  <div class="dict-container">
-    <!-- 页面标题 -->
+  <div class="log-container">
+    <!-- 页面头部 -->
     <div class="page-header">
       <h2 class="page-title">字典管理</h2>
       <el-breadcrumb separator="/">
@@ -8,6 +8,35 @@
         <el-breadcrumb-item>系统管理</el-breadcrumb-item>
         <el-breadcrumb-item>字典管理</el-breadcrumb-item>
       </el-breadcrumb>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="action-section">
+      <el-button
+        type="primary"
+        @click="handleAdd"
+        v-permission="'system:dict:add'"
+      >
+        <el-icon><Plus /></el-icon>
+        新增字典
+      </el-button>
+      <el-button
+        type="success"
+        @click="handleRefreshCache"
+        v-permission="'system:dict:refresh'"
+      >
+        <el-icon><Refresh /></el-icon>
+        刷新缓存
+      </el-button>
+      <el-button
+        type="danger"
+        @click="handleBatchDelete"
+        :disabled="!selectedDicts.length"
+        v-permission="'system:dict:delete'"
+      >
+        <el-icon><Delete /></el-icon>
+        批量删除
+      </el-button>
     </div>
 
     <!-- 搜索区域 -->
@@ -53,36 +82,7 @@
       </el-form>
     </div>
 
-    <!-- 操作按钮区域 -->
-    <div class="action-section">
-      <el-button
-        type="primary"
-        @click="handleAdd"
-        v-permission="'system:dict:add'"
-      >
-        <el-icon><Plus /></el-icon>
-        新增字典
-      </el-button>
-      <el-button
-        type="success"
-        @click="handleRefreshCache"
-        v-permission="'system:dict:refresh'"
-      >
-        <el-icon><Refresh /></el-icon>
-        刷新缓存
-      </el-button>
-      <el-button
-        type="danger"
-        @click="handleBatchDelete"
-        :disabled="!selectedDicts.length"
-        v-permission="'system:dict:delete'"
-      >
-        <el-icon><Delete /></el-icon>
-        批量删除
-      </el-button>
-    </div>
-
-    <!-- 字典列表 -->
+    <!-- 数据表格 -->
     <div class="table-section">
       <el-table
         v-loading="loading"
@@ -667,7 +667,7 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-.dict-container {
+.log-container {
   padding: 20px;
 }
 

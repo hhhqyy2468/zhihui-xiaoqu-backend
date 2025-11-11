@@ -1,7 +1,33 @@
 <template>
-  <div class="app-container">
+  <div class="log-container">
+    <!-- 页面头部 -->
+    <div class="page-header">
+      <h2 class="page-title">角色管理</h2>
+      <el-breadcrumb separator="/">
+        <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
+        <el-breadcrumb-item>系统管理</el-breadcrumb-item>
+        <el-breadcrumb-item>角色管理</el-breadcrumb-item>
+      </el-breadcrumb>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="action-section">
+      <el-button type="primary" @click="handleAdd">
+        <el-icon><Plus /></el-icon>
+        新增角色
+      </el-button>
+      <el-button type="warning" @click="handleBatchDelete" :disabled="selectedRows.length === 0">
+        <el-icon><Delete /></el-icon>
+        批量删除
+      </el-button>
+      <el-button type="success" @click="handleExport">
+        <el-icon><Download /></el-icon>
+        导出Excel
+      </el-button>
+    </div>
+
     <!-- 搜索区域 -->
-    <el-card class="search-card">
+    <div class="search-section">
       <el-form
         ref="searchFormRef"
         :model="searchForm"
@@ -49,75 +75,60 @@
           </el-button>
         </el-form-item>
       </el-form>
-    </el-card>
+    </div>
 
-    <!-- 表格区域 -->
-    <el-card class="table-card">
-      <template #header>
-        <div class="card-header">
-          <span>角色列表</span>
-          <div class="header-actions">
-            <el-button
-              type="primary"
-              v-permission="'system:role:add'"
-              @click="handleAdd"
-            >
-              <el-icon><Plus /></el-icon>
-              新增角色
-            </el-button>
-            <el-button @click="handleExport">
-              <el-icon><Download /></el-icon>
-              导出
-            </el-button>
-          </div>
-        </div>
-      </template>
-
-      <Table
-        ref="tableRef"
+    <!-- 数据表格 -->
+    <div class="table-section">
+      <el-table
+        v-loading="loading"
         :data="tableData"
-        :columns="tableColumns"
-        :loading="loading"
-        :pagination="pagination"
-        @page-change="handlePageChange"
-        @sort-change="handleSortChange"
+        stripe
+        @selection-change="handleSelectionChange"
       >
-        <!-- 状态列 -->
-        <template #status="{ row }">
-          <el-tag :type="row.status === 1 ? 'success' : 'danger'">
-            {{ row.status === 1 ? '启用' : '禁用' }}
-          </el-tag>
-        </template>
-
-        <!-- 操作列 -->
-        <template #operation="{ row }">
-          <el-button
-            link
-            type="primary"
-            v-permission="'system:role:edit'"
-            @click="handleEdit(row)"
-          >
-            编辑
-          </el-button>
-          <el-button
-            link
-            type="warning"
-            v-permission="'system:role:assignPermission'"
-            @click="handleAssignPermission(row)"
-          >
-            权限分配
-          </el-button>
-          <el-button
-            link
-            type="danger"
-            v-permission="'system:role:delete'"
-            @click="handleDelete(row)"
-          >
-            删除
-          </el-button>
-        </template>
-      </Table>
-    </el-card>
+        <el-table-column type="selection" width="55" />
+        <el-table-column prop="roleId" label="角色编号" width="100" />
+        <el-table-column prop="roleName" label="角色名称" width="150" sortable />
+        <el-table-column prop="roleKey" label="角色标识" width="150" />
+        <el-table-column prop="roleSort" label="显示顺序" width="100" />
+        <el-table-column prop="status" label="状态" width="100">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 1 ? 'success' : 'danger'">
+              {{ row.status === 1 ? '启用' : '禁用' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="createTime" label="创建时间" width="180" sortable />
+        <el-table-column prop="remark" label="备注" show-overflow-tooltip />
+        <el-table-column label="操作" width="240" fixed="right">
+          <template #default="{ row }">
+            <el-button
+              link
+              type="primary"
+              v-permission="'system:role:edit'"
+              @click="handleEdit(row)"
+            >
+              编辑
+            </el-button>
+            <el-button
+              link
+              type="warning"
+              v-permission="'system:role:assignPermission'"
+              @click="handleAssignPermission(row)"
+            >
+              权限分配
+            </el-button>
+            <el-button
+              link
+              type="danger"
+              v-permission="'system:role:delete'"
+              @click="handleDelete(row)"
+            >
+              删除
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
 
     <!-- 新增/编辑对话框 -->
     <el-dialog
@@ -126,13 +137,46 @@
       width="600px"
       @close="handleDialogClose"
     >
-      <Form
+      <el-form
         ref="formRef"
         :model="form"
         :rules="formRules"
-        :items="formItems"
         label-width="100px"
-      />
+      >
+        <el-form-item label="角色名称" prop="roleName">
+          <el-input
+            v-model="form.roleName"
+            placeholder="请输入角色名称"
+          />
+        </el-form-item>
+        <el-form-item label="角色标识" prop="roleKey">
+          <el-input
+            v-model="form.roleKey"
+            placeholder="请输入角色标识"
+          />
+        </el-form-item>
+        <el-form-item label="显示顺序" prop="roleSort">
+          <el-input-number
+            v-model="form.roleSort"
+            :min="0"
+            controls-position="right"
+          />
+        </el-form-item>
+        <el-form-item label="状态" prop="status">
+          <el-radio-group v-model="form.status">
+            <el-radio :label="1">启用</el-radio>
+            <el-radio :label="0">禁用</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="备注" prop="remark">
+          <el-input
+            v-model="form.remark"
+            type="textarea"
+            placeholder="请输入备注信息"
+            :rows="3"
+          />
+        </el-form-item>
+      </el-form>
 
       <template #footer>
         <span class="dialog-footer">
@@ -193,12 +237,9 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus, Download } from '@element-plus/icons-vue'
-import Table from '@/components/Table/index.vue'
-import Form from '@/components/Form/index.vue'
 
 // 响应式数据
 const searchFormRef = ref()
-const tableRef = ref()
 const formRef = ref()
 const permissionTreeRef = ref()
 const loading = ref(false)
@@ -207,6 +248,7 @@ const permissionSubmitLoading = ref(false)
 const dialogVisible = ref(false)
 const permissionDialogVisible = ref(false)
 const isEdit = ref(false)
+const selectedRows = ref([])
 
 // 搜索表单
 const searchForm = reactive({
@@ -225,54 +267,6 @@ const pagination = reactive({
   total: 0
 })
 
-// 表格列配置
-const tableColumns = [
-  {
-    prop: 'roleId',
-    label: '角色编号',
-    width: '100'
-  },
-  {
-    prop: 'roleName',
-    label: '角色名称',
-    width: '150',
-    sortable: true
-  },
-  {
-    prop: 'roleKey',
-    label: '角色标识',
-    width: '150'
-  },
-  {
-    prop: 'roleSort',
-    label: '显示顺序',
-    width: '100'
-  },
-  {
-    prop: 'status',
-    label: '状态',
-    width: '100',
-    slot: 'status'
-  },
-  {
-    prop: 'createTime',
-    label: '创建时间',
-    width: '180',
-    sortable: true
-  },
-  {
-    prop: 'remark',
-    label: '备注',
-    showOverflowTooltip: true
-  },
-  {
-    prop: 'operation',
-    label: '操作',
-    width: '240',
-    slot: 'operation',
-    fixed: 'right'
-  }
-]
 
 // 表单数据
 const form = reactive({
@@ -300,43 +294,6 @@ const formRules = {
   ]
 }
 
-// 表单项配置
-const formItems = computed(() => [
-  {
-    prop: 'roleName',
-    label: '角色名称',
-    type: 'input',
-    placeholder: '请输入角色名称'
-  },
-  {
-    prop: 'roleKey',
-    label: '角色标识',
-    type: 'input',
-    placeholder: '请输入角色标识'
-  },
-  {
-    prop: 'roleSort',
-    label: '显示顺序',
-    type: 'input',
-    inputType: 'number',
-    placeholder: '请输入显示顺序'
-  },
-  {
-    prop: 'status',
-    label: '状态',
-    type: 'radio',
-    options: [
-      { label: '启用', value: 1 },
-      { label: '禁用', value: 0 }
-    ]
-  },
-  {
-    prop: 'remark',
-    label: '备注',
-    type: 'textarea',
-    placeholder: '请输入备注信息'
-  }
-])
 
 // 权限表单
 const permissionForm = reactive({
@@ -541,6 +498,32 @@ const handleAssignPermission = (row) => {
   permissionDialogVisible.value = true
 }
 
+// 选择变化
+const handleSelectionChange = (selection) => {
+  selectedRows.value = selection
+}
+
+// 批量删除
+const handleBatchDelete = async () => {
+  if (selectedRows.value.length === 0) {
+    ElMessage.warning('请选择要删除的数据')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除选中的 ${selectedRows.value.length} 个角色吗？`,
+      '批量删除',
+      { type: 'warning' }
+    )
+    ElMessage.success('批量删除成功')
+    selectedRows.value = []
+    fetchData()
+  } catch (error) {
+    // 用户取消操作
+  }
+}
+
 // 导出
 const handleExport = () => {
   ElMessage.success('导出成功')
@@ -619,30 +602,39 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-.app-container {
+.log-container {
   padding: 20px;
 
-  .search-card {
+  .page-header {
     margin-bottom: 20px;
 
-    .search-form {
-      .el-form-item {
-        margin-bottom: 0;
-      }
+    .page-title {
+      margin: 0 0 16px 0;
+      font-size: 24px;
+      font-weight: 600;
+      color: #303133;
     }
   }
 
-  .table-card {
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+  .action-section {
+    margin-bottom: 20px;
+    display: flex;
+    gap: 10px;
+  }
 
-      .header-actions {
-        display: flex;
-        gap: 10px;
-      }
-    }
+  .search-section {
+    margin-bottom: 20px;
+    padding: 20px;
+    background: #fff;
+    border-radius: 4px;
+    border: 1px solid #e4e7ed;
+  }
+
+  .table-section {
+    background: #fff;
+    border-radius: 4px;
+    border: 1px solid #e4e7ed;
+    padding: 20px;
   }
 
   .permission-tree {

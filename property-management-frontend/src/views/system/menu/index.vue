@@ -1,7 +1,33 @@
 <template>
-  <div class="app-container">
+  <div class="log-container">
+    <!-- 页面头部 -->
+    <div class="page-header">
+      <h2 class="page-title">菜单管理</h2>
+      <el-breadcrumb separator="/">
+        <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
+        <el-breadcrumb-item>系统管理</el-breadcrumb-item>
+        <el-breadcrumb-item>菜单管理</el-breadcrumb-item>
+      </el-breadcrumb>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="action-section">
+      <el-button
+        type="primary"
+        v-permission="'system:menu:add'"
+        @click="handleAdd"
+      >
+        <el-icon><Plus /></el-icon>
+        新增菜单
+      </el-button>
+      <el-button @click="handleExpandAll">
+        <el-icon><Sort /></el-icon>
+        展开/折叠
+      </el-button>
+    </div>
+
     <!-- 搜索区域 -->
-    <el-card class="search-card">
+    <div class="search-section">
       <el-form
         ref="searchFormRef"
         :model="searchForm"
@@ -40,30 +66,10 @@
           </el-button>
         </el-form-item>
       </el-form>
-    </el-card>
+    </div>
 
-    <!-- 表格区域 -->
-    <el-card class="table-card">
-      <template #header>
-        <div class="card-header">
-          <span>菜单列表</span>
-          <div class="header-actions">
-            <el-button
-              type="primary"
-              v-permission="'system:menu:add'"
-              @click="handleAdd"
-            >
-              <el-icon><Plus /></el-icon>
-              新增菜单
-            </el-button>
-            <el-button @click="handleExpandAll">
-              <el-icon><Sort /></el-icon>
-              展开/折叠
-            </el-button>
-          </div>
-        </div>
-      </template>
-
+    <!-- 数据表格 -->
+    <div class="table-section">
       <Table
         ref="tableRef"
         :data="tableData"
@@ -125,7 +131,7 @@
           </el-button>
         </template>
       </Table>
-    </el-card>
+    </div>
 
     <!-- 新增/编辑对话框 -->
     <el-dialog
@@ -669,10 +675,33 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-.app-container {
+.log-container {
   padding: 20px;
 
-  .search-card {
+  .page-header {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #ebeef5;
+
+    .page-title {
+      margin: 0 0 10px 0;
+      font-size: 20px;
+      font-weight: 500;
+      color: #303133;
+    }
+  }
+
+  .action-section {
+    margin-bottom: 20px;
+    display: flex;
+    gap: 10px;
+  }
+
+  .search-section {
+    background: #fff;
+    padding: 20px;
+    border-radius: 4px;
+    border: 1px solid #ebeef5;
     margin-bottom: 20px;
 
     .search-form {
@@ -682,17 +711,11 @@ onMounted(() => {
     }
   }
 
-  .table-card {
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-
-      .header-actions {
-        display: flex;
-        gap: 10px;
-      }
-    }
+  .table-section {
+    background: #fff;
+    padding: 20px;
+    border-radius: 4px;
+    border: 1px solid #ebeef5;
   }
 
   .menu-name-cell {
