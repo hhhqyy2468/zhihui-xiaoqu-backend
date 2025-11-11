@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hyu.property.mapper.RepairOrderMapper">
+
+    <resultMap type="RepairOrderVO" id="RepairOrderResult">
+        <result property="id" column="id"/>
+        <result property="orderNo" column="order_no"/>
+        <result property="userId" column="user_id"/>
+        <result property="userName" column="user_name"/>
+        <result property="houseId" column="house_id"/>
+        <result property="houseNo" column="house_no"/>
+        <result property="buildingId" column="building_id"/>
+        <result property="buildingName" column="building_name"/>
+        <result property="unitId" column="unit_id"/>
+        <result property="unitName" column="unit_name"/>
+        <result property="repairType" column="repair_type"/>
+        <result property="faultDescription" column="fault_description"/>
+        <result property="imageUrls" column="image_urls"/>
+        <result property="urgencyLevel" column="urgency_level"/>
+        <result property="appointmentTime" column="appointment_time"/>
+        <result property="orderStatus" column="order_status"/>
+        <result property="workerId" column="worker_id"/>
+        <result property="workerName" column="worker_name"/>
+        <result property="assignTime" column="assign_time"/>
+        <result property="requiredFinishTime" column="required_finish_time"/>
+        <result property="actualFault" column="actual_fault"/>
+        <result property="repairContent" column="repair_content"/>
+        <result property="repairImageUrls" column="repair_image_urls"/>
+        <result property="repairCost" column="repair_cost"/>
+        <result property="partsReplaced" column="parts_replaced"/>
+        <result property="finishTime" column="finish_time"/>
+        <result property="acceptanceResult" column="acceptance_result"/>
+        <result property="acceptanceRating" column="acceptance_rating"/>
+        <result property="acceptanceComment" column="acceptance_comment"/>
+        <result property="acceptanceTime" column="acceptance_time"/>
+        <result property="reworkCount" column="rework_count"/>
+        <result property="autoAcceptTime" column="auto_accept_time"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <sql id="selectRepairOrderVo">
+        select ro.id, ro.order_no, ro.user_id, ro.user_name, ro.house_id, ro.house_no,
+               ro.repair_type, ro.fault_description, ro.image_urls, ro.urgency_level,
+               ro.appointment_time, ro.order_status, ro.worker_id, ro.worker_name,
+               ro.assign_time, ro.required_finish_time, ro.actual_fault, ro.repair_content,
+               ro.repair_image_urls, ro.repair_cost, ro.parts_replaced, ro.finish_time,
+               ro.acceptance_result, ro.acceptance_rating, ro.acceptance_comment,
+               ro.acceptance_time, ro.rework_count, ro.auto_accept_time,
+               ro.create_by, ro.create_time, ro.update_by, ro.update_time,
+               h.building_id, h.unit_id,
+               b.building_name,
+               u.unit_name
+        from repair_order ro
+        left join house h on ro.house_id = h.id
+        left join building b on h.building_id = b.id
+        left join unit u on h.unit_id = u.id
+    </sql>
+
+    <select id="selectRepairOrderList" parameterType="RepairOrder" resultMap="RepairOrderResult">
+        <include refid="selectRepairOrderVo"/>
+        <where>
+            ro.deleted = 0
+            <if test="orderNo != null and orderNo != ''"> and ro.order_no like concat('%', #{orderNo}, '%')</if>
+            <if test="userId != null"> and ro.user_id = #{userId}</if>
+            <if test="userName != null and userName != ''"> and ro.user_name like concat('%', #{userName}, '%')</if>
+            <if test="houseId != null"> and ro.house_id = #{houseId}</if>
+            <if test="repairType != null and repairType != ''"> and ro.repair_type = #{repairType}</if>
+            <if test="urgencyLevel != null"> and ro.urgency_level = #{urgencyLevel}</if>
+            <if test="orderStatus != null"> and ro.order_status = #{orderStatus}</if>
+            <if test="workerId != null"> and ro.worker_id = #{workerId}</if>
+            <if test="workerName != null and workerName != ''"> and ro.worker_name like concat('%', #{workerName}, '%')</if>
+            <if test="params.beginTime != null and params.beginTime != ''">
+                and date_format(ro.create_time,'%y%m%d') &gt;= date_format(#{params.beginTime},'%y%m%d')
+            </if>
+            <if test="params.endTime != null and params.endTime != ''">
+                and date_format(ro.create_time,'%y%m%d') &lt;= date_format(#{params.endTime},'%y%m%d')
+            </if>
+        </where>
+        order by ro.create_time desc
+    </select>
+
+    <select id="selectRepairOrderById" parameterType="Long" resultMap="RepairOrderResult">
+        <include refid="selectRepairOrderVo"/>
+        where ro.id = #{id} and ro.deleted = 0
+    </select>
+
+    <select id="selectRepairOrdersByUserId" parameterType="Long" resultMap="RepairOrderResult">
+        <include refid="selectRepairOrderVo"/>
+        where ro.user_id = #{userId} and ro.deleted = 0
+        order by ro.create_time desc
+    </select>
+
+    <select id="selectRepairOrdersByWorkerId" parameterType="Long" resultMap="RepairOrderResult">
+        <include refid="selectRepairOrderVo"/>
+        where ro.worker_id = #{workerId} and ro.deleted = 0
+        order by ro.create_time desc
+    </select>
+
+    <select id="selectPendingRepairOrders" resultMap="RepairOrderResult">
+        <include refid="selectRepairOrderVo"/>
+        where ro.order_status = 1 and ro.deleted = 0
+        order by ro.create_time desc
+    </select>
+
+    <select id="countByOrderStatus" parameterType="Integer" resultType="Integer">
+        select count(*) from repair_order
+        where order_status = #{orderStatus} and deleted = 0
+    </select>
+
+    <select id="selectWorkerWorkloadStats" resultType="RepairOrderVO">
+        select ro.worker_id, ro.worker_name, count(*) as workCount
+        from repair_order ro
+        where ro.worker_id is not null and ro.deleted = 0
+        group by ro.worker_id, ro.worker_name
+        order by workCount desc
+    </select>
+
+    <select id="selectRepairTypeStats" resultType="RepairOrderVO">
+        select ro.repair_type as repairTypeName, count(*) as repairCount
+        from repair_order ro
+        where ro.deleted = 0
+        group by ro.repair_type
+        order by repairCount desc
+    </select>
+
+    <update id="updateOrderStatus">
+        update repair_order
+        set order_status = #{orderStatus},
+            update_time = now()
+        where id = #{id}
+    </update>
+
+    <update id="incrementReworkCount">
+        update repair_order
+        set rework_count = rework_count + 1,
+            update_time = now()
+        where id = #{id}
+    </update>
+
+</mapper>
