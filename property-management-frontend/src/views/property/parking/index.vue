@@ -1,12 +1,27 @@
 <template>
-  <div class="app-container">
-    <!-- 搜索区域 -->
-    <el-card class="search-card">
+  <StandardPageLayout
+    :title="currentTabTitle"
+    :breadcrumbs="currentBreadcrumbs"
+    :tabs="tabs"
+    :active-tab="activeTab"
+    @tab-change="handleTabChange"
+    show-add-button
+    :add-button-text="currentAddButtonText"
+    show-batch-delete-button
+    show-export-button
+    :selected-count="selectedRows.length"
+    @add="handleAdd"
+    @batch-delete="handleBatchDelete"
+    @export="handleExport"
+    v-model:active-tab="activeTab"
+  >
+    <template #search>
+      <!-- 车位管理搜索 -->
       <el-form
+        v-if="activeTab === 'management'"
         ref="searchFormRef"
         :model="searchForm"
         inline
-        class="search-form"
       >
         <el-form-item label="车位编号" prop="parkingNo">
           <el-input
@@ -69,31 +84,74 @@
           </el-button>
         </el-form-item>
       </el-form>
-    </el-card>
 
-    <!-- 表格区域 -->
-    <el-card class="table-card">
-      <template #header>
-        <div class="card-header">
-          <span>车位列表</span>
-          <div class="header-actions">
-            <el-button
-              type="primary"
-              v-permission="'property:parking:add'"
-              @click="handleAdd"
-            >
-              <el-icon><Plus /></el-icon>
-              新增车位
-            </el-button>
-            <el-button @click="handleExport">
-              <el-icon><Download /></el-icon>
-              导出
-            </el-button>
-          </div>
-        </div>
-      </template>
+      <!-- 租赁管理搜索 -->
+      <el-form
+        v-if="activeTab === 'rental'"
+        ref="rentalSearchFormRef"
+        :model="rentalSearchForm"
+        inline
+      >
+        <el-form-item label="车位编号" prop="parkingNo">
+          <el-input
+            v-model="rentalSearchForm.parkingNo"
+            placeholder="请输入车位编号"
+            clearable
+            style="width: 200px"
+          />
+        </el-form-item>
 
+        <el-form-item label="业主姓名" prop="ownerName">
+          <el-input
+            v-model="rentalSearchForm.ownerName"
+            placeholder="请输入业主姓名"
+            clearable
+            style="width: 200px"
+          />
+        </el-form-item>
+
+        <el-form-item label="车牌号" prop="plateNumber">
+          <el-input
+            v-model="rentalSearchForm.plateNumber"
+            placeholder="请输入车牌号"
+            clearable
+            style="width: 200px"
+          />
+        </el-form-item>
+
+        <el-form-item label="租赁状态" prop="rentalStatus">
+          <el-select
+            v-model="rentalSearchForm.rentalStatus"
+            placeholder="请选择租赁状态"
+            clearable
+            style="width: 150px"
+          >
+            <el-option
+              v-for="item in rentalStatusOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item>
+          <el-button type="primary" @click="handleRentalSearch">
+            <el-icon><Search /></el-icon>
+            搜索
+          </el-button>
+          <el-button @click="handleRentalReset">
+            <el-icon><Refresh /></el-icon>
+            重置
+          </el-button>
+        </el-form-item>
+      </el-form>
+    </template>
+
+    <template #table>
+      <!-- 车位管理表格 -->
       <Table
+        v-if="activeTab === 'management'"
         ref="tableRef"
         :data="tableData"
         :columns="tableColumns"
@@ -101,6 +159,7 @@
         :pagination="pagination"
         @page-change="handlePageChange"
         @sort-change="handleSortChange"
+        @selection-change="handleSelectionChange"
       >
         <!-- 月租金列 -->
         <template #monthlyRent="{ row }">
@@ -153,132 +212,227 @@
           </el-button>
         </template>
       </Table>
-    </el-card>
 
-    <!-- 新增/编辑对话框 -->
-    <el-dialog
-      v-model="dialogVisible"
-      :title="dialogTitle"
-      width="600px"
-      @close="handleDialogClose"
-    >
-      <Form
-        ref="formRef"
-        :model="form"
-        :rules="formRules"
-        :items="formItems"
-        label-width="100px"
+      <!-- 租赁管理表格 -->
+      <Table
+        v-if="activeTab === 'rental'"
+        ref="rentalTableRef"
+        :data="rentalTableData"
+        :columns="rentalTableColumns"
+        :loading="rentalLoading"
+        :pagination="rentalPagination"
+        @page-change="handleRentalPageChange"
+        @sort-change="handleRentalSortChange"
+        @selection-change="handleRentalSelectionChange"
+      >
+        <!-- 月租金列 -->
+        <template #monthlyRent="{ row }">
+          <span class="price-text">¥{{ row.monthlyRent.toFixed(2) }}</span>
+        </template>
+
+        <!-- 租赁状态列 -->
+        <template #rentalStatus="{ row }">
+          <el-tag :type="getRentalStatusTag(row.rentalStatus)">
+            {{ getRentalStatusName(row.rentalStatus) }}
+          </el-tag>
+        </template>
+
+        <!-- 操作列 -->
+        <template #operation="{ row }">
+          <el-button
+            link
+            type="primary"
+            v-permission="'property:parking:view'"
+            @click="handleRentalView(row)"
+          >
+            查看
+          </el-button>
+          <el-button
+            link
+            type="success"
+            v-permission="'property:parking:renew'"
+            v-if="row.rentalStatus === 1"
+            @click="handleRenew(row)"
+          >
+            续租
+          </el-button>
+          <el-button
+            link
+            type="warning"
+            v-permission="'property:parking:return'"
+            v-if="row.rentalStatus === 1"
+            @click="handleReturn(row)"
+          >
+            退租
+          </el-button>
+        </template>
+      </Table>
+    </template>
+
+    <template #pagination>
+      <!-- 车位管理分页 -->
+      <el-pagination
+        v-if="activeTab === 'management'"
+        v-model:current-page="pagination.current"
+        v-model:page-size="pagination.pageSize"
+        :page-sizes="[10, 20, 50, 100]"
+        :total="pagination.total"
+        layout="total, sizes, prev, pager, next, jumper"
+        @size-change="handleSizeChange"
+        @current-change="handlePageChange"
       />
 
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="dialogVisible = false">取消</el-button>
-          <el-button
-            type="primary"
-            :loading="submitLoading"
-            @click="handleSubmit"
-          >
-            确定
-          </el-button>
-        </span>
-      </template>
-    </el-dialog>
+      <!-- 租赁管理分页 -->
+      <el-pagination
+        v-if="activeTab === 'rental'"
+        v-model:current-page="rentalPagination.current"
+        v-model:page-size="rentalPagination.pageSize"
+        :page-sizes="[10, 20, 50, 100]"
+        :total="rentalPagination.total"
+        layout="total, sizes, prev, pager, next, jumper"
+        @size-change="handleRentalSizeChange"
+        @current-change="handleRentalPageChange"
+      />
+    </template>
+  </StandardPageLayout>
 
-    <!-- 出租对话框 -->
-    <el-dialog
-      v-model="rentDialogVisible"
-      title="车位出租"
-      width="600px"
-    >
-      <el-form :model="rentForm" :rules="rentRules" ref="rentFormRef" label-width="100px">
-        <el-form-item label="车位编号">
-          <el-input v-model="rentForm.parkingNo" disabled />
-        </el-form-item>
-        <el-form-item label="车位位置">
-          <el-input v-model="rentForm.location" disabled />
-        </el-form-item>
-        <el-form-item label="业主姓名" prop="ownerName">
-          <el-input v-model="rentForm.ownerName" placeholder="请输入业主姓名" />
-        </el-form-item>
-        <el-form-item label="联系电话" prop="phone">
-          <el-input v-model="rentForm.phone" placeholder="请输入联系电话" />
-        </el-form-item>
-        <el-form-item label="车牌号" prop="plateNumber">
-          <el-input v-model="rentForm.plateNumber" placeholder="请输入车牌号" />
-        </el-form-item>
-        <el-form-item label="月租金" prop="monthlyRent">
-          <el-input-number
-            v-model="rentForm.monthlyRent"
-            :min="0"
-            :precision="2"
-            style="width: 200px"
-          />
-          <span style="margin-left: 10px;">元</span>
-        </el-form-item>
-        <el-form-item label="租赁开始时间" prop="startTime">
-          <el-date-picker
-            v-model="rentForm.startTime"
-            type="date"
-            placeholder="请选择开始时间"
-            format="YYYY-MM-DD"
-            value-format="YYYY-MM-DD"
-            style="width: 200px"
-          />
-        </el-form-item>
-        <el-form-item label="租赁结束时间" prop="endTime">
-          <el-date-picker
-            v-model="rentForm.endTime"
-            type="date"
-            placeholder="请选择结束时间"
-            format="YYYY-MM-DD"
-            value-format="YYYY-MM-DD"
-            style="width: 200px"
-          />
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input
-            v-model="rentForm.remark"
-            type="textarea"
-            placeholder="请输入备注信息"
-            :rows="3"
-          />
-        </el-form-item>
-      </el-form>
+  <!-- 新增/编辑对话框 -->
+  <el-dialog
+    v-model="dialogVisible"
+    :title="dialogTitle"
+    width="600px"
+    @close="handleDialogClose"
+  >
+    <Form
+      ref="formRef"
+      :model="form"
+      :rules="formRules"
+      :items="formItems"
+      label-width="100px"
+    />
 
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="rentDialogVisible = false">取消</el-button>
-          <el-button
-            type="primary"
-            :loading="rentLoading"
-            @click="handleRentSubmit"
-          >
-            确认出租
-          </el-button>
-        </span>
-      </template>
-    </el-dialog>
-  </div>
+    <template #footer>
+      <span class="dialog-footer">
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button
+          type="primary"
+          :loading="submitLoading"
+          @click="handleSubmit"
+        >
+          确定
+        </el-button>
+      </span>
+    </template>
+  </el-dialog>
+
+  <!-- 出租对话框 -->
+  <el-dialog
+    v-model="rentDialogVisible"
+    title="车位出租"
+    width="600px"
+  >
+    <el-form :model="rentForm" :rules="rentRules" ref="rentFormRef" label-width="100px">
+      <el-form-item label="车位编号">
+        <el-input v-model="rentForm.parkingNo" disabled />
+      </el-form-item>
+      <el-form-item label="车位位置">
+        <el-input v-model="rentForm.location" disabled />
+      </el-form-item>
+      <el-form-item label="业主姓名" prop="ownerName">
+        <el-input v-model="rentForm.ownerName" placeholder="请输入业主姓名" />
+      </el-form-item>
+      <el-form-item label="联系电话" prop="phone">
+        <el-input v-model="rentForm.phone" placeholder="请输入联系电话" />
+      </el-form-item>
+      <el-form-item label="车牌号" prop="plateNumber">
+        <el-input v-model="rentForm.plateNumber" placeholder="请输入车牌号" />
+      </el-form-item>
+      <el-form-item label="月租金" prop="monthlyRent">
+        <el-input-number
+          v-model="rentForm.monthlyRent"
+          :min="0"
+          :precision="2"
+          style="width: 200px"
+        />
+        <span style="margin-left: 10px;">元</span>
+      </el-form-item>
+      <el-form-item label="租赁开始时间" prop="startTime">
+        <el-date-picker
+          v-model="rentForm.startTime"
+          type="date"
+          placeholder="请选择开始时间"
+          format="YYYY-MM-DD"
+          value-format="YYYY-MM-DD"
+          style="width: 200px"
+        />
+      </el-form-item>
+      <el-form-item label="租赁结束时间" prop="endTime">
+        <el-date-picker
+          v-model="rentForm.endTime"
+          type="date"
+          placeholder="请选择结束时间"
+          format="YYYY-MM-DD"
+          value-format="YYYY-MM-DD"
+          style="width: 200px"
+        />
+      </el-form-item>
+      <el-form-item label="备注">
+        <el-input
+          v-model="rentForm.remark"
+          type="textarea"
+          placeholder="请输入备注信息"
+          :rows="3"
+        />
+      </el-form-item>
+    </el-form>
+
+    <template #footer>
+      <span class="dialog-footer">
+        <el-button @click="rentDialogVisible = false">取消</el-button>
+        <el-button
+          type="primary"
+          :loading="rentLoading"
+          @click="handleRentSubmit"
+        >
+          确认出租
+        </el-button>
+      </span>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus, Download } from '@element-plus/icons-vue'
 import Table from '@/components/Table/index.vue'
 import Form from '@/components/Form/index.vue'
+import StandardPageLayout from '@/components/Layout/StandardPageLayout.vue'
+
+// Router
+const route = useRoute()
+const router = useRouter()
 
 // 响应式数据
 const searchFormRef = ref()
+const rentalSearchFormRef = ref()
 const tableRef = ref()
+const rentalTableRef = ref()
 const formRef = ref()
 const rentFormRef = ref()
 const loading = ref(false)
+const rentalLoading = ref(false)
 const submitLoading = ref(false)
 const rentLoading = ref(false)
 const dialogVisible = ref(false)
 const rentDialogVisible = ref(false)
 const isEdit = ref(false)
+
+// 标签页状态
+const activeTab = ref('management')
+const selectedRows = ref([])
+const rentalSelectedRows = ref([])
 
 // 搜索表单
 const searchForm = reactive({
@@ -288,8 +442,17 @@ const searchForm = reactive({
   rentalStatus: ''
 })
 
+// 租赁管理搜索表单
+const rentalSearchForm = reactive({
+  parkingNo: '',
+  ownerName: '',
+  plateNumber: '',
+  rentalStatus: ''
+})
+
 // 表格数据
 const tableData = ref([])
+const rentalTableData = ref([])
 
 // 分页配置
 const pagination = reactive({
@@ -298,8 +461,32 @@ const pagination = reactive({
   total: 0
 })
 
+const rentalPagination = reactive({
+  current: 1,
+  pageSize: 10,
+  total: 0
+})
+
+// 标签页配置
+const tabs = [
+  {
+    name: 'management',
+    label: '车位管理',
+    route: '/property/parking'
+  },
+  {
+    name: 'rental',
+    label: '租赁管理',
+    route: '/property/parking/rental'
+  }
+]
+
 // 表格列配置
 const tableColumns = [
+  {
+    type: 'selection',
+    width: '55'
+  },
   {
     prop: 'parkingNo',
     label: '车位编号',
@@ -492,8 +679,94 @@ const formItems = computed(() => [
   }
 ])
 
+// 租赁管理表格列配置
+const rentalTableColumns = [
+  {
+    type: 'selection',
+    width: '55'
+  },
+  {
+    prop: 'rentalId',
+    label: '租赁编号',
+    width: '100',
+    sortable: true
+  },
+  {
+    prop: 'parkingNo',
+    label: '车位编号',
+    width: '120'
+  },
+  {
+    prop: 'location',
+    label: '位置区域',
+    width: '200'
+  },
+  {
+    prop: 'ownerName',
+    label: '业主姓名',
+    width: '120'
+  },
+  {
+    prop: 'phone',
+    label: '联系电话',
+    width: '150'
+  },
+  {
+    prop: 'plateNumber',
+    label: '车牌号',
+    width: '120'
+  },
+  {
+    prop: 'monthlyRent',
+    label: '月租金',
+    width: '120',
+    slot: 'monthlyRent',
+    sortable: true
+  },
+  {
+    prop: 'rentalStatus',
+    label: '租赁状态',
+    width: '100',
+    slot: 'rentalStatus'
+  },
+  {
+    prop: 'rentalPeriod',
+    label: '租赁期限',
+    width: '200',
+    formatter: (row) => `${row.startTime} 至 ${row.endTime}`
+  },
+  {
+    prop: 'createTime',
+    label: '租赁时间',
+    width: '180',
+    sortable: true
+  },
+  {
+    prop: 'operation',
+    label: '操作',
+    width: '200',
+    slot: 'operation',
+    fixed: 'right'
+  }
+]
+
 // 计算属性
 const dialogTitle = computed(() => isEdit.value ? '编辑车位' : '新增车位')
+
+// 当前标签页标题
+const currentTabTitle = computed(() => {
+  return activeTab.value === 'management' ? '车位管理' : '租赁管理'
+})
+
+// 当前面包屑
+const currentBreadcrumbs = computed(() => {
+  return ['物业管理', '车位管理', currentTabTitle.value]
+})
+
+// 当前新增按钮文本
+const currentAddButtonText = computed(() => {
+  return activeTab.value === 'management' ? '新增车位' : '新增租赁'
+})
 
 // 获取车位类型名称
 const getParkingTypeName = (type) => {
@@ -588,10 +861,21 @@ const handlePageChange = (page) => {
   fetchData()
 }
 
+const handleSizeChange = (size) => {
+  pagination.pageSize = size
+  pagination.current = 1
+  fetchData()
+}
+
 // 排序变化
 const handleSortChange = (sort) => {
   console.log('排序变化:', sort)
   fetchData()
+}
+
+// 选择变化
+const handleSelectionChange = (selection) => {
+  selectedRows.value = selection
 }
 
 // 新增
@@ -709,42 +993,158 @@ const handleDialogClose = () => {
   resetForm()
 }
 
+// 租赁管理相关方法
+const handleRentalSearch = () => {
+  rentalPagination.current = 1
+  fetchRentalData()
+}
+
+const handleRentalReset = () => {
+  rentalSearchFormRef.value?.resetFields()
+  handleRentalSearch()
+}
+
+const fetchRentalData = async () => {
+  rentalLoading.value = true
+  try {
+    // 模拟API请求
+    setTimeout(() => {
+      rentalTableData.value = getRentalMockData()
+      rentalLoading.value = false
+    }, 500)
+  } catch (error) {
+    rentalLoading.value = false
+    ElMessage.error('获取租赁数据失败')
+  }
+}
+
+const getRentalMockData = () => {
+  const mockRentals = []
+  const locations = ['B1层东侧', 'B1层西侧', 'B1层中央', 'B2层东侧', 'B2层西侧', '地面A区', '地面B区']
+  const owners = ['张三', '李四', '王五', '赵六', '钱七', '孙八', '周九', '吴十']
+  const plates = ['京A88888', '京B66666', '沪C55555', '粤D44444', '苏E33333', '浙F22222']
+
+  for (let i = 0; i < 50; i++) {
+    const monthlyRent = 200 + Math.floor(Math.random() * 300)
+
+    mockRentals.push({
+      rentalId: i + 1,
+      parkingNo: `B${Math.floor(Math.random() * 3 + 1)}-${(i + 1).toString().padStart(3, '0')}`,
+      location: locations[i % locations.length],
+      ownerName: owners[i % owners.length],
+      phone: '138****' + Math.floor(Math.random() * 10000).toString().padStart(4, '0'),
+      plateNumber: plates[i % plates.length],
+      monthlyRent: monthlyRent,
+      rentalStatus: 1, // 租赁管理只显示已出租的
+      startTime: '2024-01-01',
+      endTime: '2024-12-31',
+      rentalPeriod: '2024-01-01 至 2024-12-31',
+      createTime: '2024-01-01 10:00:00'
+    })
+  }
+
+  // 模拟分页
+  rentalPagination.total = mockRentals.length
+  return mockRentals
+}
+
+const handleRentalPageChange = (page) => {
+  rentalPagination.current = page
+  fetchRentalData()
+}
+
+const handleRentalSizeChange = (size) => {
+  rentalPagination.pageSize = size
+  rentalPagination.current = 1
+  fetchRentalData()
+}
+
+const handleRentalSortChange = (sort) => {
+  console.log('租赁表格排序变化:', sort)
+  fetchRentalData()
+}
+
+const handleRentalSelectionChange = (selection) => {
+  rentalSelectedRows.value = selection
+}
+
+const handleRentalView = (row) => {
+  ElMessage.info(`查看租赁记录 ${row.rentalId}`)
+}
+
+// 标签页切换
+const handleTabChange = (tabName) => {
+  activeTab.value = tabName
+
+  // 更新路由
+  const targetPath = tabName === 'management' ? '/property/parking' : '/property/parking/rental'
+  if (route.path !== targetPath) {
+    router.replace(targetPath)
+  }
+
+  // 加载对应的数据
+  if (tabName === 'management') {
+    fetchData()
+  } else {
+    fetchRentalData()
+  }
+}
+
+// 批量删除
+const handleBatchDelete = () => {
+  const currentSelectedRows = activeTab.value === 'management' ? selectedRows.value : rentalSelectedRows.value
+  if (currentSelectedRows.length === 0) {
+    ElMessage.warning('请选择要删除的数据')
+    return
+  }
+
+  ElMessageBox.confirm(
+    `确定要删除选中的 ${currentSelectedRows.length} 条数据吗？`,
+    '警告',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }
+  ).then(() => {
+    ElMessage.success('批量删除成功')
+    // 重新加载数据
+    if (activeTab.value === 'management') {
+      fetchData()
+    } else {
+      fetchRentalData()
+    }
+  })
+}
+
 // 组件挂载
 onMounted(() => {
-  fetchData()
+  // 根据当前路由路径设置对应的标签页
+  if (route.path.includes('/rental')) {
+    activeTab.value = 'rental'
+    fetchRentalData()
+  } else {
+    activeTab.value = 'management'
+    fetchData()
+  }
+})
+
+// 监听路由变化
+watch(() => route.path, (newPath) => {
+  if (newPath.includes('/rental')) {
+    activeTab.value = 'rental'
+    fetchRentalData()
+  } else {
+    activeTab.value = 'management'
+    fetchData()
+  }
 })
 </script>
 
 <style lang="scss" scoped>
-.app-container {
-  padding: 20px;
-
-  .search-card {
-    margin-bottom: 20px;
-
-    .search-form {
-      .el-form-item {
-        margin-bottom: 0;
-      }
-    }
-  }
-
-  .table-card {
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-
-      .header-actions {
-        display: flex;
-        gap: 10px;
-      }
-    }
-  }
-
-  .price-text {
-    color: #f56c6c;
-    font-weight: bold;
-  }
+// 价格文本样式
+.price-text {
+  color: #f56c6c;
+  font-weight: bold;
 }
 </style>

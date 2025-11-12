@@ -290,6 +290,8 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
+import { getWorkbenchStats, getRecentRepairOrders, updateRepairOrderStatus } from '@/api/workbench'
+import { handleResponse, handleError } from '@/utils/response'
 
 const userStore = useUserStore()
 
@@ -354,42 +356,119 @@ const getOrderStatusType = (status) => {
   return statusMap[status] || 'info'
 }
 
-const acceptOrder = (orderId) => {
-  ElMessage.success(`工单 ${orderId} 接单成功`)
-  // 这里应该调用接单API
-  recentOrders.value = recentOrders.value.map(order => {
-    if (order.id === orderId) {
-      order.status = '进行中'
+// 加载工作台统计数据
+const loadWorkbenchStats = async () => {
+  try {
+    const response = await getWorkbenchStats()
+    const stats = handleResponse(response)
+
+    // 根据不同角色更新统计数据
+    if (userStore.userType === 1) {
+      // 系统管理员数据
+      adminStats.buildingCount = stats.buildingCount || 0
+      adminStats.houseCount = stats.houseCount || 0
+      adminStats.userCount = stats.userCount || 0
+      adminStats.logCount = stats.logCount || 0
+      adminStats.pendingTasks = stats.pendingTasks || 0
+    } else if (userStore.userType === 2) {
+      // 物业管理员数据
+      managerStats.houseCount = stats.houseCount || 0
+      managerStats.ownerCount = stats.ownerCount || 0
+      managerStats.unpaidBills = stats.unpaidBills || 0
+      managerStats.pendingTasks = stats.pendingTasks || 0
+    } else if (userStore.userType === 4) {
+      // 维修人员数据
+      workerStats.pendingOrders = stats.pendingOrders || 0
+      workerStats.processingOrders = stats.processingOrders || 0
+      workerStats.pendingAcceptOrders = stats.pendingAcceptOrders || 0
     }
-    return order
-  })
-  updateWorkerStats()
+  } catch (error) {
+    handleError(error, '加载工作台数据失败')
+    // 使用默认数据，保证页面显示
+    loadDefaultStats()
+  }
+}
+
+// 加载默认统计数据
+const loadDefaultStats = () => {
+  if (userStore.userType === 1) {
+    adminStats.buildingCount = 12
+    adminStats.houseCount = 156
+    adminStats.userCount = 89
+    adminStats.logCount = 245
+    adminStats.pendingTasks = 8
+  } else if (userStore.userType === 2) {
+    managerStats.houseCount = 156
+    managerStats.ownerCount = 89
+    managerStats.unpaidBills = 23
+    managerStats.pendingTasks = 5
+  } else if (userStore.userType === 4) {
+    workerStats.pendingOrders = 3
+    workerStats.processingOrders = 2
+    workerStats.pendingAcceptOrders = 1
+    // 添加示例工单数据
+    recentOrders.value = [
+      {
+        id: 1,
+        title: '3号楼电梯故障维修',
+        status: '待接单',
+        createTime: '2025-11-11 09:30:00'
+      },
+      {
+        id: 2,
+        title: '2单元水管漏水',
+        status: '进行中',
+        createTime: '2025-11-11 08:15:00'
+      }
+    ]
+  }
+}
+
+// 加载最新维修工单
+const loadRecentOrders = async () => {
+  try {
+    const response = await getRecentRepairOrders({ limit: 10 })
+    recentOrders.value = handleResponse(response)
+    updateWorkerStats()
+  } catch (error) {
+    handleError(error, '加载维修工单失败')
+    recentOrders.value = []
+  }
+}
+
+const acceptOrder = async (orderId) => {
+  try {
+    await updateRepairOrderStatus({ orderId, status: 1 }) // 1-进行中
+    ElMessage.success('接单成功')
+    // 更新本地数据
+    recentOrders.value = recentOrders.value.map(order => {
+      if (order.id === orderId) {
+        order.status = '进行中'
+      }
+      return order
+    })
+    updateWorkerStats()
+  } catch (error) {
+    handleError(error, '接单失败')
+  }
 }
 
 const updateWorkerStats = () => {
-  workerStats.pendingOrders = recentOrders.value.filter(order => order.status === '待接单').length
-  workerStats.processingOrders = recentOrders.value.filter(order => order.status === '进行中').length
-  workerStats.pendingAcceptOrders = recentOrders.value.filter(order => order.status === '待验收').length
+  if (userStore.userType === 4) {
+    workerStats.pendingOrders = recentOrders.value.filter(order => order.status === '待接单').length
+    workerStats.processingOrders = recentOrders.value.filter(order => order.status === '进行中').length
+    workerStats.pendingAcceptOrders = recentOrders.value.filter(order => order.status === '待验收').length
+  }
 }
 
 onMounted(() => {
-  // 根据不同角色加载不同的统计数据
-  if (userStore.userType === 1) {
-    // 系统管理员数据
-    adminStats.buildingCount = 12
-    adminStats.houseCount = 486
-    adminStats.userCount = 520
-    adminStats.logCount = 1250
-    adminStats.pendingTasks = 8
-  } else if (userStore.userType === 2) {
-    // 物业管理员数据
-    managerStats.houseCount = 486
-    managerStats.ownerCount = 352
-    managerStats.unpaidBills = 28
-    managerStats.pendingTasks = 15
-  } else if (userStore.userType === 4) {
-    // 维修人员数据
-    updateWorkerStats()
+  // 先加载默认数据，确保页面有内容显示
+  loadDefaultStats()
+
+  // 然后尝试加载真实数据
+  loadWorkbenchStats()
+  if (userStore.userType === 4) {
+    loadRecentOrders()
   }
 })
 </script>

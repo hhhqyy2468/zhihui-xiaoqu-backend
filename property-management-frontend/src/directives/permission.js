@@ -11,8 +11,9 @@ import { hasPermission, hasRole, hasUserType } from '@/utils/permission'
 export const permission = {
   mounted(el, binding) {
     const { value } = binding
+    const userStore = useUserStore()
 
-    if (value && !hasPermission(value)) {
+    if (value && !hasPermission(value, userStore.permissions)) {
       // 移除DOM元素
       el.parentNode && el.parentNode.removeChild(el)
     }
@@ -20,9 +21,10 @@ export const permission = {
 
   updated(el, binding) {
     const { value, oldValue } = binding
+    const userStore = useUserStore()
 
     if (value !== oldValue) {
-      if (value && !hasPermission(value)) {
+      if (value && !hasPermission(value, userStore.permissions)) {
         // 移除DOM元素
         el.parentNode && el.parentNode.removeChild(el)
       }
@@ -40,8 +42,9 @@ export const permission = {
 export const role = {
   mounted(el, binding) {
     const { value } = binding
+    const userStore = useUserStore()
 
-    if (value && !hasRole(value)) {
+    if (value && !hasRole(value, userStore.roles)) {
       // 移除DOM元素
       el.parentNode && el.parentNode.removeChild(el)
     }
@@ -49,9 +52,10 @@ export const role = {
 
   updated(el, binding) {
     const { value, oldValue } = binding
+    const userStore = useUserStore()
 
     if (value !== oldValue) {
-      if (value && !hasRole(value)) {
+      if (value && !hasRole(value, userStore.roles)) {
         // 移除DOM元素
         el.parentNode && el.parentNode.removeChild(el)
       }
@@ -68,8 +72,9 @@ export const role = {
 export const userType = {
   mounted(el, binding) {
     const { value } = binding
+    const userStore = useUserStore()
 
-    if (value && !hasUserType(value)) {
+    if (value && !hasUserType(value, userStore.userType)) {
       // 移除DOM元素
       el.parentNode && el.parentNode.removeChild(el)
     }
@@ -77,9 +82,10 @@ export const userType = {
 
   updated(el, binding) {
     const { value, oldValue } = binding
+    const userStore = useUserStore()
 
     if (value !== oldValue) {
-      if (value && !hasUserType(value)) {
+      if (value && !hasUserType(value, userStore.userType)) {
         // 移除DOM元素
         el.parentNode && el.parentNode.removeChild(el)
       }

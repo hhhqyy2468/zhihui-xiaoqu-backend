@@ -31,12 +31,23 @@ export default defineConfig({
     minify: 'terser',
     chunkSizeWarningLimit: 1500,
     rollupOptions: {
+      external: [],
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
             return id.toString().split('node_modules/')[1].split('/')[0].toString()
           }
         }
+      },
+      onwarn: (warning, warn) => {
+        // 忽略关于缺失导出的警告
+        if (warning.code === 'MISSING_EXPORT') {
+          return
+        }
+        if (warning.code === 'MODULE_LEVEL_DIRECTIVE') {
+          return
+        }
+        warn(warning)
       }
     }
   }

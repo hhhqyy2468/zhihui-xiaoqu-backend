@@ -4,19 +4,19 @@ const routes = [
   {
     path: '/login',
     name: 'Login',
-    component: () => import('@/views/login/index.vue'),
+    component: () => import('@/views/login.vue'),
     meta: { title: '登录', hideInMenu: true }
   },
   {
     path: '/',
     name: 'Layout',
-    component: () => import('@/components/Layout/index.vue'),
+    component: () => import('@/components/Layout/simple.vue'),
     redirect: '/dashboard',
     children: [
       {
         path: 'dashboard',
         name: 'Dashboard',
-        component: () => import('@/views/dashboard/index.vue'),
+        component: () => import('@/views/dashboard/simple-new.vue'),
         meta: { title: '首页', icon: 'House' }
       }
     ]
@@ -25,7 +25,7 @@ const routes = [
   {
     path: '/system',
     name: 'System',
-    component: () => import('@/components/Layout/index.vue'),
+    component: () => import('@/components/Layout/simple.vue'),
     meta: { title: '系统管理', icon: 'Setting' },
     children: [
       {
@@ -64,7 +64,7 @@ const routes = [
   {
     path: '/property',
     name: 'Property',
-    component: () => import('@/components/Layout/index.vue'),
+    component: () => import('@/components/Layout/simple.vue'),
     meta: { title: '物业管理', icon: 'OfficeBuilding' },
     children: [
       {
@@ -97,25 +97,25 @@ const routes = [
   {
     path: '/finance',
     name: 'Finance',
-    component: () => import('@/components/Layout/index.vue'),
+    component: () => import('@/components/Layout/simple.vue'),
     meta: { title: '财务管理', icon: 'Money' },
     children: [
       {
         path: 'feetype',
         name: 'FinanceFeeType',
-        component: () => import('@/views/property/feetype/index.vue'),
+        component: () => import('@/views/fee/index.vue'),
         meta: { title: '费用类型', icon: 'Money' }
       },
       {
         path: 'bill',
         name: 'FinanceBill',
-        component: () => import('@/views/property/bill/index.vue'),
+        component: () => import('@/views/bill/index.vue'),
         meta: { title: '账单管理', icon: 'Money' }
       },
       {
         path: 'wallet',
         name: 'FinanceWallet',
-        component: () => import('@/views/property/wallet/index.vue'),
+        component: () => import('@/views/wallet/index.vue'),
         meta: { title: '钱包管理', icon: 'Money' }
       }
     ]
@@ -124,7 +124,7 @@ const routes = [
   {
     path: '/service',
     name: 'Service',
-    component: () => import('@/components/Layout/index.vue'),
+    component: () => import('@/components/Layout/simple.vue'),
     meta: { title: '服务管理', icon: 'Tools' },
     children: [
       {
@@ -136,7 +136,7 @@ const routes = [
       {
         path: 'repair',
         name: 'ServiceRepair',
-        component: () => import('@/views/property/repair/index.vue'),
+        component: () => import('@/views/repair/index.vue'),
         meta: { title: '维修管理', icon: 'Tools' }
       }
     ]
@@ -145,7 +145,7 @@ const routes = [
   {
     path: '/parking',
     name: 'Parking',
-    component: () => import('@/components/Layout/index.vue'),
+    component: () => import('@/components/Layout/simple.vue'),
     meta: { title: '停车管理', icon: 'Van' },
     children: [
       {
@@ -166,13 +166,13 @@ const routes = [
   {
     path: '/notice',
     name: 'Notice',
-    component: () => import('@/components/Layout/index.vue'),
+    component: () => import('@/components/Layout/simple.vue'),
     meta: { title: '公告管理', icon: 'Bell' },
     children: [
       {
         path: 'publish',
         name: 'NoticePublish',
-        component: () => import('@/views/property/notice/index.vue'),
+        component: () => import('@/views/notice/index.vue'),
         meta: { title: '公告发布', icon: 'Bell' }
       }
     ]
@@ -181,7 +181,7 @@ const routes = [
   {
     path: '/log',
     name: 'Log',
-    component: () => import('@/components/Layout/index.vue'),
+    component: () => import('@/components/Layout/simple.vue'),
     meta: { title: '系统日志', icon: 'View' },
     children: [
       {
@@ -202,7 +202,7 @@ const routes = [
   {
     path: '/portal',
     name: 'Portal',
-    component: () => import('@/components/Layout/index.vue'),
+    component: () => import('@/components/Layout/simple.vue'),
     meta: { title: '业主门户', icon: 'User' },
     children: [
       {
@@ -259,7 +259,7 @@ const routes = [
   {
     path: '/work',
     name: 'Work',
-    component: () => import('@/components/Layout/index.vue'),
+    component: () => import('@/components/Layout/simple.vue'),
     meta: { title: '我的工作', icon: 'Tools' },
     children: [
       {
@@ -292,7 +292,7 @@ const routes = [
   {
     path: '/community-notice',
     name: 'CommunityNotice',
-    component: () => import('@/components/Layout/index.vue'),
+    component: () => import('@/components/Layout/simple.vue'),
     meta: { title: '社区公告', icon: 'Bell' },
     children: [
       {
@@ -307,7 +307,7 @@ const routes = [
   {
     path: '/profile',
     name: 'Profile',
-    component: () => import('@/components/Layout/index.vue'),
+    component: () => import('@/components/Layout/simple.vue'),
     meta: { title: '个人中心', icon: 'User', hideInMenu: true },
     children: [
       {
@@ -335,13 +335,13 @@ const router = createRouter({
 // 路由守卫
 router.beforeEach((to, from, next) => {
   // 设置页面标题
-  document.title = to.meta.title ? `${to.meta.title} - 社区物业管理系统` : '社区物业管理系统'
+  document.title = to.meta.title ? `${to.meta.title} - 物业管理系统` : '物业管理系统'
 
   const token = localStorage.getItem('token')
 
   if (to.path === '/login') {
     if (token) {
-      next('/')
+      next('/dashboard')
     } else {
       next()
     }

@@ -1,33 +1,18 @@
 <template>
-  <div class="log-container">
-    <!-- 页面头部 -->
-    <div class="page-header">
-      <h2 class="page-title">角色管理</h2>
-      <el-breadcrumb separator="/">
-        <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
-        <el-breadcrumb-item>系统管理</el-breadcrumb-item>
-        <el-breadcrumb-item>角色管理</el-breadcrumb-item>
-      </el-breadcrumb>
-    </div>
-
-    <!-- 操作按钮 -->
-    <div class="action-section">
-      <el-button type="primary" @click="handleAdd">
-        <el-icon><Plus /></el-icon>
-        新增角色
-      </el-button>
-      <el-button type="warning" @click="handleBatchDelete" :disabled="selectedRows.length === 0">
-        <el-icon><Delete /></el-icon>
-        批量删除
-      </el-button>
-      <el-button type="success" @click="handleExport">
-        <el-icon><Download /></el-icon>
-        导出Excel
-      </el-button>
-    </div>
-
+  <StandardPageLayout
+    title="角色管理"
+    :breadcrumbs="['系统管理', '角色管理']"
+    show-add-button
+    add-button-text="新增角色"
+    show-batch-delete-button
+    show-export-button
+    :selected-count="selectedRows.length"
+    @add="handleAdd"
+    @batch-delete="handleBatchDelete"
+    @export="handleExport"
+  >
     <!-- 搜索区域 -->
-    <div class="search-section">
+    <template #search>
       <el-form
         ref="searchFormRef"
         :model="searchForm"
@@ -75,10 +60,10 @@
           </el-button>
         </el-form-item>
       </el-form>
-    </div>
+    </template>
 
     <!-- 数据表格 -->
-    <div class="table-section">
+    <template #table>
       <el-table
         v-loading="loading"
         :data="tableData"
@@ -128,7 +113,8 @@
           </template>
         </el-table-column>
       </el-table>
-    </div>
+    </template>
+  </StandardPageLayout>
 
     <!-- 新增/编辑对话框 -->
     <el-dialog
@@ -237,6 +223,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus, Download } from '@element-plus/icons-vue'
+import StandardPageLayout from '@/components/Layout/StandardPageLayout.vue'
 
 // 响应式数据
 const searchFormRef = ref()
@@ -602,48 +589,12 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-.log-container {
-  padding: 20px;
-
-  .page-header {
-    margin-bottom: 20px;
-
-    .page-title {
-      margin: 0 0 16px 0;
-      font-size: 24px;
-      font-weight: 600;
-      color: #303133;
-    }
-  }
-
-  .action-section {
-    margin-bottom: 20px;
-    display: flex;
-    gap: 10px;
-  }
-
-  .search-section {
-    margin-bottom: 20px;
-    padding: 20px;
-    background: #fff;
-    border-radius: 4px;
-    border: 1px solid #e4e7ed;
-  }
-
-  .table-section {
-    background: #fff;
-    border-radius: 4px;
-    border: 1px solid #e4e7ed;
-    padding: 20px;
-  }
-
-  .permission-tree {
-    width: 100%;
-    height: 400px;
-    overflow-y: auto;
-    border: 1px solid #dcdfe6;
-    border-radius: 4px;
-    padding: 10px;
-  }
+.permission-tree {
+  width: 100%;
+  height: 400px;
+  overflow-y: auto;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  padding: 10px;
 }
 </style>

@@ -1,216 +1,202 @@
 <template>
-  <div class="log-container">
-    <!-- 页面标题 -->
-    <div class="page-header">
-      <h2 class="page-title">用户管理</h2>
-      <el-breadcrumb separator="/">
-        <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
-        <el-breadcrumb-item>系统管理</el-breadcrumb-item>
-        <el-breadcrumb-item>用户管理</el-breadcrumb-item>
-      </el-breadcrumb>
-    </div>
-
+  <StandardPageLayout
+    title="用户管理"
+    :breadcrumbs="['系统管理', '用户管理']"
+    show-add-button
+    add-button-text="新增用户"
+    show-batch-delete-button
+    show-export-button
+    :selected-count="selectedRows.length"
+    @add="handleAdd"
+    @batch-delete="handleBatchDelete"
+    @export="handleExport"
+  >
     <!-- 统计卡片 -->
-    <el-row :gutter="20" class="statistics-cards">
-      <el-col :span="6">
-        <el-card class="stat-card total-users">
-          <div class="stat-content">
-            <div class="stat-icon">
-              <el-icon><User /></el-icon>
+    <template #statistics>
+      <el-row :gutter="20" class="statistics-cards">
+        <el-col :span="6">
+          <el-card class="stat-card total-users">
+            <div class="stat-content">
+              <div class="stat-icon">
+                <el-icon><User /></el-icon>
+              </div>
+              <div class="stat-info">
+                <div class="stat-value">{{ statistics.totalUsers }}</div>
+                <div class="stat-label">用户总数</div>
+              </div>
             </div>
-            <div class="stat-info">
-              <div class="stat-value">{{ statistics.totalUsers }}</div>
-              <div class="stat-label">用户总数</div>
+          </el-card>
+        </el-col>
+        <el-col :span="6">
+          <el-card class="stat-card active-users">
+            <div class="stat-content">
+              <div class="stat-icon">
+                <el-icon><CircleCheck /></el-icon>
+              </div>
+              <div class="stat-info">
+                <div class="stat-value">{{ statistics.activeUsers }}</div>
+                <div class="stat-label">活跃用户</div>
+              </div>
             </div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card class="stat-card active-users">
-          <div class="stat-content">
-            <div class="stat-icon">
-              <el-icon><CircleCheck /></el-icon>
+          </el-card>
+        </el-col>
+        <el-col :span="6">
+          <el-card class="stat-card admin-users">
+            <div class="stat-content">
+              <div class="stat-icon">
+                <el-icon><UserFilled /></el-icon>
+              </div>
+              <div class="stat-info">
+                <div class="stat-value">{{ statistics.adminUsers }}</div>
+                <div class="stat-label">管理员</div>
+              </div>
             </div>
-            <div class="stat-info">
-              <div class="stat-value">{{ statistics.activeUsers }}</div>
-              <div class="stat-label">活跃用户</div>
+          </el-card>
+        </el-col>
+        <el-col :span="6">
+          <el-card class="stat-card new-users">
+            <div class="stat-content">
+              <div class="stat-icon">
+                <el-icon><Plus /></el-icon>
+              </div>
+              <div class="stat-info">
+                <div class="stat-value">{{ statistics.newUsers }}</div>
+                <div class="stat-label">本月新增</div>
+              </div>
             </div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card class="stat-card admin-users">
-          <div class="stat-content">
-            <div class="stat-icon">
-              <el-icon><UserFilled /></el-icon>
-            </div>
-            <div class="stat-info">
-              <div class="stat-value">{{ statistics.adminUsers }}</div>
-              <div class="stat-label">管理员</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card class="stat-card new-users">
-          <div class="stat-content">
-            <div class="stat-icon">
-              <el-icon><Plus /></el-icon>
-            </div>
-            <div class="stat-info">
-              <div class="stat-value">{{ statistics.newUsers }}</div>
-              <div class="stat-label">本月新增</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
-
-    <!-- 操作按钮 -->
-    <div class="action-section">
-      <el-button type="primary" @click="handleAdd" v-permission="'system:user:add'">
-        <el-icon><Plus /></el-icon>
-        新增用户
-      </el-button>
-      <el-button type="warning" @click="handleBatchDelete" :disabled="selectedRows.length === 0" v-permission="'system:user:delete'">
-        <el-icon><Delete /></el-icon>
-        批量删除
-      </el-button>
-      <el-button type="success" @click="handleExport">
-        <el-icon><Download /></el-icon>
-        导出Excel
-      </el-button>
-    </div>
+          </el-card>
+        </el-col>
+      </el-row>
+    </template>
 
     <!-- 搜索区域 -->
-    <div class="search-section">
-        <el-form :model="searchForm" inline @submit.prevent>
-          <el-form-item label="用户名">
-            <el-input
-              v-model="searchForm.username"
-              placeholder="请输入用户名"
-              clearable
-              style="width: 200px"
+    <template #search>
+      <el-form :model="searchForm" inline @submit.prevent>
+        <el-form-item label="用户名">
+          <el-input
+            v-model="searchForm.username"
+            placeholder="请输入用户名"
+            clearable
+            style="width: 200px"
+          />
+        </el-form-item>
+        <el-form-item label="真实姓名">
+          <el-input
+            v-model="searchForm.realName"
+            placeholder="请输入真实姓名"
+            clearable
+            style="width: 200px"
+          />
+        </el-form-item>
+        <el-form-item label="手机号">
+          <el-input
+            v-model="searchForm.phone"
+            placeholder="请输入手机号"
+            clearable
+            style="width: 200px"
+          />
+        </el-form-item>
+        <el-form-item label="用户类型">
+          <el-select
+            v-model="searchForm.userType"
+            placeholder="请选择用户类型"
+            clearable
+            style="width: 150px"
+          >
+            <el-option
+              v-for="item in userTypeOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
             />
-          </el-form-item>
-          <el-form-item label="真实姓名">
-            <el-input
-              v-model="searchForm.realName"
-              placeholder="请输入真实姓名"
-              clearable
-              style="width: 200px"
-            />
-          </el-form-item>
-          <el-form-item label="手机号">
-            <el-input
-              v-model="searchForm.phone"
-              placeholder="请输入手机号"
-              clearable
-              style="width: 200px"
-            />
-          </el-form-item>
-          <el-form-item label="用户类型">
-            <el-select
-              v-model="searchForm.userType"
-              placeholder="请选择用户类型"
-              clearable
-              style="width: 150px"
-            >
-              <el-option
-                v-for="item in userTypeOptions"
-                :key="item.value"
-                :label="item.label"
-                :value="item.value"
-              />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="状态">
-            <el-select
-              v-model="searchForm.status"
-              placeholder="请选择状态"
-              clearable
-              style="width: 120px"
-            >
-              <el-option label="启用" :value="1" />
-              <el-option label="禁用" :value="0" />
-            </el-select>
-          </el-form-item>
-          <el-form-item>
-            <el-button type="primary" @click="handleSearch">
-              <el-icon><Search /></el-icon>
-              搜索
-            </el-button>
-            <el-button @click="handleReset">
-              <el-icon><Refresh /></el-icon>
-              重置
-            </el-button>
-          </el-form-item>
-        </el-form>
-      </div>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-select
+            v-model="searchForm.status"
+            placeholder="请选择状态"
+            clearable
+            style="width: 120px"
+          >
+            <el-option label="启用" :value="1" />
+            <el-option label="禁用" :value="0" />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="handleSearch">
+            <el-icon><Search /></el-icon>
+            搜索
+          </el-button>
+          <el-button @click="handleReset">
+            <el-icon><Refresh /></el-icon>
+            重置
+          </el-button>
+        </el-form-item>
+      </el-form>
+    </template>
 
-      <!-- 数据表格 -->
-      <div class="table-section">
-        <el-table
-          v-loading="loading"
-          :data="userList"
-          stripe
-          @selection-change="handleSelectionChange"
-        >
-          <el-table-column type="selection" width="55" />
-          <el-table-column prop="username" label="用户名" width="120" />
-          <el-table-column prop="realName" label="真实姓名" width="120" />
-          <el-table-column prop="userType" label="用户类型" width="100">
-            <template #default="{ row }">
-              <el-tag :type="getUserTypeTag(row.userType)">
-                {{ getUserTypeText(row.userType) }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column prop="phone" label="手机号" width="140" />
-          <el-table-column prop="email" label="邮箱" width="180" show-overflow-tooltip />
-          <el-table-column prop="status" label="状态" width="80">
-            <template #default="{ row }">
-              <el-tag :type="row.status === 1 ? 'success' : 'danger'">
-                {{ row.status === 1 ? '启用' : '禁用' }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column prop="lastLoginTime" label="最后登录" width="160" />
-          <el-table-column prop="createTime" label="创建时间" width="160" />
-          <el-table-column label="操作" width="200" fixed="right">
-            <template #default="{ row }">
-              <el-button type="primary" link @click="handleView(row)">
-                <el-icon><View /></el-icon>
-                详情
-              </el-button>
-              <el-button type="success" link @click="handleEdit(row)" v-permission="'system:user:edit'">
-                <el-icon><Edit /></el-icon>
-                编辑
-              </el-button>
-              <el-button type="warning" link @click="handleResetPassword(row)" v-permission="'system:user:reset'">
-                <el-icon><Key /></el-icon>
-                重置密码
-              </el-button>
-              <el-button type="danger" link @click="handleDelete(row)" v-permission="'system:user:delete'">
-                <el-icon><Delete /></el-icon>
-                删除
-              </el-button>
-            </template>
-          </el-table-column>
-        </el-table>
+    <!-- 数据表格 -->
+    <template #table>
+      <el-table
+        v-loading="loading"
+        :data="userList"
+        stripe
+        @selection-change="handleSelectionChange"
+      >
+        <el-table-column type="selection" width="55" />
+        <el-table-column prop="username" label="用户名" width="120" />
+        <el-table-column prop="realName" label="真实姓名" width="120" />
+        <el-table-column prop="userType" label="用户类型" width="100">
+          <template #default="{ row }">
+            <el-tag :type="getUserTypeTag(row.userType)">
+              {{ getUserTypeText(row.userType) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="phone" label="手机号" width="140" />
+        <el-table-column prop="email" label="邮箱" width="180" show-overflow-tooltip />
+        <el-table-column prop="status" label="状态" width="80">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 1 ? 'success' : 'danger'">
+              {{ row.status === 1 ? '启用' : '禁用' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="lastLoginTime" label="最后登录" width="160" />
+        <el-table-column prop="createTime" label="创建时间" width="160" />
+        <el-table-column label="操作" width="200" fixed="right">
+          <template #default="{ row }">
+            <el-button type="primary" link @click="handleView(row)">
+              <el-icon><View /></el-icon>
+              详情
+            </el-button>
+            <el-button type="success" link @click="handleEdit(row)" v-permission="'system:user:edit'">
+              <el-icon><Edit /></el-icon>
+              编辑
+            </el-button>
+            <el-button type="warning" link @click="handleResetPassword(row)" v-permission="'system:user:reset'">
+              <el-icon><Key /></el-icon>
+              重置密码
+            </el-button>
+            <el-button type="danger" link @click="handleDelete(row)" v-permission="'system:user:delete'">
+              <el-icon><Delete /></el-icon>
+              删除
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
 
-        <!-- 分页 -->
-        <el-pagination
-          v-model:current-page="searchForm.page"
-          v-model:page-size="searchForm.size"
-          :page-sizes="[10, 20, 50, 100]"
-          :total="total"
-          background
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSearch"
-          @current-change="handleSearch"
-        />
-      </div>
+      <!-- 分页 -->
+      <el-pagination
+        v-model:current-page="searchForm.page"
+        v-model:page-size="searchForm.size"
+        :page-sizes="[10, 20, 50, 100]"
+        :total="total"
+        background
+        layout="total, sizes, prev, pager, next, jumper"
+        @size-change="handleSearch"
+        @current-change="handleSearch"
+      />
 
       <!-- 批量操作 -->
       <div v-if="selectedRows.length > 0" class="batch-actions">
@@ -223,68 +209,8 @@
           <el-button type="danger" @click="handleBatchDelete">批量删除</el-button>
         </div>
       </div>
-    </el-card>
-
-    <Table
-        ref="tableRef"
-        :data="tableData"
-        :columns="tableColumns"
-        :loading="loading"
-        :pagination="pagination"
-        @selection-change="handleSelectionChange"
-        @page-change="handlePageChange"
-        @sort-change="handleSortChange"
-      >
-        <!-- 状态列 -->
-        <template #status="{ row }">
-          <el-tag :type="row.status === 1 ? 'success' : 'danger'">
-            {{ row.status === 1 ? '启用' : '禁用' }}
-          </el-tag>
-        </template>
-
-        <!-- 用户类型列 -->
-        <template #userType="{ row }">
-          <el-tag :type="getUserTypeTag(row.userType)">
-            {{ getUserTypeName(row.userType) }}
-          </el-tag>
-        </template>
-
-        <!-- 操作列 -->
-        <template #operation="{ row }">
-          <el-button
-            link
-            type="primary"
-            v-permission="'system:user:edit'"
-            @click="handleEdit(row)"
-          >
-            编辑
-          </el-button>
-          <el-button
-            link
-            type="info"
-            v-permission="'system:user:resetPassword'"
-            @click="handleResetPassword(row)"
-          >
-            重置密码
-          </el-button>
-          <el-button
-            link
-            type="warning"
-            v-permission="'system:user:assignRole'"
-            @click="handleAssignRole(row)"
-          >
-            分配角色
-          </el-button>
-          <el-button
-            link
-            type="danger"
-            v-permission="'system:user:delete'"
-            @click="handleDelete(row)"
-          >
-            删除
-          </el-button>
-        </template>
-      </Table>
+    </template>
+  </StandardPageLayout>
 
     <!-- 新增/编辑对话框 - Fixed template syntax -->
     <el-dialog
@@ -358,9 +284,10 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, Plus, Delete, Download } from '@element-plus/icons-vue'
+import { Search, Refresh, Plus, Delete, Download, User, CircleCheck, UserFilled, View, Edit, Key } from '@element-plus/icons-vue'
 import Table from '@/components/Table/index.vue'
 import Form from '@/components/Form/index.vue'
+import StandardPageLayout from '@/components/Layout/StandardPageLayout.vue'
 import { USER_TYPES } from '@/utils/permission'
 
 // 响应式数据
@@ -381,8 +308,22 @@ const searchForm = reactive({
   realName: '',
   phone: '',
   userType: '',
-  status: ''
+  status: '',
+  page: 1,
+  size: 10
 })
+
+// 统计数据
+const statistics = reactive({
+  totalUsers: 15,
+  activeUsers: 12,
+  adminUsers: 3,
+  newUsers: 5
+})
+
+// 用户列表数据
+const userList = ref([])
+const total = ref(0)
 
 // 表格数据
 const tableData = ref([])
@@ -572,6 +513,29 @@ const getUserTypeName = (userType) => {
   return option ? option.label : '未知'
 }
 
+// 获取用户类型文本
+const getUserTypeText = (userType) => {
+  const option = userTypeOptions.find(item => item.value === userType)
+  return option ? option.label : '未知'
+}
+
+// 批量启用
+const batchEnable = () => {
+  ElMessage.success('批量启用成功')
+  selectedRows.value = []
+}
+
+// 批量禁用
+const batchDisable = () => {
+  ElMessage.success('批量禁用成功')
+  selectedRows.value = []
+}
+
+// 查看详情
+const handleView = (row) => {
+  ElMessage.info(`查看用户详情: ${row.realName}`)
+}
+
 // 获取用户类型标签
 const getUserTypeTag = (userType) => {
   const tagMap = {
@@ -594,6 +558,7 @@ const getMockData = () => {
       email: 'admin@example.com',
       userType: USER_TYPES.ADMIN,
       status: 1,
+      lastLoginTime: '2024-01-01 10:00:00',
       createTime: '2024-01-01 10:00:00'
     },
     {
@@ -604,6 +569,7 @@ const getMockData = () => {
       email: 'manager@example.com',
       userType: USER_TYPES.MANAGER,
       status: 1,
+      lastLoginTime: '2024-01-02 09:30:00',
       createTime: '2024-01-02 10:00:00'
     },
     {
@@ -614,6 +580,7 @@ const getMockData = () => {
       email: 'owner@example.com',
       userType: USER_TYPES.OWNER,
       status: 1,
+      lastLoginTime: '2024-01-03 14:20:00',
       createTime: '2024-01-03 10:00:00'
     },
     {
@@ -624,18 +591,17 @@ const getMockData = () => {
       email: 'worker@example.com',
       userType: USER_TYPES.WORKER,
       status: 1,
+      lastLoginTime: '2024-01-04 08:15:00',
       createTime: '2024-01-04 10:00:00'
     }
   ]
 
-  // 模拟分页
-  pagination.total = mockUsers.length
   return mockUsers
 }
 
 // 搜索
 const handleSearch = () => {
-  pagination.current = 1
+  searchForm.page = 1
   fetchData()
 }
 
@@ -651,7 +617,10 @@ const fetchData = async () => {
   try {
     // 模拟API请求
     setTimeout(() => {
-      tableData.value = getMockData()
+      const mockData = getMockData()
+      userList.value = mockData
+      tableData.value = mockData
+      total.value = mockData.length
       loading.value = false
     }, 500)
   } catch (error) {
@@ -819,30 +788,78 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-.app-container {
-  padding: 20px;
+.stat-card {
+  &.total-users {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+  }
 
-  .search-card {
-    margin-bottom: 20px;
+  &.active-users {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+  }
 
-    .search-form {
-      .el-form-item {
-        margin-bottom: 0;
+  &.admin-users {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: white;
+  }
+
+  &.new-users {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    color: white;
+  }
+
+  :deep(.el-card__body) {
+    padding: 20px;
+  }
+
+  .stat-content {
+    display: flex;
+    align-items: center;
+
+    .stat-icon {
+      font-size: 32px;
+      margin-right: 16px;
+      opacity: 0.8;
+    }
+
+    .stat-info {
+      .stat-value {
+        font-size: 28px;
+        font-weight: bold;
+        margin-bottom: 4px;
+      }
+
+      .stat-label {
+        font-size: 14px;
+        opacity: 0.9;
       }
     }
   }
+}
 
-  .table-card {
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+.batch-actions {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  z-index: 1000;
 
-      .header-actions {
-        display: flex;
-        gap: 10px;
-      }
-    }
+  .batch-info {
+    color: #606266;
+    font-size: 14px;
+  }
+
+  .batch-buttons {
+    display: flex;
+    gap: 8px;
   }
 }
 </style>

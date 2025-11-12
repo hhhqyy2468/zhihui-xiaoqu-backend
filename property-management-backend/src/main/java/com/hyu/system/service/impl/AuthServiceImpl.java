@@ -416,9 +416,39 @@ public class AuthServiceImpl implements IAuthService {
         userInfo.put("createTime", user.getCreateTime());
         userInfo.put("updateTime", user.getUpdateTime());
 
-        // 这里可以添加角色和权限信息
-        // userInfo.put("roles", user.getRoles());
-        // userInfo.put("permissions", user.getPermissions());
+        // 根据用户类型设置角色和权限
+        Set<String> roles = new HashSet<>();
+        Set<String> permissions = new HashSet<>();
+
+        switch (user.getUserType()) {
+            case 1: // 系统管理员
+                roles.add("admin");
+                permissions.add("*");
+                break;
+            case 2: // 物业管理员
+                roles.add("property_manager");
+                permissions.add("property:*");
+                permissions.add("system:user:view");
+                permissions.add("system:role:view");
+                break;
+            case 3: // 业主
+                roles.add("owner");
+                permissions.add("portal:view");
+                permissions.add("portal:bill:view");
+                permissions.add("portal:bill:pay");
+                permissions.add("property:complaint:add");
+                permissions.add("property:repair:add");
+                break;
+            case 4: // 维修人员
+                roles.add("worker");
+                permissions.add("property:repair:view");
+                permissions.add("property:repair:handle");
+                permissions.add("property:notice:view");
+                break;
+        }
+
+        userInfo.put("roles", roles);
+        userInfo.put("permissions", permissions);
 
         return userInfo;
     }

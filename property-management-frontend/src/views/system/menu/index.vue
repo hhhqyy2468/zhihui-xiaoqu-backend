@@ -1,33 +1,23 @@
 <template>
-  <div class="log-container">
-    <!-- 页面头部 -->
-    <div class="page-header">
-      <h2 class="page-title">菜单管理</h2>
-      <el-breadcrumb separator="/">
-        <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
-        <el-breadcrumb-item>系统管理</el-breadcrumb-item>
-        <el-breadcrumb-item>菜单管理</el-breadcrumb-item>
-      </el-breadcrumb>
-    </div>
-
-    <!-- 操作按钮 -->
-    <div class="action-section">
-      <el-button
-        type="primary"
-        v-permission="'system:menu:add'"
-        @click="handleAdd"
-      >
-        <el-icon><Plus /></el-icon>
-        新增菜单
-      </el-button>
+  <StandardPageLayout
+    title="菜单管理"
+    :breadcrumbs="['系统管理', '菜单管理']"
+    show-add-button
+    add-button-text="新增菜单"
+    :show-batch-delete-button="false"
+    :show-export-button="false"
+    @add="handleAdd"
+  >
+    <!-- 额外操作按钮 -->
+    <template #extra-actions>
       <el-button @click="handleExpandAll">
         <el-icon><Sort /></el-icon>
         展开/折叠
       </el-button>
-    </div>
+    </template>
 
     <!-- 搜索区域 -->
-    <div class="search-section">
+    <template #search>
       <el-form
         ref="searchFormRef"
         :model="searchForm"
@@ -66,10 +56,10 @@
           </el-button>
         </el-form-item>
       </el-form>
-    </div>
+    </template>
 
     <!-- 数据表格 -->
-    <div class="table-section">
+    <template #table>
       <Table
         ref="tableRef"
         :data="tableData"
@@ -131,9 +121,10 @@
           </el-button>
         </template>
       </Table>
-    </div>
+    </template>
+  </StandardPageLayout>
 
-    <!-- 新增/编辑对话框 -->
+  <!-- 新增/编辑对话框 -->
     <el-dialog
       v-model="dialogVisible"
       :title="dialogTitle"
@@ -168,6 +159,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus, Sort } from '@element-plus/icons-vue'
+import StandardPageLayout from '@/components/Layout/StandardPageLayout.vue'
 import Table from '@/components/Table/index.vue'
 import Form from '@/components/Form/index.vue'
 

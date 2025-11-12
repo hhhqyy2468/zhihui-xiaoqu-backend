@@ -9,20 +9,20 @@ spring:
     username: root
     password: 123456
 
-  # Redis配置
-  data:
-    redis:
-      host: localhost
-      port: 6379
-      password: ''
-      database: 0
-      timeout: 10000ms
-      lettuce:
-        pool:
-          max-active: 8
-          max-wait: -1ms
-          max-idle: 8
-          min-idle: 0
+  # Redis配置 - 暂时禁用
+  # data:
+  #   redis:
+  #     host: localhost
+  #     port: 6379
+  #     password: ''
+  #     database: 0
+  #     timeout: 10000ms
+  #     lettuce:
+  #       pool:
+  #         max-active: 8
+  #         max-wait: -1ms
+  #         max-idle: 8
+  #         min-idle: 0
 
   # 文件上传配置
   servlet:
@@ -33,6 +33,16 @@ spring:
   # Flyway 数据库迁移配置
   flyway:
     enabled: false
+
+  # Jackson配置
+  jackson:
+    default-property-inclusion: NON_NULL
+    serialization:
+      fail-on-empty-beans: false
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+    time-zone: GMT+8
 
 server:
   port: 8080
@@ -54,7 +64,7 @@ mybatis-plus:
 
 # JWT配置
 jwt:
-  secret: propertyManagement2025SecretKeyForJWTTokenGeneration
+  secret: propertyManagement2025SecretKeyForJWTTokenGenerationAndAuthenticationThisIsA512BitKeyForHS512AlgorithmCompatibility
   expiration: 7200000
   refresh-expiration: 604800000
 

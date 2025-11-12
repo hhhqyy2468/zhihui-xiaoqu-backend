@@ -22,13 +22,14 @@
     "vue-router": "^4.2.5"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^4.5.2",
-    "vite": "^5.0.8",
-    "sass": "^1.69.5",
     "@types/node": "^20.10.5",
+    "@vitejs/plugin-vue": "^4.5.2",
+    "@vue/eslint-config-prettier": "^9.0.0",
     "eslint": "^8.55.0",
     "eslint-plugin-vue": "^9.19.2",
-    "@vue/eslint-config-prettier": "^9.0.0",
-    "prettier": "^3.1.1"
+    "prettier": "^3.1.1",
+    "sass": "^1.69.5",
+    "terser": "^5.44.1",
+    "vite": "^5.0.8"
   }
 }

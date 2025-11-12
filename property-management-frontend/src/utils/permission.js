@@ -1,5 +1,3 @@
-import { useUserStore } from '@/stores/user'
-
 /**
  * 权限检查工具函数
  */
@@ -7,20 +5,18 @@ import { useUserStore } from '@/stores/user'
 /**
  * 检查是否有指定权限
  * @param {string|Array|Object} permission - 权限值
+ * @param {Array} userPermissions - 用户权限列表
  * @returns {boolean} 是否有权限
  */
-export function hasPermission(permission) {
-  const userStore = useUserStore()
-  const permissions = userStore.permissions
-
+export function hasPermission(permission, userPermissions = []) {
   if (!permission) return true
 
   if (typeof permission === 'string') {
-    return permissions.includes(permission)
+    return userPermissions.includes(permission)
   }
 
   if (Array.isArray(permission)) {
-    return permission.some(p => permissions.includes(p))
+    return permission.some(p => userPermissions.includes(p))
   }
 
   if (typeof permission === 'object') {
@@ -28,9 +24,9 @@ export function hasPermission(permission) {
     const permList = Array.isArray(perm) ? perm : [perm]
 
     if (mode === 'all') {
-      return permList.every(p => permissions.includes(p))
+      return permList.every(p => userPermissions.includes(p))
     }
-    return permList.some(p => permissions.includes(p))
+    return permList.some(p => userPermissions.includes(p))
   }
 
   return false
@@ -39,20 +35,18 @@ export function hasPermission(permission) {
 /**
  * 检查是否有指定角色
  * @param {string|Array|Object} role - 角色值
+ * @param {Array} userRoles - 用户角色列表
  * @returns {boolean} 是否有角色
  */
-export function hasRole(role) {
-  const userStore = useUserStore()
-  const roles = userStore.roles
-
+export function hasRole(role, userRoles = []) {
   if (!role) return true
 
   if (typeof role === 'string') {
-    return roles.includes(role)
+    return userRoles.includes(role)
   }
 
   if (Array.isArray(role)) {
-    return role.some(r => roles.includes(r))
+    return role.some(r => userRoles.includes(r))
   }
 
   if (typeof role === 'object') {
@@ -60,9 +54,9 @@ export function hasRole(role) {
     const roleList = Array.isArray(r) ? r : [r]
 
     if (mode === 'all') {
-      return roleList.every(r => roles.includes(r))
+      return roleList.every(r => userRoles.includes(r))
     }
-    return roleList.some(r => roles.includes(r))
+    return roleList.some(r => userRoles.includes(r))
   }
 
   return false
@@ -71,12 +65,10 @@ export function hasRole(role) {
 /**
  * 检查是否为指定用户类型
  * @param {number|Array} userType - 用户类型
+ * @param {number} currentUserType - 当前用户类型
  * @returns {boolean} 是否为指定用户类型
  */
-export function hasUserType(userType) {
-  const userStore = useUserStore()
-  const currentUserType = userStore.userType
-
+export function hasUserType(userType, currentUserType) {
   if (!userType) return true
 
   if (typeof userType === 'number') {
@@ -92,74 +84,92 @@ export function hasUserType(userType) {
 
 /**
  * 检查是否为管理员
+ * @param {number} currentUserType - 当前用户类型
+ * @param {Array} userRoles - 用户角色列表
  * @returns {boolean} 是否为管理员
  */
-export function isAdmin() {
-  return hasRole('admin') || hasUserType(1)
+export function isAdmin(currentUserType, userRoles = []) {
+  return hasRole('admin', userRoles) || hasUserType(1, currentUserType)
 }
 
 /**
  * 检查是否为物业管理员
+ * @param {number} currentUserType - 当前用户类型
+ * @param {Array} userRoles - 用户角色列表
  * @returns {boolean} 是否为物业管理员
  */
-export function isPropertyManager() {
-  return hasRole('property_manager') || hasUserType(2)
+export function isPropertyManager(currentUserType, userRoles = []) {
+  return hasRole('property_manager', userRoles) || hasUserType(2, currentUserType)
 }
 
 /**
  * 检查是否为业主
+ * @param {number} currentUserType - 当前用户类型
+ * @param {Array} userRoles - 用户角色列表
  * @returns {boolean} 是否为业主
  */
-export function isOwner() {
-  return hasRole('owner') || hasUserType(3)
+export function isOwner(currentUserType, userRoles = []) {
+  return hasRole('owner', userRoles) || hasUserType(3, currentUserType)
 }
 
 /**
  * 检查是否为维修人员
+ * @param {number} currentUserType - 当前用户类型
+ * @param {Array} userRoles - 用户角色列表
  * @returns {boolean} 是否为维修人员
  */
-export function isWorker() {
-  return hasRole('worker') || hasUserType(4)
+export function isWorker(currentUserType, userRoles = []) {
+  return hasRole('worker', userRoles) || hasUserType(4, currentUserType)
 }
 
 /**
  * 检查是否可以管理系统模块
+ * @param {number} currentUserType - 当前用户类型
+ * @param {Array} userRoles - 用户角色列表
  * @returns {boolean} 是否可以管理系统模块
  */
-export function canManageSystem() {
-  return isAdmin() || isPropertyManager()
+export function canManageSystem(currentUserType, userRoles = []) {
+  return isAdmin(currentUserType, userRoles) || isPropertyManager(currentUserType, userRoles)
 }
 
 /**
  * 检查是否可以管理物业模块
+ * @param {number} currentUserType - 当前用户类型
+ * @param {Array} userRoles - 用户角色列表
  * @returns {boolean} 是否可以管理物业模块
  */
-export function canManageProperty() {
-  return isAdmin() || isPropertyManager()
+export function canManageProperty(currentUserType, userRoles = []) {
+  return isAdmin(currentUserType, userRoles) || isPropertyManager(currentUserType, userRoles)
 }
 
 /**
  * 检查是否可以访问业主门户
+ * @param {number} currentUserType - 当前用户类型
+ * @param {Array} userRoles - 用户角色列表
  * @returns {boolean} 是否可以访问业主门户
  */
-export function canAccessPortal() {
-  return isOwner()
+export function canAccessPortal(currentUserType, userRoles = []) {
+  return isOwner(currentUserType, userRoles)
 }
 
 /**
  * 检查是否可以处理维修工单
+ * @param {number} currentUserType - 当前用户类型
+ * @param {Array} userRoles - 用户角色列表
  * @returns {boolean} 是否可以处理维修工单
  */
-export function canHandleRepair() {
-  return isAdmin() || isPropertyManager() || isWorker()
+export function canHandleRepair(currentUserType, userRoles = []) {
+  return isAdmin(currentUserType, userRoles) || isPropertyManager(currentUserType, userRoles) || isWorker(currentUserType, userRoles)
 }
 
 /**
  * 检查是否可以处理投诉
+ * @param {number} currentUserType - 当前用户类型
+ * @param {Array} userRoles - 用户角色列表
  * @returns {boolean} 是否可以处理投诉
  */
-export function canHandleComplaint() {
-  return isAdmin() || isPropertyManager()
+export function canHandleComplaint(currentUserType, userRoles = []) {
+  return isAdmin(currentUserType, userRoles) || isPropertyManager(currentUserType, userRoles)
 }
 
 /**

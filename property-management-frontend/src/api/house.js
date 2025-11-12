@@ -3,7 +3,7 @@ import request from '@/utils/request'
 // 获取房产列表
 export function getHouseList(params) {
   return request({
-    url: '/house/list',
+    url: '/api/v1/property/house/list',
     method: 'get',
     params
   })
@@ -12,7 +12,7 @@ export function getHouseList(params) {
 // 获取房产详情
 export function getHouseDetail(houseId) {
   return request({
-    url: `/house/${houseId}`,
+    url: `/api/v1/property/house/${houseId}`,
     method: 'get'
   })
 }
@@ -20,7 +20,7 @@ export function getHouseDetail(houseId) {
 // 新增房产
 export function addHouse(data) {
   return request({
-    url: '/house',
+    url: '/api/v1/property/house',
     method: 'post',
     data
   })
@@ -29,7 +29,7 @@ export function addHouse(data) {
 // 编辑房产
 export function updateHouse(data) {
   return request({
-    url: '/house',
+    url: '/api/v1/property/house',
     method: 'put',
     data
   })
@@ -38,7 +38,7 @@ export function updateHouse(data) {
 // 删除房产
 export function deleteHouse(houseId) {
   return request({
-    url: `/house/${houseId}`,
+    url: `/api/v1/property/house/${houseId}`,
     method: 'delete'
   })
 }
@@ -46,7 +46,7 @@ export function deleteHouse(houseId) {
 // 批量删除房产
 export function batchDeleteHouse(houseIds) {
   return request({
-    url: '/house/batch',
+    url: '/api/v1/property/house/batch',
     method: 'delete',
     data: houseIds
   })
@@ -55,7 +55,7 @@ export function batchDeleteHouse(houseIds) {
 // 获取房产统计信息
 export function getHouseStats(params) {
   return request({
-    url: '/house/stats',
+    url: '/api/v1/property/house/stats',
     method: 'get',
     params
   })
@@ -64,7 +64,7 @@ export function getHouseStats(params) {
 // 获取住户信息
 export function getHouseResidents(houseId) {
   return request({
-    url: `/house/${houseId}/residents`,
+    url: `/api/v1/property/house/${houseId}/residents`,
     method: 'get'
   })
 }
@@ -72,7 +72,7 @@ export function getHouseResidents(houseId) {
 // 更新房产状态
 export function updateHouseStatus(data) {
   return request({
-    url: '/house/status',
+    url: '/api/v1/property/house/status',
     method: 'put',
     data
   })
@@ -81,9 +81,17 @@ export function updateHouseStatus(data) {
 // 导出房产数据
 export function exportHouseData(params) {
   return request({
-    url: '/house/export',
+    url: '/api/v1/property/house/export',
     method: 'get',
     params,
     responseType: 'blob'
+  })
+}
+
+// 根据单元获取房产列表
+export function getHousesByUnit(unitId) {
+  return request({
+    url: `/api/v1/property/house/unit/${unitId}`,
+    method: 'get'
   })
 }
