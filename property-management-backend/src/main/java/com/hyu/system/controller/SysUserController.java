@@ -15,9 +15,18 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
+import org.apache.poi.xssf.streaming.SXSSFSheet;
+import org.apache.poi.xssf.streaming.SXSSFRow;
 
 /**
  * 用户信息控制器
@@ -195,9 +204,176 @@ public class SysUserController {
     }
 
     /**
+     * 统一用户操作接口（新增、修改、删除、角色分配等）
+     */
+    @PostMapping("/operation")
+    @PreAuthorize("@ss.hasPermi('system:user:edit')")
+    public AjaxResult operation(@RequestBody UserOperationRequest request) {
+        log.info("用户操作接口, operation: {}, data: {}", request.getOperation(), request.getData());
+
+        switch (request.getOperation()) {
+            case "add":
+                return toAjax(userService.save(request.getData()));
+            case "edit":
+                return toAjax(userService.updateUserInfo(request.getData()));
+            case "delete":
+                return toAjax(userService.removeByIds(request.getIds()));
+            case "assignRoles":
+                return toAjax(userService.assignUserRoles(request.getData().getUserId(), request.getRoleIds()));
+            case "resetPwd":
+                return toAjax(userService.resetUserPassword(request.getData().getUserId(), request.getData().getPassword()));
+            case "changeStatus":
+                return toAjax(userService.updateUserInfo(request.getData()));
+            default:
+                return AjaxResult.error("不支持的操作类型: " + request.getOperation());
+        }
+    }
+
+    /**
+     * 获取用户的角色ID列表
+     */
+    @GetMapping("/{userId}/roles")
+    @PreAuthorize("@ss.hasPermi('system:user:query')")
+    public AjaxResult getUserRoles(@NotNull(message = "用户ID不能为空") @PathVariable Long userId) {
+        log.info("获取用户的角色ID列表, userId: {}", userId);
+        return AjaxResult.success(userService.getUserRoleIds(userId));
+    }
+
+    /**
+     * 导出用户Excel
+     */
+    @GetMapping("/export")
+    @PreAuthorize("@ss.hasPermi('system:user:export')")
+    public void exportUsers(HttpServletResponse response,
+                            @RequestParam(required = false) String username,
+                            @RequestParam(required = false) String realName,
+                            @RequestParam(required = false) String phone,
+                            @RequestParam(required = false) Integer status,
+                            @RequestParam(required = false) Integer userType,
+                            @RequestParam(required = false) String beginTime,
+                            @RequestParam(required = false) String endTime) throws IOException {
+        log.info("导出用户数据, username: {}, realName: {}, phone: {}, status: {}, userType: {}, beginTime: {}, endTime: {}",
+                username, realName, phone, status, userType, beginTime, endTime);
+
+        // 构建查询条件
+        com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<SysUser> queryWrapper =
+            new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
+        queryWrapper.like(StringUtils.isNotEmpty(username), "username", username)
+                   .like(StringUtils.isNotEmpty(realName), "real_name", realName)
+                   .like(StringUtils.isNotEmpty(phone), "phone", phone)
+                   .eq(status != null, "status", status)
+                   .eq(userType != null, "user_type", userType)
+                   .ge(StringUtils.isNotEmpty(beginTime), "create_time", beginTime)
+                   .le(StringUtils.isNotEmpty(endTime), "create_time", endTime)
+                   .orderByDesc("create_time");
+
+        // 查询数据
+        List<SysUser> userList = userService.list(queryWrapper);
+
+        // 创建工作簿
+        try (SXSSFWorkbook workbook = new SXSSFWorkbook()) {
+            SXSSFSheet sheet = workbook.createSheet("用户数据");
+
+            // 创建表头
+            String[] headers = {"用户ID", "用户名", "真实姓名", "手机号", "邮箱", "用户类型", "状态", "创建时间", "更新时间"};
+            SXSSFRow headerRow = sheet.createRow(0);
+            for (int i = 0; i < headers.length; i++) {
+                headerRow.createCell(i).setCellValue(headers[i]);
+            }
+
+            // 填充数据
+            int rowNum = 1;
+            for (SysUser user : userList) {
+                SXSSFRow row = sheet.createRow(rowNum++);
+                row.createCell(0).setCellValue(user.getUserId());
+                row.createCell(1).setCellValue(user.getUsername());
+                row.createCell(2).setCellValue(user.getRealName());
+                row.createCell(3).setCellValue(user.getPhone() != null ? user.getPhone() : "");
+                row.createCell(4).setCellValue(user.getEmail() != null ? user.getEmail() : "");
+                row.createCell(5).setCellValue(getUserTypeName(user.getUserType()));
+                row.createCell(6).setCellValue(user.getStatus() == 1 ? "启用" : "禁用");
+                row.createCell(7).setCellValue(user.getCreateTime() != null ? user.getCreateTime().toString() : "");
+                row.createCell(8).setCellValue(user.getUpdateTime() != null ? user.getUpdateTime().toString() : "");
+            }
+
+            // 设置响应头
+            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            response.setCharacterEncoding("utf-8");
+            String fileName = URLEncoder.encode("用户数据", "UTF-8").replaceAll("\\+", "%20");
+            //String fileName = URLEncoder.encode("用户数据", StandardCharsets.UTF_8).replaceAll("\\+", "%20");
+            response.setHeader("Content-disposition", "attachment;filename*=utf-8''" + fileName + ".xlsx");
+
+            // 写入响应流
+            workbook.write(response.getOutputStream());
+        } catch (Exception e) {
+            log.error("导出用户数据失败", e);
+            response.reset();
+            response.setContentType("application/json");
+            response.setCharacterEncoding("utf-8");
+            response.getWriter().println("{\"code\":500,\"msg\":\"导出失败\"}");
+        }
+    }
+
+    /**
+     * 获取用户类型名称
+     */
+    private String getUserTypeName(Integer userType) {
+        if (userType == null) return "";
+        switch (userType) {
+            case 1: return "系统管理员";
+            case 2: return "物业管理员";
+            case 3: return "业主";
+            case 4: return "维修人员";
+            default: return "未知";
+        }
+    }
+
+    /**
      * 返回AjaxResult
      */
     private AjaxResult toAjax(boolean result) {
         return result ? AjaxResult.success() : AjaxResult.error();
+    }
+
+    /**
+     * 用户操作请求DTO
+     */
+    public static class UserOperationRequest {
+        private String operation;
+        private SysUser data;
+        private List<Long> ids;
+        private List<Long> roleIds;
+
+        public String getOperation() {
+            return operation;
+        }
+
+        public void setOperation(String operation) {
+            this.operation = operation;
+        }
+
+        public SysUser getData() {
+            return data;
+        }
+
+        public void setData(SysUser data) {
+            this.data = data;
+        }
+
+        public List<Long> getIds() {
+            return ids;
+        }
+
+        public void setIds(List<Long> ids) {
+            this.ids = ids;
+        }
+
+        public List<Long> getRoleIds() {
+            return roleIds;
+        }
+
+        public void setRoleIds(List<Long> roleIds) {
+            this.roleIds = roleIds;
+        }
     }
 }

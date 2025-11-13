@@ -2,6 +2,7 @@ package com.hyu.system.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.hyu.system.domain.SysUser;
+import java.util.List;
 
 /**
  * 用户Service接口
@@ -110,4 +111,21 @@ public interface ISysUserService extends IService<SysUser> {
      * @return 结果
      */
     boolean insertAuthRoleUsers(Long roleId, Long[] userIds);
+
+    /**
+     * 分配用户角色
+     *
+     * @param userId 用户ID
+     * @param roleIds 角色ID列表
+     * @return 结果
+     */
+    boolean assignUserRoles(Long userId, List<Long> roleIds);
+
+    /**
+     * 获取用户的角色ID列表
+     *
+     * @param userId 用户ID
+     * @return 角色ID列表
+     */
+    List<Long> getUserRoleIds(Long userId);
 }
