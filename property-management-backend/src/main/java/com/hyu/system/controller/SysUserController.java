@@ -15,7 +15,9 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * 用户信息控制器
@@ -36,7 +38,7 @@ public class SysUserController {
      */
     @GetMapping("/list")
     @PreAuthorize("@ss.hasPermi('system:user:list')")
-    public PageResult list(@RequestParam(defaultValue = "1") Integer pageNum,
+    public AjaxResult list(@RequestParam(defaultValue = "1") Integer pageNum,
                            @RequestParam(defaultValue = "10") Integer pageSize,
                            @RequestParam(required = false) String username,
                            @RequestParam(required = false) String realName,
@@ -47,8 +49,6 @@ public class SysUserController {
                            @RequestParam(required = false) String endTime) {
         log.info("分页查询用户列表, pageNum: {}, pageSize: {}, username: {}, realName: {}, phone: {}, status: {}, userType: {}, beginTime: {}, endTime: {}",
                  pageNum, pageSize, username, realName, phone, status, userType, beginTime, endTime);
-
-        Page<SysUser> page = new Page<>(pageNum, pageSize);
 
         // 构建查询条件
         com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<SysUser> queryWrapper =
@@ -62,8 +62,20 @@ public class SysUserController {
                    .le(StringUtils.isNotEmpty(endTime), "create_time", endTime)
                    .orderByDesc("create_time");
 
-        Page<SysUser> result = userService.page(page, queryWrapper);
-        return PageResult.success(result.getTotal(), result.getRecords());
+        // 手动分页查询
+        List<SysUser> allUsers = userService.list(queryWrapper);
+        Long total = (long) allUsers.size();
+
+        // 计算分页
+        int start = (pageNum - 1) * pageSize;
+        int end = Math.min(start + pageSize, allUsers.size());
+
+        List<SysUser> pageRecords = new ArrayList<>();
+        if (start < allUsers.size()) {
+            pageRecords = allUsers.subList(start, end);
+        }
+
+        return AjaxResult.success("查询成功", PageResult.success(total, pageRecords));
     }
 
     /**

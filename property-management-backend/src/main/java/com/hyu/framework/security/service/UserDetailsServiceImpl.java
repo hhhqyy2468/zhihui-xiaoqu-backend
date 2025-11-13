@@ -59,154 +59,41 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     }
 
     /**
-     * 获取用户权限（根据用户类型分配不同权限）
+     * 获取用户权限（暂时返回空权限）
      *
      * @param userId 用户ID
      * @return 权限列表
      */
     private Set<String> getUserPermissions(Long userId) {
+        // TODO: 从数据库获取用户权限
+        // 这里暂时返回空权限，后续实现角色权限模块时再完善
         Set<String> permissions = new HashSet<>();
 
-        // 首先获取用户信息以确定用户类型
-        SysUser user = userService.getById(userId);
-        if (user == null) {
-            return permissions;
-        }
-
-        // 根据用户类型分配不同权限
-        Integer userType = user.getUserType();
-
-        // 基本权限（所有用户都有）
+        // 给所有用户默认添加基本权限（临时方案）
         permissions.add("auth:info");
         permissions.add("auth:logout");
         permissions.add("auth:profile");
         permissions.add("auth:password");
 
-        switch (userType) {
-            case 1: // 系统管理员
-                // 系统管理权限
+        // 获取用户信息以判断用户类型
+        SysUser user = userService.getById(userId);
+        if (user != null) {
+            // 给系统管理员用户（userType=1）添加系统管理权限
+            Integer userType = user.getUserType();
+            if (userType != null && userType == 1) { // 系统管理员
+                permissions.add("*"); // 所有权限
                 permissions.add("system:user:list");
+                permissions.add("system:user:view");
                 permissions.add("system:user:add");
                 permissions.add("system:user:edit");
                 permissions.add("system:user:remove");
+                permissions.add("system:user:query");
+                permissions.add("system:user:resetPwd");
                 permissions.add("system:role:list");
-                permissions.add("system:role:add");
-                permissions.add("system:role:edit");
-                permissions.add("system:role:remove");
+                permissions.add("system:role:view");
                 permissions.add("system:menu:list");
-                permissions.add("system:menu:add");
-                permissions.add("system:menu:edit");
-                permissions.add("system:menu:remove");
-                permissions.add("system:log:list");
-
-                // 物业管理权限（管理员也有所有权限）
-                permissions.add("property:building:list");
-                permissions.add("property:building:add");
-                permissions.add("property:building:edit");
-                permissions.add("property:building:delete");
-                permissions.add("property:house:list");
-                permissions.add("property:house:add");
-                permissions.add("property:house:edit");
-                permissions.add("property:house:delete");
-                permissions.add("property:unit:list");
-                permissions.add("property:unit:add");
-                permissions.add("property:unit:edit");
-                permissions.add("property:unit:delete");
-                permissions.add("property:owner:list");
-                permissions.add("property:owner:add");
-                permissions.add("property:owner:edit");
-                permissions.add("property:owner:delete");
-                permissions.add("property:bill:list");
-                permissions.add("property:bill:add");
-                permissions.add("property:bill:edit");
-                permissions.add("property:bill:delete");
-                permissions.add("property:bill:generate");
-                permissions.add("property:bill:overdue");
-                permissions.add("property:repair:list");
-                permissions.add("property:repair:add");
-                permissions.add("property:repair:edit");
-                permissions.add("property:repair:delete");
-                permissions.add("property:repair:assign");
-                permissions.add("property:repair:process");
-                permissions.add("property:notice:list");
-                permissions.add("property:notice:add");
-                permissions.add("property:notice:edit");
-                permissions.add("property:notice:delete");
-                permissions.add("property:wallet:list");
-                permissions.add("property:wallet:add");
-                permissions.add("property:wallet:edit");
-                permissions.add("property:wallet:freeze");
-                permissions.add("property:wallet:unfreeze");
-                permissions.add("property:wallet:deduct");
-                permissions.add("property:feetype:list");
-                permissions.add("property:feetype:add");
-                permissions.add("property:feetype:edit");
-                permissions.add("property:feetype:remove");
-                permissions.add("workbench:stats:view");
-                permissions.add("common:upload");
-                break;
-
-            case 2: // 物业管理员
-                // 物业管理权限
-                permissions.add("property:building:list");
-                permissions.add("property:building:add");
-                permissions.add("property:building:edit");
-                permissions.add("property:house:list");
-                permissions.add("property:house:add");
-                permissions.add("property:house:edit");
-                permissions.add("property:unit:list");
-                permissions.add("property:unit:add");
-                permissions.add("property:unit:edit");
-                permissions.add("property:owner:list");
-                permissions.add("property:owner:add");
-                permissions.add("property:owner:edit");
-                permissions.add("property:bill:list");
-                permissions.add("property:bill:add");
-                permissions.add("property:bill:edit");
-                permissions.add("property:bill:generate");
-                permissions.add("property:bill:overdue");
-                permissions.add("property:repair:list");
-                permissions.add("property:repair:add");
-                permissions.add("property:repair:edit");
-                permissions.add("property:repair:assign");
-                permissions.add("property:repair:process");
-                permissions.add("property:notice:list");
-                permissions.add("property:notice:add");
-                permissions.add("property:notice:edit");
-                permissions.add("property:wallet:list");
-                permissions.add("property:wallet:freeze");
-                permissions.add("property:wallet:unfreeze");
-                permissions.add("property:feetype:list");
-                permissions.add("property:feetype:add");
-                permissions.add("property:feetype:edit");
-                permissions.add("workbench:stats:view");
-                permissions.add("common:upload");
-                break;
-
-            case 3: // 业主
-                // 业主权限
-                permissions.add("property:house:view"); // 只能查看自己的房产
-                permissions.add("property:bill:view");  // 只能查看自己的账单
-                permissions.add("property:bill:pay");   // 支付账单
-                permissions.add("property:repair:add");  // 提交报修
-                permissions.add("property:repair:view"); // 查看自己的报修
-                permissions.add("property:notice:view"); // 查看通知
-                permissions.add("property:notice:read"); // 标记通知已读
-                permissions.add("property:wallet:view"); // 查看自己的钱包
-                permissions.add("property:wallet:recharge"); // 钱包充值
-                break;
-
-            case 4: // 维修工
-                // 维修工权限
-                permissions.add("property:repair:list"); // 查看分配给自己的维修单
-                permissions.add("property:repair:process"); // 处理维修单
-                permissions.add("property:repair:view");   // 查看维修单详情
-                permissions.add("auth:profile");           // 个人资料
-                break;
-
-            default:
-                // 默认权限（只有基本权限）
-                break;
+                permissions.add("system:config:view");
+            }
         }
 
         return permissions;

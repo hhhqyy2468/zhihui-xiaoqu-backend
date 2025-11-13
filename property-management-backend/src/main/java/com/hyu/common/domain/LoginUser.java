@@ -117,7 +117,7 @@ public class LoginUser implements UserDetails {
         this.email = user.getEmail();
         this.userType = user.getUserType();
         this.avatar = user.getAvatar();
-        this.deptId = user.getDeptId();
+        // this.deptId = user.getDeptId(); // 数据库中不存在此字段，注释掉
         // this.deptName = user.getDeptName(); // 项目不需要部门管理，注释掉
         this.status = user.getStatus();
         this.permissions = permissions;
