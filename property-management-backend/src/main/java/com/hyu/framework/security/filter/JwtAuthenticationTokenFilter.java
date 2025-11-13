@@ -60,10 +60,8 @@ public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
 
                     // 如果上下文中没有认证信息，则进行认证
                     if (SecurityContextHolder.getContext().getAuthentication() == null) {
-                        loginUser = userDetailsService.createLoginUser(
-                            (SysUser) userDetailsService.loadUserByUsername(username),
-                            new HashSet<>()
-                        );
+                        // loadUserByUsername返回的是LoginUser，直接使用
+                        loginUser = (LoginUser) userDetailsService.loadUserByUsername(username);
 
                         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                             loginUser, null, loginUser.getAuthorities()

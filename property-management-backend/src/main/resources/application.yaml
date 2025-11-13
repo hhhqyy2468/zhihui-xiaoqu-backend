@@ -5,24 +5,24 @@ spring:
   # 数据源配置
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/property_management?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=GMT%2B8
+    url: jdbc:mysql://localhost:3306/property_management?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true
     username: root
     password: 123456
 
-  # Redis配置 - 暂时禁用
-  # data:
-  #   redis:
-  #     host: localhost
-  #     port: 6379
-  #     password: ''
-  #     database: 0
-  #     timeout: 10000ms
-  #     lettuce:
-  #       pool:
-  #         max-active: 8
-  #         max-wait: -1ms
-  #         max-idle: 8
-  #         min-idle: 0
+  # Redis配置
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: ''
+      database: 0
+      timeout: 10000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-wait: -1ms
+          max-idle: 8
+          min-idle: 0
 
   # 文件上传配置
   servlet:
@@ -34,23 +34,13 @@ spring:
   flyway:
     enabled: false
 
-  # Jackson配置
-  jackson:
-    default-property-inclusion: NON_NULL
-    serialization:
-      fail-on-empty-beans: false
-      write-dates-as-timestamps: false
-    deserialization:
-      fail-on-unknown-properties: false
-    time-zone: GMT+8
-
 server:
   port: 8080
 
 # MyBatis Plus配置
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
-  type-aliases-package: com.hyu.**.domain,com.hyu.**.entity
+  type-aliases-package: com.hyu.**.domain,com.hyu.**.entity,com.hyu.**.domain.vo
   global-config:
     db-config:
       id-type: auto
@@ -64,7 +54,7 @@ mybatis-plus:
 
 # JWT配置
 jwt:
-  secret: propertyManagement2025SecretKeyForJWTTokenGenerationAndAuthenticationThisIsA512BitKeyForHS512AlgorithmCompatibility
+  secret: propertyManagement2025SecretKeyForJWTTokenGenerationAndAuthenticationThisIsASecureKeyThatMeetsHS512RequirementsWithMinimum64CharactersLength
   expiration: 7200000
   refresh-expiration: 604800000
 
