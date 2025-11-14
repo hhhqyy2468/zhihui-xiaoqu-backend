@@ -107,6 +107,18 @@
         <el-table-column type="selection" width="55" />
         <el-table-column prop="userId" label="业主编号" width="100" />
         <el-table-column prop="realName" label="业主姓名" width="120" />
+        <el-table-column label="房产信息" width="200">
+          <template #default="{ row }">
+            <div v-if="row.houseList && row.houseList.length > 0">
+              <div v-for="(house, index) in row.houseList" :key="index" class="house-info">
+                <span class="building-name">{{ house.buildingName || '-' }}</span>
+                <span class="unit-name">{{ house.unitName || '-' }}</span>
+                <span class="house-no">{{ house.houseNo || '-' }}</span>
+              </div>
+            </div>
+            <span v-else class="no-house">暂无房产</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="gender" label="性别" width="80">
           <template #default="{ row }">
             {{ row.gender === 1 ? '男' : row.gender === 2 ? '女' : '未知' }}
@@ -814,5 +826,34 @@ onMounted(() => {
       color: #303133;
     }
   }
+}
+
+// 房产信息样式
+.house-info {
+  margin-bottom: 4px;
+  font-size: 13px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  .building-name {
+    color: #409eff;
+    font-weight: 500;
+  }
+
+  .unit-name {
+    color: #67c23a;
+    margin: 0 4px;
+  }
+
+  .house-no {
+    color: #e6a23c;
+  }
+}
+
+.no-house {
+  color: #909399;
+  font-size: 13px;
 }
 </style>
