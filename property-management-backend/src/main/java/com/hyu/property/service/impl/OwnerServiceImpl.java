@@ -9,12 +9,14 @@ import com.hyu.property.domain.Building;
 import com.hyu.property.domain.House;
 import com.hyu.property.domain.Owner;
 import com.hyu.property.domain.Unit;
+import com.hyu.property.domain.UserHouse;
 import com.hyu.property.domain.vo.OwnerVO;
 import com.hyu.property.mapper.OwnerMapper;
 import com.hyu.property.service.IOwnerService;
 import com.hyu.property.service.IBuildingService;
 import com.hyu.property.service.IHouseService;
 import com.hyu.property.service.IUnitService;
+import com.hyu.property.service.IUserHouseService;
 import com.hyu.system.domain.SysUser;
 import com.hyu.system.mapper.SysUserMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -55,6 +57,9 @@ public class OwnerServiceImpl extends ServiceImpl<OwnerMapper, Owner> implements
 
     @Autowired
     private IUnitService unitService;
+
+    @Autowired
+    private IUserHouseService userHouseService;
 
     /**
      * 分页查询业主列表
@@ -436,46 +441,46 @@ public class OwnerServiceImpl extends ServiceImpl<OwnerMapper, Owner> implements
 
         try {
             // 查询用户的房产关联关系
-            // 注意：这里假设有一个UserHouse实体和对应的Mapper
-            // 如果没有，我们需要使用原始SQL查询
+            List<UserHouse> userHouseList = userHouseService.selectUserHouseByUserId(userId);
 
-            // 先通过模拟查询获取用户的房产ID列表
-            // 这里应该查询 user_house 表 where user_id = userId
-            List<Long> houseIds = getUserHouseIds(userId);
+            for (UserHouse userHouse : userHouseList) {
+                Long houseId = userHouse.getHouseId();
+                if (houseId != null) {
+                    // 获取房产详细信息
+                    House house = houseService.getById(houseId);
+                    if (house != null) {
+                        OwnerVO.HouseInfo houseInfo = new OwnerVO.HouseInfo();
+                        houseInfo.setHouseId(house.getId());
+                        houseInfo.setHouseNo(house.getHouseNo());
+                        houseInfo.setHouseType(house.getHouseType());
+                        houseInfo.setBuildingAreaNum(house.getBuildingArea() != null ? house.getBuildingArea().doubleValue() : null);
+                        houseInfo.setUsableArea(house.getUsableArea() != null ? house.getUsableArea().doubleValue() : null);
+                        houseInfo.setHouseStatus(house.getHouseStatus());
 
-            for (Long houseId : houseIds) {
-                // 获取房产详细信息
-                House house = houseService.getById(houseId);
-                if (house != null) {
-                    OwnerVO.HouseInfo houseInfo = new OwnerVO.HouseInfo();
-                    houseInfo.setHouseId(house.getId());
-                    houseInfo.setHouseNo(house.getHouseNo());
-                    houseInfo.setHouseType(house.getHouseType());
-                    houseInfo.setBuildingAreaNum(house.getBuildingArea() != null ? house.getBuildingArea().doubleValue() : null);
-                    houseInfo.setUsableArea(house.getUsableArea() != null ? house.getUsableArea().doubleValue() : null);
-                    houseInfo.setHouseStatus(house.getHouseStatus());
-
-                    // 获取楼栋信息
-                    if (house.getBuildingId() != null) {
-                        Building building = buildingService.getById(house.getBuildingId());
-                        if (building != null) {
-                            houseInfo.setBuildingName(building.getBuildingName());
+                        // 获取楼栋信息
+                        if (house.getBuildingId() != null) {
+                            Building building = buildingService.getById(house.getBuildingId());
+                            if (building != null) {
+                                houseInfo.setBuildingName(building.getBuildingName());
+                            }
                         }
-                    }
 
-                    // 获取单元信息
-                    if (house.getUnitId() != null) {
-                        Unit unit = unitService.getById(house.getUnitId());
-                        if (unit != null) {
-                            houseInfo.setUnitName(unit.getUnitName());
+                        // 获取单元信息
+                        if (house.getUnitId() != null) {
+                            Unit unit = unitService.getById(house.getUnitId());
+                            if (unit != null) {
+                                houseInfo.setUnitName(unit.getUnitName());
+                            }
                         }
+
+                        // 设置关系类型
+                        houseInfo.setRelationTypeNum(userHouse.getRelationType());
+                        houseInfo.setStartDate(userHouse.getStartDate());
+                        houseInfo.setEndDate(userHouse.getEndDate());
+                        houseInfo.setIsCurrent(userHouse.getIsCurrent());
+
+                        houseList.add(houseInfo);
                     }
-
-                    houseInfo.setRelationTypeNum(1); // 业主
-                    houseInfo.setStartDate(new Date());
-                    houseInfo.setIsCurrent(true);
-
-                    houseList.add(houseInfo);
                 }
             }
         } catch (Exception e) {
@@ -483,41 +488,5 @@ public class OwnerServiceImpl extends ServiceImpl<OwnerMapper, Owner> implements
         }
 
         return houseList;
-    }
-
-    /**
-     * 获取用户的房产ID列表
-     * 这里应该查询 user_house 表，暂时使用模拟数据
-     *
-     * @param userId 用户ID
-     * @return 房产ID列表
-     */
-    private List<Long> getUserHouseIds(Long userId) {
-        List<Long> houseIds = new ArrayList<>();
-
-        // 模拟数据 - 根据用户ID返回对应的房产ID
-        // 实际应该查询 user_house 表
-        switch (userId.intValue()) {
-            case 3: houseIds.add(1L); break;  // 张三 - A001-0101
-            case 4: houseIds.add(2L); break;  // 李四 - A001-0102
-            case 5: houseIds.add(3L); break;  // 王五 - A001-0103
-            case 6: houseIds.add(5L); break;  // 赵六 - A001-0201
-            case 7: houseIds.add(6L); break;  // 钱七 - A001-0202
-            case 8: houseIds.add(8L); break;  // 孙八 - A001-0204
-            case 9: houseIds.add(9L); break;  // 周九 - A002-0101
-            case 10: houseIds.add(11L); break; // 吴十 - A002-0103
-            case 11: houseIds.add(12L); break; // 郑十一 - A002-0104
-            case 12: houseIds.add(13L); break; // 王十二 - A001-0203
-            case 13: houseIds.add(14L); break; // 李十三 - A001-0301
-            case 14: houseIds.add(17L); break; // 刘十五 - A002-0105
-            case 15: houseIds.add(18L); break; // 陈十六 - A002-0106
-            case 16: houseIds.add(20L); break; // 杨十七 - B001-0103
-            case 17: houseIds.add(21L); break; // 黄十八 - B001-0104
-            case 18: houseIds.add(23L); break; // 赵十九 - B001-0106
-            case 19: houseIds.add(25L); break; // 周二十 - B001-0102
-            case 20: houseIds.add(27L); break; // 吴二十一 - B001-0101
-        }
-
-        return houseIds;
     }
 }
