@@ -107,13 +107,19 @@
         <el-table-column type="selection" width="55" />
         <el-table-column prop="userId" label="业主编号" width="100" />
         <el-table-column prop="realName" label="业主姓名" width="120" />
-        <el-table-column label="房产信息" width="200">
+        <el-table-column label="房产信息" width="250">
           <template #default="{ row }">
             <div v-if="row.houseList && row.houseList.length > 0">
               <div v-for="(house, index) in row.houseList" :key="index" class="house-info">
-                <span class="building-name">{{ house.buildingName || '-' }}</span>
-                <span class="unit-name">{{ house.unitName || '-' }}</span>
-                <span class="house-no">{{ house.houseNo || '-' }}</span>
+                <div class="house-location">
+                  <span class="building-name">{{ house.buildingName || '-' }}</span>
+                  <span class="unit-name">{{ house.unitName || '-' }}</span>
+                  <span class="house-no">{{ house.houseNo || '-' }}</span>
+                </div>
+                <div class="house-detail">
+                  <span class="house-type">{{ house.houseType || '-' }}</span>
+                  <span class="house-area">{{ house.buildingAreaNum || '-' }}㎡</span>
+                </div>
               </div>
             </div>
             <span v-else class="no-house">暂无房产</span>
@@ -225,8 +231,8 @@
       >
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="业主姓名" prop="ownerName">
-              <el-input v-model="ownerForm.ownerName" placeholder="请输入业主姓名" />
+            <el-form-item label="业主姓名" prop="realName">
+              <el-input v-model="ownerForm.realName" placeholder="请输入业主姓名" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -259,32 +265,16 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="产权性质" prop="ownershipType">
-              <el-select v-model="ownerForm.ownershipType" placeholder="请选择产权性质" style="width: 100%">
-                <el-option label="商品房" :value="1" />
-                <el-option label="经济适用房" :value="2" />
-                <el-option label="廉租房" :value="3" />
-                <el-option label="共有产权房" :value="4" />
+            <el-form-item label="住户状态" prop="residentStatus">
+              <el-select v-model="ownerForm.residentStatus" placeholder="请选择住户状态" style="width: 100%">
+                <el-option label="在住" :value="1" />
+                <el-option label="已搬离" :value="0" />
               </el-select>
             </el-form-item>
           </el-col>
         </el-row>
 
-        <el-form-item label="房产地址" prop="houseAddress">
-          <el-input v-model="ownerForm.houseAddress" placeholder="请输入房产地址" />
-        </el-form-item>
-
         <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="房产面积" prop="propertyArea">
-              <el-input-number
-                v-model="ownerForm.propertyArea"
-                :min="0"
-                :precision="2"
-                style="width: 100%"
-              />
-            </el-form-item>
-          </el-col>
           <el-col :span="12">
             <el-form-item label="业主状态" prop="status">
               <el-radio-group v-model="ownerForm.status">
@@ -292,6 +282,9 @@
                 <el-radio :label="0">冻结</el-radio>
               </el-radio-group>
             </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <!-- 空列 -->
           </el-col>
         </el-row>
 
@@ -323,40 +316,46 @@
     >
       <div class="detail-content">
         <el-descriptions :column="2" border>
-          <el-descriptions-item label="业主编号">{{ ownerDetail.ownerId }}</el-descriptions-item>
-          <el-descriptions-item label="业主姓名">{{ ownerDetail.ownerName }}</el-descriptions-item>
+          <el-descriptions-item label="业主编号">{{ ownerDetail.userId }}</el-descriptions-item>
+          <el-descriptions-item label="业主姓名">{{ ownerDetail.realName }}</el-descriptions-item>
           <el-descriptions-item label="性别">{{ ownerDetail.gender === 1 ? '男' : '女' }}</el-descriptions-item>
           <el-descriptions-item label="手机号码">{{ ownerDetail.phone }}</el-descriptions-item>
           <el-descriptions-item label="身份证号">{{ ownerDetail.idCard }}</el-descriptions-item>
           <el-descriptions-item label="电子邮箱">{{ ownerDetail.email }}</el-descriptions-item>
-          <el-descriptions-item label="房产地址">{{ ownerDetail.houseAddress }}</el-descriptions-item>
-          <el-descriptions-item label="房产面积">{{ ownerDetail.propertyArea }}m²</el-descriptions-item>
-          <el-descriptions-item label="产权性质">{{ getOwnershipTypeName(ownerDetail.ownershipType) }}</el-descriptions-item>
+          <el-descriptions-item label="住户状态">
+            <el-tag :type="ownerDetail.residentStatus === 1 ? 'success' : 'info'">
+              {{ ownerDetail.residentStatus === 1 ? '在住' : '已搬离' }}
+            </el-tag>
+          </el-descriptions-item>
           <el-descriptions-item label="业主状态">
             <el-tag :type="ownerDetail.status === 1 ? 'success' : 'danger'">
               {{ ownerDetail.status === 1 ? '正常' : '冻结' }}
             </el-tag>
           </el-descriptions-item>
-          <el-descriptions-item label="登记时间">{{ formatDateTime(ownerDetail.registerTime) }}</el-descriptions-item>
+          <el-descriptions-item label="创建时间">{{ formatDateTime(ownerDetail.createTime) }}</el-descriptions-item>
           <el-descriptions-item label="备注">{{ ownerDetail.remark || '无' }}</el-descriptions-item>
         </el-descriptions>
 
-        <div class="detail-section">
+        <div class="detail-section" v-if="ownerDetail.houseList && ownerDetail.houseList.length > 0">
           <h4>相关房产</h4>
-          <el-table :data="ownerDetail.properties || []" size="small">
-            <el-table-column prop="buildingName" label="楼栋" />
-            <el-table-column prop="unitName" label="单元" />
-            <el-table-column prop="houseNumber" label="房号" />
-            <el-table-column prop="area" label="面积">
+          <el-table :data="ownerDetail.houseList" size="small">
+            <el-table-column prop="buildingName" label="楼栋" width="100" />
+            <el-table-column prop="unitName" label="单元" width="100" />
+            <el-table-column prop="houseNo" label="房号" width="120" />
+            <el-table-column prop="houseType" label="户型" width="100" />
+            <el-table-column prop="buildingAreaNum" label="建筑面积" width="120">
               <template #default="{ row }">
-                {{ row.area }}m²
+                {{ row.buildingAreaNum }}m²
               </template>
             </el-table-column>
-            <el-table-column prop="status" label="状态">
+            <el-table-column prop="usableArea" label="使用面积" width="120">
               <template #default="{ row }">
-                <el-tag :type="row.status === 1 ? 'success' : 'info'">
-                  {{ row.status === 1 ? '已入住' : '空置' }}
-                </el-tag>
+                {{ row.usableArea }}m²
+              </template>
+            </el-table-column>
+            <el-table-column prop="houseStatus" label="房产状态" width="100">
+              <template #default="{ row }">
+                {{ getHouseStatusName(row.houseStatus) }}
               </template>
             </el-table-column>
           </el-table>
@@ -618,7 +617,7 @@ const handleEdit = (row) => {
 
 // 查看业主详情
 const handleView = (row) => {
-  ownerDetail.value = generateOwnerDetail(row.ownerId)
+  ownerDetail.value = generateOwnerDetail(row.userId)
   detailDialogVisible.value = true
 }
 
@@ -830,30 +829,55 @@ onMounted(() => {
 
 // 房产信息样式
 .house-info {
-  margin-bottom: 4px;
+  margin-bottom: 8px;
   font-size: 13px;
+  border-left: 3px solid #409eff;
+  padding-left: 8px;
 
   &:last-child {
     margin-bottom: 0;
   }
 
-  .building-name {
-    color: #409eff;
-    font-weight: 500;
+  .house-location {
+    margin-bottom: 2px;
+
+    .building-name {
+      color: #409eff;
+      font-weight: 500;
+      margin-right: 4px;
+    }
+
+    .unit-name {
+      color: #67c23a;
+      margin-right: 4px;
+    }
+
+    .house-no {
+      color: #e6a23c;
+    }
   }
 
-  .unit-name {
-    color: #67c23a;
-    margin: 0 4px;
-  }
+  .house-detail {
+    display: flex;
+    gap: 8px;
+    margin-top: 2px;
 
-  .house-no {
-    color: #e6a23c;
+    .house-type {
+      color: #606266;
+      font-size: 12px;
+    }
+
+    .house-area {
+      color: #909399;
+      font-size: 12px;
+      font-weight: 500;
+    }
   }
 }
 
 .no-house {
   color: #909399;
   font-size: 13px;
+  font-style: italic;
 }
 </style>
