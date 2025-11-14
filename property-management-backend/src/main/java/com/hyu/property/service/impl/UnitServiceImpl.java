@@ -4,10 +4,13 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hyu.common.utils.StringUtils;
+import com.hyu.property.domain.Building;
 import com.hyu.property.domain.Unit;
 import com.hyu.property.mapper.UnitMapper;
 import com.hyu.property.service.IUnitService;
+import com.hyu.property.service.IBuildingService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -21,6 +24,9 @@ import java.util.List;
 @Service
 public class UnitServiceImpl extends ServiceImpl<UnitMapper, Unit> implements IUnitService {
 
+    @Autowired
+    private IBuildingService buildingService;
+
     /**
      * 分页查询单元列表
      *
@@ -30,7 +36,18 @@ public class UnitServiceImpl extends ServiceImpl<UnitMapper, Unit> implements IU
      */
     @Override
     public Page<Unit> selectUnitPage(Page<Unit> page, Unit unit) {
-        return baseMapper.selectUnitList(page, unit);
+        Page<Unit> result = baseMapper.selectUnitList(page, unit);
+
+        // 填充楼栋名称
+        if (result != null && result.getRecords() != null) {
+            for (Unit unitRecord : result.getRecords()) {
+                if (unitRecord.getBuildingId() != null) {
+                    unitRecord.setBuildingName(getBuildingNameById(unitRecord.getBuildingId()));
+                }
+            }
+        }
+
+        return result;
     }
 
     /**
@@ -133,5 +150,21 @@ public class UnitServiceImpl extends ServiceImpl<UnitMapper, Unit> implements IU
     @Override
     public int deleteUnitById(Long unitId) {
         return removeById(unitId) ? 1 : 0;
+    }
+
+    /**
+     * 根据楼栋ID获取楼栋名称
+     *
+     * @param buildingId 楼栋ID
+     * @return 楼栋名称
+     */
+    private String getBuildingNameById(Long buildingId) {
+        try {
+            Building building = buildingService.getById(buildingId);
+            return building != null ? building.getBuildingName() : "";
+        } catch (Exception e) {
+            log.error("获取楼栋名称失败, buildingId: {}", buildingId, e);
+            return "";
+        }
     }
 }

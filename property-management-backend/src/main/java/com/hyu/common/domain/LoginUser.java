@@ -125,6 +125,12 @@ public class LoginUser implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
+        // 将权限字符串转换为GrantedAuthority对象
+        if (permissions != null && !permissions.isEmpty()) {
+            return permissions.stream()
+                    .map(SimpleGrantedAuthority::new)
+                    .collect(Collectors.toList());
+        }
         return new ArrayList<>();
     }
 
