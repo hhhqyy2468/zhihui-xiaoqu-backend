@@ -225,6 +225,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus, Delete, Download } from '@element-plus/icons-vue'
+import * as buildingApi from '@/api/building'
 
 // 响应式数据
 const formRef = ref()
@@ -403,17 +404,37 @@ const handleReset = () => {
 }
 
 // 加载楼栋数据
-const loadBuildings = () => {
+const loadBuildings = async () => {
   loading.value = true
-  setTimeout(() => {
-    const mockData = generateMockData()
-    tableData.value = mockData.slice(
-      (pagination.current - 1) * pagination.pageSize,
-      pagination.current * pagination.pageSize
-    )
-    pagination.total = mockData.length
+  try {
+    const params = {
+      pageNum: pagination.current,
+      pageSize: pagination.pageSize,
+      buildingNo: searchForm.buildingNo,
+      buildingName: searchForm.buildingName,
+      address: searchForm.address
+    }
+
+    // 清理空值参数
+    Object.keys(params).forEach(key => {
+      if (params[key] === '' || params[key] === null || params[key] === undefined) {
+        delete params[key]
+      }
+    })
+
+    const response = await buildingApi.listBuildings(params)
+    if (response.code === 200) {
+      tableData.value = response.data.rows || []
+      pagination.total = response.data.total || 0
+    } else {
+      ElMessage.error(response.msg || '获取楼栋列表失败')
+    }
+  } catch (error) {
+    console.error('加载楼栋数据失败:', error)
+    ElMessage.error('网络错误，请稍后重试')
+  } finally {
     loading.value = false
-  }, 500)
+  }
 }
 
 // 分页处理
@@ -440,10 +461,20 @@ const handleAdd = () => {
 }
 
 // 编辑
-const handleEdit = (row) => {
-  isEdit.value = true
-  Object.assign(form, { ...row })
-  dialogVisible.value = true
+const handleEdit = async (row) => {
+  try {
+    const response = await buildingApi.getBuilding(row.id)
+    if (response.code === 200) {
+      isEdit.value = true
+      Object.assign(form, response.data)
+      dialogVisible.value = true
+    } else {
+      ElMessage.error(response.msg || '获取楼栋信息失败')
+    }
+  } catch (error) {
+    console.error('获取楼栋信息失败:', error)
+    ElMessage.error('网络错误，请稍后重试')
+  }
 }
 
 // 删除
@@ -451,13 +482,26 @@ const handleDelete = async (row) => {
   try {
     await ElMessageBox.confirm(
       `确定要删除楼栋"${row.buildingName}"吗？`,
-      '提示',
-      { type: 'warning' }
+      '警告',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
     )
-    ElMessage.success('删除成功')
-    loadBuildings()
+
+    const response = await buildingApi.deleteBuilding(row.id)
+    if (response.code === 200) {
+      ElMessage.success('删除成功')
+      loadBuildings()
+    } else {
+      ElMessage.error(response.msg || '删除失败')
+    }
   } catch (error) {
-    // 用户取消操作
+    if (error !== 'cancel') {
+      console.error('删除楼栋失败:', error)
+      ElMessage.error('删除失败，请稍后重试')
+    }
   }
 }
 
@@ -466,13 +510,27 @@ const handleBatchDelete = async () => {
   try {
     await ElMessageBox.confirm(
       `确定要删除选中的${selectedRows.value.length}个楼栋吗？`,
-      '提示',
-      { type: 'warning' }
+      '警告',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
     )
-    ElMessage.success('批量删除成功')
-    loadBuildings()
+
+    const ids = selectedRows.value.map(row => row.id)
+    const response = await buildingApi.deleteBuildings(ids)
+    if (response.code === 200) {
+      ElMessage.success('批量删除成功')
+      loadBuildings()
+    } else {
+      ElMessage.error(response.msg || '批量删除失败')
+    }
   } catch (error) {
-    // 用户取消操作
+    if (error !== 'cancel') {
+      console.error('批量删除失败:', error)
+      ElMessage.error('批量删除失败，请稍后重试')
+    }
   }
 }
 
@@ -500,17 +558,26 @@ const handleSubmit = async () => {
     await formRef.value.validate()
     submitLoading.value = true
 
-    // 计算总户数
-    const totalHouseholds = form.floorCount * form.unitCount * 3 // 假设每层3户
+    let response
+    if (isEdit.value) {
+      response = await buildingApi.updateBuilding(form)
+    } else {
+      response = await buildingApi.addBuilding(form)
+    }
 
-    // 模拟API请求
-    setTimeout(() => {
+    if (response.code === 200) {
       ElMessage.success(isEdit.value ? '编辑成功' : '新增成功')
       dialogVisible.value = false
       loadBuildings()
-      submitLoading.value = false
-    }, 1000)
+    } else {
+      ElMessage.error(response.msg || (isEdit.value ? '编辑失败' : '新增失败'))
+    }
   } catch (error) {
+    if (error !== false) { // 表单验证失败时error为false
+      console.error('提交失败:', error)
+      ElMessage.error('操作失败，请稍后重试')
+    }
+  } finally {
     submitLoading.value = false
   }
 }

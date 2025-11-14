@@ -219,3 +219,20 @@ export function changeRoleStatus(data) {
     data
   })
 }
+
+// 获取角色菜单列表
+export function getRoleMenus(roleId) {
+  return request({
+    url: `/system/role/${roleId}/menus`,
+    method: 'get'
+  })
+}
+
+// 分配角色菜单权限
+export function assignRoleMenus(roleId, menuIds) {
+  return request({
+    url: `/system/role/${roleId}/menus`,
+    method: 'post',
+    data: menuIds
+  })
+}

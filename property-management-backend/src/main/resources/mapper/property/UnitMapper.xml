@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hyu.property.mapper.UnitMapper">
+
+    <resultMap type="Unit" id="UnitResult">
+        <id     property="id"               column="id"               />
+        <result property="buildingId"       column="building_id"       />
+        <result property="unitNo"           column="unit_no"           />
+        <result property="unitName"         column="unit_name"         />
+        <result property="floorCount"       column="floor_count"       />
+        <result property="roomCountPerFloor" column="room_count_per_floor" />
+        <result property="remark"           column="remark"            />
+        <result property="deleted"          column="deleted"           />
+        <result property="createBy"         column="create_by"         />
+        <result property="createTime"       column="create_time"       />
+        <result property="updateBy"         column="update_by"         />
+        <result property="updateTime"       column="update_time"       />
+        <result property="buildingName"     column="building_name"     />
+    </resultMap>
+
+    <sql id="selectUnitVo">
+        select u.id, u.building_id, u.unit_no, u.unit_name, u.floor_count,
+               u.room_count_per_floor, u.remark, u.deleted, u.create_by, u.create_time,
+               u.update_by, u.update_time,
+               b.building_name
+        from unit u
+        left join building b on u.building_id = b.id
+    </sql>
+
+    <select id="selectUnitList" resultMap="UnitResult">
+        <include refid="selectUnitVo"/>
+        <where>
+            u.deleted = 0
+            <if test="unit.buildingId != null "> and u.building_id = #{unit.buildingId}</if>
+            <if test="unit.unitNo != null  and unit.unitNo != ''"> and u.unit_no like concat('%', #{unit.unitNo}, '%')</if>
+            <if test="unit.unitName != null  and unit.unitName != ''"> and u.unit_name like concat('%', #{unit.unitName}, '%')</if>
+        </where>
+        order by u.create_time desc
+    </select>
+
+    <select id="selectUnitListByBuildingId" parameterType="Long" resultMap="UnitResult">
+        <include refid="selectUnitVo"/>
+        where u.deleted = 0 and u.building_id = #{buildingId}
+        order by u.unit_no
+    </select>
+
+    <select id="selectUnitById" parameterType="Long" resultMap="UnitResult">
+        <include refid="selectUnitVo"/>
+        where u.id = #{unitId} and u.deleted = 0
+    </select>
+
+    <select id="checkUnitCodeUnique" parameterType="Unit" resultMap="UnitResult">
+        <include refid="selectUnitVo"/>
+        where u.deleted = 0 and u.building_id = #{buildingId} and u.unit_no = #{unitNo}
+        <if test="id != null "> and u.id != #{id}</if>
+        limit 1
+    </select>
+
+    <insert id="insertUnit" parameterType="Unit" useGeneratedKeys="true" keyProperty="id">
+        insert into unit
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="buildingId != null">building_id,</if>
+            <if test="unitNo != null and unitNo != ''">unit_no,</if>
+            <if test="unitName != null and unitName != ''">unit_name,</if>
+            <if test="floorCount != null">floor_count,</if>
+            <if test="roomCountPerFloor != null">room_count_per_floor,</if>
+            <if test="remark != null">remark,</if>
+            <if test="createBy != null">create_by,</if>
+            create_time
+         </trim>
+         <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="buildingId != null">#{buildingId},</if>
+            <if test="unitNo != null and unitNo != ''">#{unitNo},</if>
+            <if test="unitName != null and unitName != ''">#{unitName},</if>
+            <if test="floorCount != null">#{floorCount},</if>
+            <if test="roomCountPerFloor != null">#{roomCountPerFloor},</if>
+            <if test="remark != null">#{remark},</if>
+            <if test="createBy != null">#{createBy},</if>
+            sysdate()
+         </trim>
+    </insert>
+
+    <update id="updateUnit" parameterType="Unit">
+        update unit
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="buildingId != null">building_id = #{buildingId},</if>
+            <if test="unitNo != null and unitNo != ''">unit_no = #{unitNo},</if>
+            <if test="unitName != null and unitName != ''">unit_name = #{unitName},</if>
+            <if test="floorCount != null">floor_count = #{floorCount},</if>
+            <if test="roomCountPerFloor != null">room_count_per_floor = #{roomCountPerFloor},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            update_time = sysdate()
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteUnitById" parameterType="Long">
+        update unit set deleted = 1, update_time = sysdate() where id = #{unitId}
+    </delete>
+
+    <delete id="deleteUnitByIds" parameterType="String">
+        update unit set deleted = 1, update_time = sysdate() where id in
+        <foreach item="unitId" collection="array" open="(" separator="," close=")">
+            #{unitId}
+        </foreach>
+    </delete>
+
+</mapper>

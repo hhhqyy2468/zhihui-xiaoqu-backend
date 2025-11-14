@@ -74,7 +74,7 @@
         v-loading="loading"
         :data="tableData"
       >
-        <el-table-column prop="id" label="角色编号" width="100" />
+        <el-table-column prop="roleId" label="角色编号" width="100" />
         <el-table-column prop="roleName" label="角色名称" width="150" sortable />
         <el-table-column prop="roleKey" label="角色标识" width="150" />
         <el-table-column prop="roleSort" label="显示顺序" width="100" />
@@ -213,6 +213,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus, Download } from '@element-plus/icons-vue'
+import * as systemApi from '@/api/system'
 
 // 响应式数据
 const formRef = ref()
@@ -241,7 +242,7 @@ const pagination = reactive({
 
 // 表单数据
 const form = reactive({
-  id: null,
+  roleId: null,
   roleName: '',
   roleKey: '',
   roleSort: 0,
@@ -351,62 +352,36 @@ const formatDateTime = (dateTime) => {
   return new Date(dateTime).toLocaleString('zh-CN')
 }
 
-// 生成模拟数据
-const generateMockData = () => {
-  const roles = [
-    {
-      id: 1,
-      roleName: '系统管理员',
-      roleKey: 'admin',
-      roleSort: 1,
-      status: 1,
-      createTime: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
-      remark: '系统管理员，拥有所有权限'
-    },
-    {
-      id: 2,
-      roleName: '物业管理员',
-      roleKey: 'manager',
-      roleSort: 2,
-      status: 1,
-      createTime: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
-      remark: '物业管理员，负责物业管理相关工作'
-    },
-    {
-      id: 3,
-      roleName: '业主',
-      roleKey: 'owner',
-      roleSort: 3,
-      status: 1,
-      createTime: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
-      remark: '业主，可查看和操作自己的相关信息'
-    },
-    {
-      id: 4,
-      roleName: '维修人员',
-      roleKey: 'worker',
-      roleSort: 4,
-      status: 1,
-      createTime: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
-      remark: '维修人员，负责处理维修工单'
-    }
-  ]
-
-  return roles
-}
-
 // 加载角色数据
-const loadRoles = () => {
+const loadRoles = async () => {
   loading.value = true
-  setTimeout(() => {
-    const mockData = generateMockData()
-    tableData.value = mockData.slice(
-      (pagination.current - 1) * pagination.pageSize,
-      pagination.current * pagination.pageSize
-    )
-    pagination.total = mockData.length
+  try {
+    const params = {
+      pageNum: pagination.current,
+      pageSize: pagination.pageSize,
+      ...searchForm
+    }
+
+    // 清理空值参数
+    Object.keys(params).forEach(key => {
+      if (params[key] === '' || params[key] === null || params[key] === undefined) {
+        delete params[key]
+      }
+    })
+
+    const response = await systemApi.listRoles(params)
+    if (response.code === 200) {
+      tableData.value = response.data.rows || []
+      pagination.total = response.data.total || 0
+    } else {
+      ElMessage.error(response.msg || '获取角色列表失败')
+    }
+  } catch (error) {
+    console.error('加载角色数据失败:', error)
+    ElMessage.error('网络错误，请稍后重试')
+  } finally {
     loading.value = false
-  }, 500)
+  }
 }
 
 // 搜索
@@ -429,7 +404,7 @@ const handleReset = () => {
 const handleAdd = () => {
   isEdit.value = false
   Object.assign(form, {
-    id: null,
+    roleId: null,
     roleName: '',
     roleKey: '',
     roleSort: 0,
@@ -440,64 +415,222 @@ const handleAdd = () => {
 }
 
 // 编辑
-const handleEdit = (row) => {
-  isEdit.value = true
-  Object.assign(form, row)
-  dialogVisible.value = true
+const handleEdit = async (row) => {
+  try {
+    const response = await systemApi.getRole(row.roleId)
+    if (response.code === 200) {
+      isEdit.value = true
+      Object.assign(form, response.data)
+      dialogVisible.value = true
+    } else {
+      ElMessage.error(response.msg || '获取角色信息失败')
+    }
+  } catch (error) {
+    console.error('获取角色信息失败:', error)
+    ElMessage.error('网络错误，请稍后重试')
+  }
 }
 
 // 删除
-const handleDelete = (row) => {
-  ElMessageBox.confirm(
-    `确定要删除角色"${row.roleName}"吗？`,
-    '警告',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
+const handleDelete = async (row) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除角色"${row.roleName}"吗？`,
+      '警告',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    const response = await systemApi.delRole(row.roleId)
+    if (response.code === 200) {
+      ElMessage.success('删除成功')
+      loadRoles()
+    } else {
+      ElMessage.error(response.msg || '删除失败')
     }
-  ).then(() => {
-    ElMessage.success('删除成功')
-    loadRoles()
-  }).catch(() => {
-    // 用户取消操作
-  })
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除角色失败:', error)
+      ElMessage.error('删除失败，请稍后重试')
+    }
+  }
 }
 
 // 权限分配
-const handleAssignPermission = (row) => {
-  permissionForm.roleId = row.id
-  permissionForm.roleName = row.roleName
-  permissionForm.permissionIds = [111, 112, 113, 114, 211, 212] // 模拟已分配的权限
-  permissionDialogVisible.value = true
+const handleAssignPermission = async (row) => {
+  try {
+    permissionForm.roleId = row.roleId
+    permissionForm.roleName = row.roleName
+    permissionForm.permissionIds = [] // 初始化为空
+
+    // 获取角色菜单列表
+    const response = await systemApi.getRoleMenus(row.roleId)
+    if (response.code === 200) {
+      // 转换菜单数据为权限树格式
+      permissionTreeData.value = convertMenusToPermissionTree(response.data || [])
+      permissionDialogVisible.value = true
+    } else {
+      ElMessage.error('获取菜单数据失败')
+    }
+  } catch (error) {
+    console.error('获取菜单数据失败:', error)
+    ElMessage.error('获取菜单数据失败')
+  }
 }
 
-// 导出
-const handleExport = () => {
-  ElMessage.success('导出成功')
+// 转换菜单数据为权限树格式
+const convertMenusToPermissionTree = (menus) => {
+  return menus.map(menu => ({
+    id: menu.menuId,
+    label: menu.menuName,
+    children: menu.children ? convertMenusToPermissionTree(menu.children) : []
+  }))
+}
+
+// 导出Excel（纯前端方案）
+const handleExport = async () => {
+  try {
+    const loadingInstance = ElMessage({
+      message: '正在导出数据...',
+      type: 'info',
+      duration: 0
+    })
+
+    // 获取所有数据
+    const allParams = {
+      pageNum: 1,
+      pageSize: 10000,
+      ...searchForm
+    }
+
+    // 清理空值参数
+    Object.keys(allParams).forEach(key => {
+      if (allParams[key] === '' || allParams[key] === null || allParams[key] === undefined) {
+        delete allParams[key]
+      }
+    })
+
+    const response = await systemApi.listRoles(allParams)
+    loadingInstance.close()
+
+    if (response.code === 200 && response.data.rows) {
+      const roles = response.data.rows
+      if (roles.length === 0) {
+        ElMessage.warning('没有数据可导出')
+        return
+      }
+
+      // 导入xlsx库
+      const XLSX = await import('xlsx')
+      const { saveAs } = await import('file-saver')
+
+      // 准备导出数据
+      const exportData = roles.map(role => ({
+        '角色ID': role.roleId,
+        '角色名称': role.roleName,
+        '角色标识': role.roleKey,
+        '显示顺序': role.roleSort || 0,
+        '状态': role.status === 1 ? '启用' : '禁用',
+        '备注': role.remark || '',
+        '创建时间': role.createTime || '',
+        '更新时间': role.updateTime || ''
+      }))
+
+      // 创建工作簿
+      const wb = XLSX.utils.book_new()
+      const ws = XLSX.utils.json_to_sheet(exportData)
+
+      // 设置列宽
+      const colWidths = [
+        { wch: 10 }, // 角色ID
+        { wch: 15 }, // 角色名称
+        { wch: 15 }, // 角色标识
+        { wch: 12 }, // 显示顺序
+        { wch: 10 }, // 状态
+        { wch: 30 }, // 备注
+        { wch: 20 }, // 创建时间
+        { wch: 20 }  // 更新时间
+      ]
+      ws['!cols'] = colWidths
+
+      // 添加工作表
+      XLSX.utils.book_append_sheet(wb, ws, '角色数据')
+
+      // 导出文件
+      const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+      const blob = new Blob([excelBuffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      })
+
+      // 生成文件名
+      const now = new Date()
+      const timestamp = now.getFullYear() +
+        String(now.getMonth() + 1).padStart(2, '0') +
+        String(now.getDate()).padStart(2, '0') + '_' +
+        String(now.getHours()).padStart(2, '0') +
+        String(now.getMinutes()).padStart(2, '0')
+
+      saveAs(blob, `角色数据_${timestamp}.xlsx`)
+      ElMessage.success(`成功导出 ${roles.length} 条角色数据`)
+    } else {
+      ElMessage.error('获取角色数据失败')
+    }
+  } catch (error) {
+    console.error('导出失败:', error)
+    ElMessage.error('导出失败：' + (error.message || '网络错误'))
+  }
 }
 
 // 提交表单
-const handleSubmit = () => {
+const handleSubmit = async () => {
   if (!formRef.value) return
 
-  formRef.value.validate((valid) => {
-    if (valid) {
+  try {
+    await formRef.value.validate()
+
+    let response
+    if (isEdit.value) {
+      response = await systemApi.updateRole(form)
+    } else {
+      response = await systemApi.addRole(form)
+    }
+
+    if (response.code === 200) {
       ElMessage.success(dialogTitle.value + '成功')
       dialogVisible.value = false
       loadRoles()
+    } else {
+      ElMessage.error(response.msg || dialogTitle.value + '失败')
     }
-  })
+  } catch (error) {
+    if (error !== false) { // 表单验证失败时error为false
+      console.error('提交失败:', error)
+      ElMessage.error('操作失败，请稍后重试')
+    }
+  }
 }
 
 // 提交权限分配
-const handlePermissionSubmit = () => {
-  const checkedKeys = permissionTreeRef.value?.getCheckedKeys() || []
-  const halfCheckedKeys = permissionTreeRef.value?.getHalfCheckedKeys() || []
-  const allCheckedKeys = [...checkedKeys, ...halfCheckedKeys]
+const handlePermissionSubmit = async () => {
+  try {
+    const checkedKeys = permissionTreeRef.value?.getCheckedKeys() || []
+    const halfCheckedKeys = permissionTreeRef.value?.getHalfCheckedKeys() || []
+    const allCheckedKeys = [...checkedKeys, ...halfCheckedKeys]
 
-  ElMessage.success('权限分配成功')
-  permissionDialogVisible.value = false
+    const response = await systemApi.assignRoleMenus(permissionForm.roleId, allCheckedKeys)
+    if (response.code === 200) {
+      ElMessage.success('权限分配成功')
+      permissionDialogVisible.value = false
+    } else {
+      ElMessage.error(response.msg || '权限分配失败')
+    }
+  } catch (error) {
+    console.error('权限分配失败:', error)
+    ElMessage.error('权限分配失败，请稍后重试')
+  }
 }
 
 // 分页处理

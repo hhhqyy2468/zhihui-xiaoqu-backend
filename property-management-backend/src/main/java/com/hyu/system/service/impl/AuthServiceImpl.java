@@ -99,7 +99,7 @@ public class AuthServiceImpl implements IAuthService {
                 user.getUsername(),
                 user.getRealName(),
                 user.getUserType(),
-                user.getDeptId()
+                null // 数据库中不存在deptId字段，传入null
         );
 
         // 生成刷新token
@@ -108,10 +108,10 @@ public class AuthServiceImpl implements IAuthService {
         // 存储刷新token到Redis
         redisUtils.set(REFRESH_TOKEN_PREFIX + user.getUserId(), refreshToken, 7 * 24 * 60 * 60);
 
-        // 更新最后登录信息
-        user.setLastLoginTime(LocalDateTime.now());
-        user.setLastLoginIp(getClientIP());
-        userService.updateById(user);
+        // 更新最后登录信息 - 数据库中不存在这些字段，暂时注释掉
+        // user.setLastLoginTime(LocalDateTime.now());
+        // user.setLastLoginIp(getClientIP());
+        // userService.updateById(user);
 
         // 构建返回结果
         Map<String, Object> result = new HashMap<>();
@@ -225,7 +225,7 @@ public class AuthServiceImpl implements IAuthService {
                     user.getUsername(),
                     user.getRealName(),
                     user.getUserType(),
-                    user.getDeptId()
+                    null // 数据库中不存在deptId字段，传入null
             );
 
             // 生成新的刷新token
@@ -411,44 +411,14 @@ public class AuthServiceImpl implements IAuthService {
         userInfo.put("email", user.getEmail());
         userInfo.put("userType", user.getUserType());
         userInfo.put("avatar", user.getAvatar());
-        userInfo.put("lastLoginTime", user.getLastLoginTime());
-        userInfo.put("lastLoginIp", user.getLastLoginIp());
+        // userInfo.put("lastLoginTime", user.getLastLoginTime()); // 数据库中不存在此字段
+        // userInfo.put("lastLoginIp", user.getLastLoginIp()); // 数据库中不存在此字段
         userInfo.put("createTime", user.getCreateTime());
         userInfo.put("updateTime", user.getUpdateTime());
 
-        // 根据用户类型设置角色和权限
-        Set<String> roles = new HashSet<>();
-        Set<String> permissions = new HashSet<>();
-
-        switch (user.getUserType()) {
-            case 1: // 系统管理员
-                roles.add("admin");
-                permissions.add("*");
-                break;
-            case 2: // 物业管理员
-                roles.add("property_manager");
-                permissions.add("property:*");
-                permissions.add("system:user:view");
-                permissions.add("system:role:view");
-                break;
-            case 3: // 业主
-                roles.add("owner");
-                permissions.add("portal:view");
-                permissions.add("portal:bill:view");
-                permissions.add("portal:bill:pay");
-                permissions.add("property:complaint:add");
-                permissions.add("property:repair:add");
-                break;
-            case 4: // 维修人员
-                roles.add("worker");
-                permissions.add("property:repair:view");
-                permissions.add("property:repair:handle");
-                permissions.add("property:notice:view");
-                break;
-        }
-
-        userInfo.put("roles", roles);
-        userInfo.put("permissions", permissions);
+        // 这里可以添加角色和权限信息
+        // userInfo.put("roles", user.getRoles());
+        // userInfo.put("permissions", user.getPermissions());
 
         return userInfo;
     }

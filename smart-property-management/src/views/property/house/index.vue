@@ -317,6 +317,7 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus, Delete, Download } from '@element-plus/icons-vue'
+import { listHouses, getHouse, addHouse, updateHouse, deleteHouses } from '@/api/house'
 
 // 响应式数据
 const formRef = ref()
@@ -538,17 +539,31 @@ const generateMockData = () => {
 }
 
 // 加载房产数据
-const loadHouses = () => {
+const loadHouses = async () => {
   loading.value = true
-  setTimeout(() => {
-    const mockData = generateMockData()
-    tableData.value = mockData.slice(
-      (pagination.current - 1) * pagination.pageSize,
-      pagination.current * pagination.pageSize
-    )
-    pagination.total = mockData.length
+  try {
+    const params = {
+      pageNum: pagination.current,
+      pageSize: pagination.pageSize,
+      houseNo: searchForm.houseNo,
+      roomNumber: searchForm.roomNumber,
+      buildingId: searchForm.buildingId,
+      unitId: searchForm.unitId,
+      houseStatus: searchForm.houseStatus
+    }
+    const response = await listHouses(params)
+    if (response.code === 200) {
+      tableData.value = response.data.rows
+      pagination.total = response.data.total
+    } else {
+      ElMessage.error(response.msg || '加载房产数据失败')
+    }
+  } catch (error) {
+    console.error('加载房产数据错误:', error)
+    ElMessage.error('加载房产数据失败')
+  } finally {
     loading.value = false
-  }, 500)
+  }
 }
 
 // 搜索
@@ -600,42 +615,66 @@ const handleEdit = (row) => {
 }
 
 // 删除
-const handleDelete = (row) => {
-  ElMessageBox.confirm(
-    `确定要删除房产"${row.houseNo}"吗？`,
-    '警告',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
+const handleDelete = async (row) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除房产"${row.houseNo}"吗？`,
+      '警告',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    const response = await deleteHouses([row.id])
+    if (response.code === 200) {
+      ElMessage.success('删除成功')
+      loadHouses()
+    } else {
+      ElMessage.error(response.msg || '删除失败')
     }
-  ).then(() => {
-    ElMessage.success('删除成功')
-    loadHouses()
-  }).catch(() => {
-    // 用户取消操作
-  })
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除错误:', error)
+      ElMessage.error('删除失败')
+    }
+  }
 }
 
 // 批量删除
-const handleBatchDelete = () => {
+const handleBatchDelete = async () => {
   if (selectedRows.value.length === 0) {
     ElMessage.warning('请选择要删除的房产')
     return
   }
 
-  ElMessageBox.confirm(
-    `确定要删除选中的${selectedRows.value.length}个房产吗？`,
-    '批量删除',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除选中的${selectedRows.value.length}个房产吗？`,
+      '批量删除',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    const ids = selectedRows.value.map(item => item.id)
+    const response = await deleteHouses(ids)
+    if (response.code === 200) {
+      ElMessage.success('批量删除成功')
+      selectedRows.value = []
+      loadHouses()
+    } else {
+      ElMessage.error(response.msg || '批量删除失败')
     }
-  ).then(() => {
-    ElMessage.success('批量删除成功')
-    loadHouses()
-  })
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('批量删除错误:', error)
+      ElMessage.error('批量删除失败')
+    }
+  }
 }
 
 // 查看住户
@@ -658,14 +697,30 @@ const handleExport = () => {
 }
 
 // 提交表单
-const handleSubmit = () => {
+const handleSubmit = async () => {
   if (!formRef.value) return
 
-  formRef.value.validate((valid) => {
+  formRef.value.validate(async (valid) => {
     if (valid) {
-      ElMessage.success(dialogTitle.value + '成功')
-      dialogVisible.value = false
-      loadHouses()
+      try {
+        let response
+        if (isEdit.value) {
+          response = await updateHouse(form)
+        } else {
+          response = await addHouse(form)
+        }
+
+        if (response.code === 200) {
+          ElMessage.success(dialogTitle.value + '成功')
+          dialogVisible.value = false
+          loadHouses()
+        } else {
+          ElMessage.error(response.msg || dialogTitle.value + '失败')
+        }
+      } catch (error) {
+        console.error('提交表单错误:', error)
+        ElMessage.error(dialogTitle.value + '失败')
+      }
     }
   })
 }

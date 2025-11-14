@@ -31,6 +31,14 @@ public interface IUnitService extends IService<Unit> {
     List<Unit> selectUnitListByBuildingId(Long buildingId);
 
     /**
+     * 根据楼栋ID获取单元列表
+     *
+     * @param buildingId 楼栋ID
+     * @return 单元列表
+     */
+    List<Unit> getUnitsByBuildingId(Long buildingId);
+
+    /**
      * 根据单元ID查询单元信息
      *
      * @param unitId 单元ID

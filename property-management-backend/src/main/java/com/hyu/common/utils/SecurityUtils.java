@@ -5,12 +5,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import com.hyu.common.domain.LoginUser;
 
 /**
- * 安全工具类
+ * Security Utility Class
  */
 public class SecurityUtils {
 
     /**
-     * 获取用户ID
+     * Get User ID
      */
     public static Long getUserId() {
         try {
@@ -19,13 +19,13 @@ public class SecurityUtils {
                 return loginUser.getUserId();
             }
         } catch (Exception e) {
-            // 忽略异常
+            // ignore exception
         }
         return null;
     }
 
     /**
-     * 获取用户名
+     * Get Username
      */
     public static String getUsername() {
         try {
@@ -34,13 +34,13 @@ public class SecurityUtils {
                 return loginUser.getUsername();
             }
         } catch (Exception e) {
-            // 忽略异常
+            // ignore exception
         }
         return null;
     }
 
     /**
-     * 获取登录用户
+     * Get Login User
      */
     public static LoginUser getLoginUser() {
         try {
@@ -49,13 +49,13 @@ public class SecurityUtils {
                 return (LoginUser) authentication.getPrincipal();
             }
         } catch (Exception e) {
-            // 忽略异常
+            // ignore exception
         }
         return null;
     }
 
     /**
-     * 判断是否为系统管理员
+     * Check if Admin
      */
     public static boolean isAdmin() {
         try {

@@ -62,6 +62,14 @@ public class SysUser {
     @TableField("status")
     private Integer status;
 
+    /** 居住类型：1-业主 2-租户 */
+    @TableField("resident_type")
+    private Integer residentType;
+
+    /** 居住状态：1-在住 2-搬离 */
+    @TableField("resident_status")
+    private Integer residentStatus;
+
     /** 部门ID */
     // @TableField("dept_id") // 数据库中不存在此字段
     // private Long deptId;

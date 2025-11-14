@@ -15,7 +15,7 @@
       <el-form :model="searchForm" inline>
         <el-form-item label="业主姓名">
           <el-input
-            v-model="searchForm.ownerName"
+            v-model="searchForm.realName"
             placeholder="请输入业主姓名"
             clearable
             style="width: 200px"
@@ -29,23 +29,23 @@
             style="width: 200px"
           />
         </el-form-item>
-        <el-form-item label="房产地址">
+        <el-form-item label="用户名">
           <el-input
-            v-model="searchForm.houseAddress"
-            placeholder="请输入房产地址"
+            v-model="searchForm.username"
+            placeholder="请输入用户名"
             clearable
             style="width: 200px"
           />
         </el-form-item>
-        <el-form-item label="业主状态">
+        <el-form-item label="住户状态">
           <el-select
-            v-model="searchForm.status"
+            v-model="searchForm.residentStatus"
             placeholder="请选择状态"
             clearable
             style="width: 120px"
           >
-            <el-option label="正常" value="1" />
-            <el-option label="冻结" value="0" />
+            <el-option label="在住" :value="1" />
+            <el-option label="已搬离" :value="2" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -105,36 +105,32 @@
         @selection-change="handleSelectionChange"
       >
         <el-table-column type="selection" width="55" />
-        <el-table-column prop="ownerId" label="业主编号" width="100" />
-        <el-table-column prop="ownerName" label="业主姓名" width="120" />
+        <el-table-column prop="userId" label="业主编号" width="100" />
+        <el-table-column prop="realName" label="业主姓名" width="120" />
         <el-table-column prop="gender" label="性别" width="80">
           <template #default="{ row }">
-            {{ row.gender === 1 ? '男' : '女' }}
+            {{ row.gender === 1 ? '男' : row.gender === 2 ? '女' : '未知' }}
           </template>
         </el-table-column>
         <el-table-column prop="phone" label="手机号码" width="140" />
         <el-table-column prop="idCard" label="身份证号" width="180" />
-        <el-table-column prop="houseAddress" label="房产地址" show-overflow-tooltip />
-        <el-table-column prop="propertyArea" label="房产面积" width="120">
+        <el-table-column prop="residentStatus" label="住户状态" width="100">
           <template #default="{ row }">
-            {{ row.propertyArea }}m²
-          </template>
-        </el-table-column>
-        <el-table-column prop="ownershipType" label="产权性质" width="100">
-          <template #default="{ row }">
-            {{ getOwnershipTypeName(row.ownershipType) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="status" label="业主状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'danger'">
-              {{ row.status === 1 ? '正常' : '冻结' }}
+            <el-tag :type="row.residentStatus === 1 ? 'success' : 'info'">
+              {{ row.residentStatus === 1 ? '在住' : '已搬离' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="registerTime" label="登记时间" width="180">
+        <el-table-column prop="status" label="用户状态" width="100">
           <template #default="{ row }">
-            {{ formatDateTime(row.registerTime) }}
+            <el-tag :type="row.status === 1 ? 'success' : 'danger'">
+              {{ row.status === 1 ? '正常' : '禁用' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="createTime" label="登记时间" width="180">
+          <template #default="{ row }">
+            {{ formatDateTime(row.createTime) }}
           </template>
         </el-table-column>
         <el-table-column label="操作" width="280" fixed="right">
@@ -377,6 +373,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus, Delete, Upload, Download } from '@element-plus/icons-vue'
+import { listOwners, getOwner, addOwner, updateOwner, deleteOwners, resetPassword, changeStatus } from '@/api/owner'
 
 // 响应式数据
 const loading = ref(false)
@@ -389,23 +386,24 @@ const ownerFormRef = ref()
 
 // 搜索表单
 const searchForm = reactive({
-  ownerName: '',
+  realName: '',
   phone: '',
-  houseAddress: '',
-  status: ''
+  username: '',
+  residentStatus: ''
 })
 
 // 业主表单
 const ownerForm = reactive({
-  ownerId: null,
-  ownerName: '',
-  gender: 1,
+  userId: null,
+  username: '',
+  password: '',
+  realName: '',
+  gender: 0,
   phone: '',
   idCard: '',
   email: '',
-  houseAddress: '',
-  propertyArea: 0,
-  ownershipType: 1,
+  residentType: 1,
+  residentStatus: 1,
   status: 1,
   remark: ''
 })
@@ -422,12 +420,17 @@ const total = ref(0)
 
 // 表单验证规则
 const ownerRules = {
-  ownerName: [
-    { required: true, message: '请输入业主姓名', trigger: 'blur' },
-    { min: 2, max: 20, message: '长度在 2 到 20 个字符', trigger: 'blur' }
+  username: [
+    { required: true, message: '请输入用户名', trigger: 'blur' },
+    { min: 4, max: 20, message: '长度在 4 到 20 个字符', trigger: 'blur' }
   ],
-  gender: [
-    { required: true, message: '请选择性别', trigger: 'change' }
+  password: [
+    { required: true, message: '请输入密码', trigger: 'blur' },
+    { min: 6, max: 20, message: '长度在 6 到 20 个字符', trigger: 'blur' }
+  ],
+  realName: [
+    { required: true, message: '请输入真实姓名', trigger: 'blur' },
+    { min: 2, max: 20, message: '长度在 2 到 20 个字符', trigger: 'blur' }
   ],
   phone: [
     { required: true, message: '请输入手机号码', trigger: 'blur' },
@@ -440,17 +443,14 @@ const ownerRules = {
   email: [
     { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
   ],
-  houseAddress: [
-    { required: true, message: '请输入房产地址', trigger: 'blur' }
+  residentType: [
+    { required: true, message: '请选择住户类型', trigger: 'change' }
   ],
-  propertyArea: [
-    { required: true, message: '请输入房产面积', trigger: 'blur' }
-  ],
-  ownershipType: [
-    { required: true, message: '请选择产权性质', trigger: 'change' }
+  residentStatus: [
+    { required: true, message: '请选择住户状态', trigger: 'change' }
   ],
   status: [
-    { required: true, message: '请选择业主状态', trigger: 'change' }
+    { required: true, message: '请选择用户状态', trigger: 'change' }
   ]
 }
 
@@ -531,12 +531,30 @@ const generateOwnerDetail = (ownerId) => {
 }
 
 // 加载业主列表
-const loadOwnerList = () => {
+const loadOwnerList = async () => {
   loading.value = true
-  setTimeout(() => {
-    ownerList.value = generateMockOwners()
+  try {
+    const params = {
+      pageNum: currentPage.value,
+      pageSize: pageSize.value,
+      realName: searchForm.realName,
+      phone: searchForm.phone,
+      username: searchForm.username,
+      residentStatus: searchForm.residentStatus ? Number(searchForm.residentStatus) : null
+    }
+    const response = await listOwners(params)
+    if (response.code === 200) {
+      ownerList.value = response.data.rows
+      total.value = response.data.total
+    } else {
+      ElMessage.error(response.msg || '加载业主数据失败')
+    }
+  } catch (error) {
+    console.error('加载业主数据错误:', error)
+    ElMessage.error('加载业主数据失败')
+  } finally {
     loading.value = false
-  }, 500)
+  }
 }
 
 // 搜索
@@ -548,10 +566,10 @@ const handleSearch = () => {
 // 重置搜索
 const handleReset = () => {
   Object.assign(searchForm, {
-    ownerName: '',
+    realName: '',
     phone: '',
-    houseAddress: '',
-    status: ''
+    username: '',
+    residentStatus: ''
   })
   handleSearch()
 }
@@ -564,15 +582,16 @@ const handleSelectionChange = (selection) => {
 // 新增业主
 const handleAdd = () => {
   Object.assign(ownerForm, {
-    ownerId: null,
-    ownerName: '',
-    gender: 1,
+    userId: null,
+    username: '',
+    password: '123456',
+    realName: '',
+    gender: 0,
     phone: '',
     idCard: '',
     email: '',
-    houseAddress: '',
-    propertyArea: 0,
-    ownershipType: 1,
+    residentType: 1,
+    residentStatus: 1,
     status: 1,
     remark: ''
   })
@@ -592,52 +611,100 @@ const handleView = (row) => {
 }
 
 // 删除业主
-const handleDelete = (row) => {
-  ElMessageBox.confirm(
-    `确定要删除业主"${row.ownerName}"吗？`,
-    '提示',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
+const handleDelete = async (row) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除业主"${row.realName}"吗？`,
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    const response = await deleteOwners([row.userId])
+    if (response.code === 200) {
+      ElMessage.success('删除成功')
+      loadOwnerList()
+    } else {
+      ElMessage.error(response.msg || '删除失败')
     }
-  ).then(() => {
-    ElMessage.success('删除成功')
-    loadOwnerList()
-  })
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除错误:', error)
+      ElMessage.error('删除失败')
+    }
+  }
 }
 
 // 批量删除
-const handleBatchDelete = () => {
-  ElMessageBox.confirm(
-    `确定要删除选中的 ${selectedOwners.value.length} 个业主吗？`,
-    '提示',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
+const handleBatchDelete = async () => {
+  if (selectedOwners.value.length === 0) {
+    ElMessage.warning('请选择要删除的业主')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除选中的 ${selectedOwners.value.length} 个业主吗？`,
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    const ids = selectedOwners.value.map(item => item.userId)
+    const response = await deleteOwners(ids)
+    if (response.code === 200) {
+      ElMessage.success('批量删除成功')
+      selectedOwners.value = []
+      loadOwnerList()
+    } else {
+      ElMessage.error(response.msg || '批量删除失败')
     }
-  ).then(() => {
-    ElMessage.success('批量删除成功')
-    loadOwnerList()
-  })
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('批量删除错误:', error)
+      ElMessage.error('批量删除失败')
+    }
+  }
 }
 
 // 切换业主状态
-const handleToggleStatus = (row) => {
-  const action = row.status === 1 ? '冻结' : '解冻'
-  ElMessageBox.confirm(
-    `确定要${action}业主"${row.ownerName}"吗？`,
-    '提示',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
+const handleToggleStatus = async (row) => {
+  const action = row.status === 1 ? '禁用' : '启用'
+  try {
+    await ElMessageBox.confirm(
+      `确定要${action}业主"${row.realName}"吗？`,
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    const newStatus = row.status === 1 ? 0 : 1
+    const response = await changeStatus({
+      userId: row.userId,
+      status: newStatus
+    })
+
+    if (response.code === 200) {
+      row.status = newStatus
+      ElMessage.success(`${action}成功`)
+    } else {
+      ElMessage.error(response.msg || `${action}失败`)
     }
-  ).then(() => {
-    row.status = row.status === 1 ? 0 : 1
-    ElMessage.success(`${action}成功`)
-  })
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('状态切换错误:', error)
+      ElMessage.error(`${action}失败`)
+    }
+  }
 }
 
 // 管理房产
@@ -666,13 +733,23 @@ const handleSubmit = async () => {
     await ownerFormRef.value.validate()
     submitting.value = true
 
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    let response
+    if (ownerForm.userId) {
+      response = await updateOwner(ownerForm)
+    } else {
+      response = await addOwner(ownerForm)
+    }
 
-    ElMessage.success(ownerForm.ownerId ? '编辑成功' : '新增成功')
-    ownerDialogVisible.value = false
-    loadOwnerList()
+    if (response.code === 200) {
+      ElMessage.success(ownerForm.userId ? '编辑成功' : '新增成功')
+      ownerDialogVisible.value = false
+      loadOwnerList()
+    } else {
+      ElMessage.error(response.msg || (ownerForm.userId ? '编辑失败' : '新增失败'))
+    }
   } catch (error) {
-    console.error('表单验证失败:', error)
+    console.error('提交表单错误:', error)
+    ElMessage.error('提交失败')
   } finally {
     submitting.value = false
   }

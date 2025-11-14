@@ -1,18 +1,18 @@
 import request from '@/utils/request'
 
 // 获取房产列表
-export function getHouseList(params) {
+export function listHouses(params) {
   return request({
-    url: '/house/list',
+    url: '/property/house/list',
     method: 'get',
     params
   })
 }
 
 // 获取房产详情
-export function getHouseDetail(houseId) {
+export function getHouse(houseId) {
   return request({
-    url: `/house/${houseId}`,
+    url: `/property/house/${houseId}`,
     method: 'get'
   })
 }
@@ -20,7 +20,7 @@ export function getHouseDetail(houseId) {
 // 新增房产
 export function addHouse(data) {
   return request({
-    url: '/house',
+    url: '/property/house',
     method: 'post',
     data
   })
@@ -29,7 +29,7 @@ export function addHouse(data) {
 // 编辑房产
 export function updateHouse(data) {
   return request({
-    url: '/house',
+    url: '/property/house',
     method: 'put',
     data
   })
@@ -38,17 +38,16 @@ export function updateHouse(data) {
 // 删除房产
 export function deleteHouse(houseId) {
   return request({
-    url: `/house/${houseId}`,
+    url: `/property/house/${houseId}`,
     method: 'delete'
   })
 }
 
 // 批量删除房产
-export function batchDeleteHouse(houseIds) {
+export function deleteHouses(houseIds) {
   return request({
-    url: '/house/batch',
-    method: 'delete',
-    data: houseIds
+    url: `/property/house/${houseIds.join(',')}`,
+    method: 'delete'
   })
 }
 

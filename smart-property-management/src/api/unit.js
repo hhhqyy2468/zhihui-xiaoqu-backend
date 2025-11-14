@@ -1,18 +1,18 @@
 import request from '@/utils/request'
 
 // 获取单元列表
-export function getUnitList(params) {
+export function listUnits(params) {
   return request({
-    url: '/unit/list',
+    url: '/property/unit/list',
     method: 'get',
     params
   })
 }
 
 // 获取单元详情
-export function getUnitDetail(unitId) {
+export function getUnit(unitId) {
   return request({
-    url: `/unit/${unitId}`,
+    url: `/property/unit/${unitId}`,
     method: 'get'
   })
 }
@@ -20,7 +20,7 @@ export function getUnitDetail(unitId) {
 // 新增单元
 export function addUnit(data) {
   return request({
-    url: '/unit',
+    url: '/property/unit',
     method: 'post',
     data
   })
@@ -29,7 +29,7 @@ export function addUnit(data) {
 // 编辑单元
 export function updateUnit(data) {
   return request({
-    url: '/unit',
+    url: '/property/unit',
     method: 'put',
     data
   })
@@ -38,32 +38,23 @@ export function updateUnit(data) {
 // 删除单元
 export function deleteUnit(unitId) {
   return request({
-    url: `/unit/${unitId}`,
+    url: `/property/unit/${unitId}`,
     method: 'delete'
   })
 }
 
 // 批量删除单元
-export function batchDeleteUnit(unitIds) {
+export function deleteUnits(unitIds) {
   return request({
-    url: '/unit/batch',
-    method: 'delete',
-    data: unitIds
+    url: `/property/unit/${unitIds.join(',')}`,
+    method: 'delete'
   })
 }
 
 // 根据楼栋获取单元列表
 export function getUnitsByBuilding(buildingId) {
   return request({
-    url: `/unit/by-building/${buildingId}`,
-    method: 'get'
-  })
-}
-
-// 获取单元统计信息
-export function getUnitStats(unitId) {
-  return request({
-    url: `/unit/${unitId}/stats`,
+    url: `/property/unit/by-building/${buildingId}`,
     method: 'get'
   })
 }

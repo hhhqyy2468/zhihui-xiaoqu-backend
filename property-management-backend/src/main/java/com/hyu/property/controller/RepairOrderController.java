@@ -1,213 +1,123 @@
 package com.hyu.property.controller;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.hyu.common.core.domain.AjaxResult;
+import com.hyu.common.core.domain.PageResult;
 import com.hyu.common.utils.SecurityUtils;
 import com.hyu.property.domain.RepairOrder;
-import com.hyu.property.domain.dto.RepairOrderDTO;
-import com.hyu.property.domain.vo.RepairOrderVO;
 import com.hyu.property.service.IRepairOrderService;
-import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
 
 /**
- * 维修工单Controller
+ * 维修工单管理
  *
- * @author system
- * @date 2025-11-11
+ * @author hyu
  */
+@Slf4j
 @RestController
-@RequestMapping("/property/repair")
-@RequiredArgsConstructor
+@RequestMapping("/api/v1/property/repair")
+@Validated
 public class RepairOrderController {
 
-    private final IRepairOrderService repairOrderService;
-
-    private AjaxResult toAjax(int rows) {
-        return rows > 0 ? AjaxResult.success() : AjaxResult.error();
-    }
-
-    private AjaxResult success(Object data) {
-        return AjaxResult.success(data);
-    }
+    @Autowired
+    private IRepairOrderService repairOrderService;
 
     /**
-     * 查询维修工单列表
+     * 分页查询维修工单列表
      */
     @GetMapping("/list")
-    public AjaxResult list(RepairOrder repairOrder) {
-        List<RepairOrderVO> list = repairOrderService.selectRepairOrderList(repairOrder);
-        return success(list);
+    @PreAuthorize("@ss.hasPermi('property:repair:list')")
+    public AjaxResult list(@RequestParam(defaultValue = "1") Integer pageNum,
+                          @RequestParam(defaultValue = "10") Integer pageSize,
+                          @RequestParam(required = false) String orderNo,
+                          @RequestParam(required = false) Long userId,
+                          @RequestParam(required = false) String userName,
+                          @RequestParam(required = false) Long houseId,
+                          @RequestParam(required = false) String houseNo,
+                          @RequestParam(required = false) String repairType,
+                          @RequestParam(required = false) Integer urgencyLevel,
+                          @RequestParam(required = false) Integer orderStatus,
+                          @RequestParam(required = false) Long workerId,
+                          @RequestParam(required = false) String workerName) {
+        log.info("分页查询维修工单列表, pageNum: {}, pageSize: {}, orderNo: {}, userId: {}, userName: {}, houseId: {}, houseNo: {}, repairType: {}, urgencyLevel: {}, orderStatus: {}, workerId: {}, workerName: {}",
+                pageNum, pageSize, orderNo, userId, userName, houseId, houseNo, repairType, urgencyLevel, orderStatus, workerId, workerName);
+
+        Page<RepairOrder> page = new Page<>(pageNum, pageSize);
+        RepairOrder repairOrder = new RepairOrder();
+        repairOrder.setOrderNo(orderNo);
+        repairOrder.setUserId(userId);
+        repairOrder.setUserName(userName);
+        repairOrder.setHouseId(houseId);
+        repairOrder.setHouseNo(houseNo);
+        repairOrder.setRepairType(repairType);
+        repairOrder.setUrgencyLevel(urgencyLevel);
+        repairOrder.setOrderStatus(orderStatus);
+        repairOrder.setWorkerId(workerId);
+        repairOrder.setWorkerName(workerName);
+
+        Page<RepairOrder> result = repairOrderService.selectRepairOrderPage(page, repairOrder);
+        return AjaxResult.success("查询成功", PageResult.success(result.getTotal(), result.getRecords()));
     }
 
     /**
      * 获取维修工单详细信息
      */
     @GetMapping(value = "/{id}")
-    public AjaxResult getInfo(@PathVariable("id") Long id) {
-        return success(repairOrderService.selectRepairOrderById(id));
+    @PreAuthorize("@ss.hasPermi('property:repair:list')")
+    public AjaxResult getInfo(@NotNull(message = "维修工单ID不能为空") @PathVariable Long id) {
+        log.info("获取维修工单详细信息, id: {}", id);
+        return AjaxResult.success(repairOrderService.getById(id));
     }
 
     /**
      * 新增维修工单
      */
     @PostMapping
-    public AjaxResult add(@Validated @RequestBody RepairOrderDTO repairOrderDTO) {
-        return toAjax(repairOrderService.insertRepairOrder(repairOrderDTO));
+    @PreAuthorize("@ss.hasPermi('property:repair:add')")
+    public AjaxResult add(@Valid @RequestBody RepairOrder repairOrder) {
+        log.info("新增维修工单, repairOrder: {}", repairOrder);
+        if (!repairOrderService.checkOrderNoUnique(repairOrder)) {
+            return AjaxResult.error("新增维修工单'" + repairOrder.getOrderNo() + "'失败，工单编号已存在");
+        }
+        repairOrder.setCreateBy(SecurityUtils.getUsername());
+        return toAjax(repairOrderService.save(repairOrder));
     }
 
     /**
-     * 修改维修工单
+     * 修改保存维修工单
      */
     @PutMapping
-    public AjaxResult edit(@Validated @RequestBody RepairOrderDTO repairOrderDTO) {
-        return toAjax(repairOrderService.updateRepairOrder(repairOrderDTO));
+    @PreAuthorize("@ss.hasPermi('property:repair:edit')")
+    public AjaxResult edit(@Valid @RequestBody RepairOrder repairOrder) {
+        log.info("修改维修工单, repairOrder: {}", repairOrder);
+        if (!repairOrderService.checkOrderNoUnique(repairOrder)) {
+            return AjaxResult.error("修改维修工单'" + repairOrder.getOrderNo() + "'失败，工单编号已存在");
+        }
+        repairOrder.setUpdateBy(SecurityUtils.getUsername());
+        return toAjax(repairOrderService.updateById(repairOrder));
     }
 
     /**
      * 删除维修工单
      */
     @DeleteMapping("/{ids}")
-    public AjaxResult remove(@PathVariable Long[] ids) {
-        return toAjax(repairOrderService.deleteRepairOrderByIds(Arrays.asList(ids)));
-    }
-
-    // ========== 业务接口 ==========
-
-    /**
-     * 业主提交报修申请
-     */
-    @PostMapping("/submit")
-    public AjaxResult submitRepairRequest(@Validated @RequestBody RepairOrderDTO repairOrderDTO) {
-        return toAjax(repairOrderService.submitRepairRequest(repairOrderDTO));
+    @PreAuthorize("@ss.hasPermi('property:repair:delete')")
+    public AjaxResult remove(@NotNull(message = "维修工单ID不能为空") @PathVariable Long[] ids) {
+        log.info("删除维修工单, ids: {}", ids);
+        return toAjax(repairOrderService.removeByIds(java.util.Arrays.asList(ids)));
     }
 
     /**
-     * 物业管理员派工
+     * 返回AjaxResult
      */
-    @PutMapping("/assign/{id}")
-    public AjaxResult assignWorker(
-            @PathVariable Long id,
-            @RequestParam Long workerId,
-            @RequestParam String workerName,
-            @RequestParam(required = false) String requiredFinishTime) {
-
-        java.time.LocalDateTime finishTime = null;
-        if (requiredFinishTime != null && !requiredFinishTime.isEmpty()) {
-            finishTime = java.time.LocalDateTime.parse(requiredFinishTime);
-        }
-
-        return toAjax(repairOrderService.assignWorker(id, workerId, workerName, finishTime));
-    }
-
-    /**
-     * 维修人员接单
-     */
-    @PutMapping("/accept/{id}")
-    public AjaxResult acceptOrder(@PathVariable Long id) {
-        Long currentUserId = SecurityUtils.getUserId();
-        return toAjax(repairOrderService.acceptOrder(id, currentUserId));
-    }
-
-    /**
-     * 维修人员开始维修
-     */
-    @PutMapping("/start/{id}")
-    public AjaxResult startRepair(@PathVariable Long id) {
-        Long currentUserId = SecurityUtils.getUserId();
-        return toAjax(repairOrderService.startRepair(id, currentUserId));
-    }
-
-    /**
-     * 维修人员完成维修
-     */
-    @PutMapping("/complete")
-    public AjaxResult completeRepair(@Validated @RequestBody RepairOrderDTO repairOrderDTO) {
-        return toAjax(repairOrderService.completeRepair(repairOrderDTO));
-    }
-
-    /**
-     * 业主验收维修
-     */
-    @PutMapping("/acceptance/{id}")
-    public AjaxResult acceptRepair(
-            @PathVariable Long id,
-            @RequestParam Integer acceptanceResult,
-            @RequestParam(required = false) Integer acceptanceRating,
-            @RequestParam(required = false) String acceptanceComment) {
-
-        Long currentUserId = SecurityUtils.getUserId();
-        return toAjax(repairOrderService.acceptRepair(id, currentUserId, acceptanceResult, acceptanceRating, acceptanceComment));
-    }
-
-    /**
-     * 业主取消报修
-     */
-    @DeleteMapping("/cancel/{id}")
-    public AjaxResult cancelRepairOrder(@PathVariable Long id) {
-        Long currentUserId = SecurityUtils.getUserId();
-        return toAjax(repairOrderService.cancelRepairOrder(id, currentUserId));
-    }
-
-    // ========== 查询接口 ==========
-
-    /**
-     * 根据用户ID查询维修工单列表（业主）
-     */
-    @GetMapping("/my")
-    public AjaxResult getMyRepairOrders() {
-        Long currentUserId = SecurityUtils.getUserId();
-        List<RepairOrderVO> list = repairOrderService.selectRepairOrdersByUserId(currentUserId);
-        return success(list);
-    }
-
-    /**
-     * 根据维修人员ID查询维修工单列表（维修人员）
-     */
-    @GetMapping("/worker")
-    public AjaxResult getWorkerRepairOrders() {
-        Long currentUserId = SecurityUtils.getUserId();
-        List<RepairOrderVO> list = repairOrderService.selectRepairOrdersByWorkerId(currentUserId);
-        return success(list);
-    }
-
-    /**
-     * 查询待派工的维修工单列表（物业管理员）
-     */
-    @GetMapping("/pending")
-    public AjaxResult getPendingRepairOrders() {
-        List<RepairOrderVO> list = repairOrderService.selectPendingRepairOrders();
-        return success(list);
-    }
-
-    /**
-     * 查询维修统计信息
-     */
-    @GetMapping("/statistics")
-    public AjaxResult getRepairStatistics() {
-        Map<String, Object> stats = repairOrderService.getRepairStatistics();
-        return success(stats);
-    }
-
-    /**
-     * 查询维修人员工作量统计
-     */
-    @GetMapping("/workload")
-    public AjaxResult getWorkerWorkloadStats() {
-        List<RepairOrderVO> stats = repairOrderService.getWorkerWorkloadStats();
-        return success(stats);
-    }
-
-    /**
-     * 查询维修类型统计
-     */
-    @GetMapping("/type-stats")
-    public AjaxResult getRepairTypeStats() {
-        List<RepairOrderVO> stats = repairOrderService.getRepairTypeStats();
-        return success(stats);
+    private AjaxResult toAjax(Boolean result) {
+        return result ? AjaxResult.success() : AjaxResult.error();
     }
 }

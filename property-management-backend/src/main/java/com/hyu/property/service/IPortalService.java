@@ -1,7 +1,7 @@
 package com.hyu.property.service;
 
 import com.hyu.property.domain.dto.*;
-import com.hyu.property.domain.vo.RepairOrderVO;
+import com.hyu.property.domain.RepairOrder;
 
 import java.util.List;
 import java.util.Map;
@@ -108,7 +108,7 @@ public interface IPortalService {
      * @param pageSize 每页条数
      * @return 报修列表
      */
-    public List<RepairOrderVO> getMyRepairList(Integer orderStatus, Integer pageNum, Integer pageSize);
+    public List<RepairOrder> getMyRepairList(Integer orderStatus, Integer pageNum, Integer pageSize);
 
     /**
      * 获取我的报修详情
@@ -116,7 +116,7 @@ public interface IPortalService {
      * @param repairId 报修ID
      * @return 报修详情
      */
-    public RepairOrderVO getMyRepairDetail(Long repairId);
+    public RepairOrder getMyRepairDetail(Long repairId);
 
     // ========== 我的房产 ==========
 

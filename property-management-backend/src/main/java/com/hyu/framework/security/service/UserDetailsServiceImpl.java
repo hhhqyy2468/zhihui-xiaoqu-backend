@@ -59,17 +59,15 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     }
 
     /**
-     * 获取用户权限（暂时返回空权限）
+     * 获取用户权限
      *
      * @param userId 用户ID
      * @return 权限列表
      */
     private Set<String> getUserPermissions(Long userId) {
-        // TODO: 从数据库获取用户权限
-        // 这里暂时返回空权限，后续实现角色权限模块时再完善
         Set<String> permissions = new HashSet<>();
 
-        // 给所有用户默认添加基本权限（临时方案）
+        // 给所有用户默认添加基本权限
         permissions.add("auth:info");
         permissions.add("auth:logout");
         permissions.add("auth:profile");
@@ -78,10 +76,10 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         // 获取用户信息以判断用户类型
         SysUser user = userService.getById(userId);
         if (user != null) {
-            // 给系统管理员用户（userType=1）添加系统管理权限
+            // 给系统管理员用户（userType=1）添加所有权限
             Integer userType = user.getUserType();
             if (userType != null && userType == 1) { // 系统管理员
-                permissions.add("*"); // 所有权限
+                // 添加系统管理权限
                 permissions.add("system:user:list");
                 permissions.add("system:user:view");
                 permissions.add("system:user:add");
@@ -93,6 +91,27 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 permissions.add("system:role:view");
                 permissions.add("system:menu:list");
                 permissions.add("system:config:view");
+
+                // 添加物业管理相关权限
+                permissions.add("property:building:list");
+                permissions.add("property:building:add");
+                permissions.add("property:building:edit");
+                permissions.add("property:building:remove");
+
+                permissions.add("property:unit:list");
+                permissions.add("property:unit:add");
+                permissions.add("property:unit:edit");
+                permissions.add("property:unit:remove");
+
+                permissions.add("property:house:list");
+                permissions.add("property:house:add");
+                permissions.add("property:house:edit");
+                permissions.add("property:house:remove");
+
+                permissions.add("property:owner:list");
+                permissions.add("property:owner:add");
+                permissions.add("property:owner:edit");
+                permissions.add("property:owner:remove");
             }
         }
 
