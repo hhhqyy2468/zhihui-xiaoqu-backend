@@ -336,26 +336,21 @@
           <el-descriptions-item label="备注">{{ ownerDetail.remark || '无' }}</el-descriptions-item>
         </el-descriptions>
 
-        <div class="detail-section" v-if="ownerDetail.houseList && ownerDetail.houseList.length > 0">
+        <div class="detail-section" v-if="ownerDetail.properties && ownerDetail.properties.length > 0">
           <h4>相关房产</h4>
-          <el-table :data="ownerDetail.houseList" size="small">
+          <el-table :data="ownerDetail.properties" size="small">
             <el-table-column prop="buildingName" label="楼栋" width="100" />
             <el-table-column prop="unitName" label="单元" width="100" />
-            <el-table-column prop="houseNo" label="房号" width="120" />
+            <el-table-column prop="houseNumber" label="房号" width="120" />
             <el-table-column prop="houseType" label="户型" width="100" />
-            <el-table-column prop="buildingAreaNum" label="建筑面积" width="120">
+            <el-table-column prop="area" label="面积" width="120">
               <template #default="{ row }">
-                {{ row.buildingAreaNum }}m²
+                {{ row.area }}m²
               </template>
             </el-table-column>
-            <el-table-column prop="usableArea" label="使用面积" width="120">
+            <el-table-column prop="status" label="状态" width="100">
               <template #default="{ row }">
-                {{ row.usableArea }}m²
-              </template>
-            </el-table-column>
-            <el-table-column prop="houseStatus" label="房产状态" width="100">
-              <template #default="{ row }">
-                {{ getHouseStatusName(row.houseStatus) }}
+                {{ row.status === 1 ? '正常' : '未知' }}
               </template>
             </el-table-column>
           </el-table>
@@ -519,25 +514,35 @@ const generateMockOwners = () => {
   return owners.slice(start, end)
 }
 
-// 生成业主详情数据
+// 生成业主详情数据（使用真实数据）
 const generateOwnerDetail = (ownerId) => {
-  const owner = ownerList.value.find(o => o.ownerId === ownerId)
+  const owner = ownerList.value.find(o => o.userId === ownerId)
   if (!owner) return {}
+
+  // 使用后端返回的真实房产数据
+  const properties = owner.houseList && owner.houseList.length > 0
+    ? owner.houseList.map(house => ({
+        buildingName: house.buildingName || '-',
+        unitName: house.unitName || '-',
+        houseNumber: house.houseNo || '-',
+        area: house.buildingAreaNum || 0,
+        houseType: house.houseType || '-',
+        status: house.status || 1
+      }))
+    : []
+
+  // 计算总面积
+  const totalArea = properties.reduce((sum, prop) => sum + (prop.area || 0), 0)
 
   return {
     ...owner,
-    properties: [
-      {
-        buildingName: '3号楼',
-        unitName: '2单元',
-        houseNumber: '501',
-        area: owner.propertyArea,
-        status: 1
-      }
-    ],
-    totalAmount: Math.floor(Math.random() * 10000) + 1000,
-    paidAmount: Math.floor(Math.random() * 5000) + 500,
-    unpaidAmount: 0
+    properties: properties,
+    totalArea: totalArea,
+    totalProperties: properties.length,
+    // 财务信息使用真实字段或提供默认值
+    totalAmount: owner.totalAmount || 0,
+    paidAmount: owner.paidAmount || 0,
+    unpaidAmount: owner.unpaidAmount || 0
   }
 }
 
