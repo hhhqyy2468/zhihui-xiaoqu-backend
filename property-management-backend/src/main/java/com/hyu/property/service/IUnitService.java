@@ -3,6 +3,7 @@ package com.hyu.property.service;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.hyu.property.domain.Unit;
+import com.hyu.property.domain.House;
 
 import java.util.List;
 
@@ -85,4 +86,12 @@ public interface IUnitService extends IService<Unit> {
      * @return 结果
      */
     int deleteUnitById(Long unitId);
+
+    /**
+     * 获取单元下的房产列表
+     *
+     * @param unitId 单元ID
+     * @return 房产列表
+     */
+    List<House> getUnitHouses(Long unitId);
 }

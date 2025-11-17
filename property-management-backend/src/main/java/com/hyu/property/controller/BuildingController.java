@@ -101,7 +101,16 @@ public class BuildingController {
         return toAjax(buildingService.removeByIds(java.util.Arrays.asList(ids)));
     }
 
-    
+    /**
+     * 获取楼栋下的单元列表
+     */
+    @GetMapping("/{id}/units")
+    @PreAuthorize("@ss.hasPermi('property:building:list')")
+    public AjaxResult getBuildingUnits(@NotNull(message = "楼栋ID不能为空") @PathVariable Long id) {
+        log.info("获取楼栋单元列表, buildingId: {}", id);
+        return AjaxResult.success(buildingService.getBuildingUnits(id));
+    }
+
     /**
      * 返回AjaxResult
      */

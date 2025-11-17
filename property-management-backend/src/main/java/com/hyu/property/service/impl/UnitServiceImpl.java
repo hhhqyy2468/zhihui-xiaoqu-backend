@@ -5,7 +5,9 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hyu.common.utils.StringUtils;
 import com.hyu.property.domain.Building;
+import com.hyu.property.domain.House;
 import com.hyu.property.domain.Unit;
+import com.hyu.property.mapper.HouseMapper;
 import com.hyu.property.mapper.UnitMapper;
 import com.hyu.property.service.IUnitService;
 import com.hyu.property.service.IBuildingService;
@@ -26,6 +28,9 @@ public class UnitServiceImpl extends ServiceImpl<UnitMapper, Unit> implements IU
 
     @Autowired
     private IBuildingService buildingService;
+
+    @Autowired
+    private HouseMapper houseMapper;
 
     /**
      * 分页查询单元列表
@@ -150,6 +155,21 @@ public class UnitServiceImpl extends ServiceImpl<UnitMapper, Unit> implements IU
     @Override
     public int deleteUnitById(Long unitId) {
         return removeById(unitId) ? 1 : 0;
+    }
+
+    /**
+     * 获取单元下的房产列表
+     *
+     * @param unitId 单元ID
+     * @return 房产列表
+     */
+    @Override
+    public List<House> getUnitHouses(Long unitId) {
+        QueryWrapper<House> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("unit_id", unitId)
+                   .eq("deleted", 0)
+                   .orderByAsc("house_no");
+        return houseMapper.selectList(queryWrapper);
     }
 
     /**

@@ -3,6 +3,9 @@ package com.hyu.property.service;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.hyu.property.domain.Building;
+import com.hyu.property.domain.Unit;
+
+import java.util.List;
 
 /**
  * 楼栋Service接口
@@ -27,4 +30,12 @@ public interface IBuildingService extends IService<Building> {
      * @return 结果 true唯一 false不唯一
      */
     boolean checkBuildingNoUnique(Building building);
+
+    /**
+     * 获取楼栋下的单元列表
+     *
+     * @param buildingId 楼栋ID
+     * @return 单元列表
+     */
+    List<Unit> getBuildingUnits(Long buildingId);
 }

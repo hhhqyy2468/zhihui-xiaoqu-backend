@@ -113,8 +113,23 @@
         </el-table-column>
         <el-table-column prop="isTop" label="是否置顶" width="100">
           <template #default="{ row }">
-            <el-tag v-if="row.isTop" type="warning">置顶</el-tag>
+            <el-tag v-if="row.isTop === 1" type="warning">置顶</el-tag>
             <span v-else>-</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="publishScope" label="发布范围" width="150">
+          <template #default="{ row }">
+            <el-tooltip
+              :content="getPublishScopeTooltip(row)"
+              placement="top"
+              :disabled="row.publishScope === 1"
+            >
+              <div class="publish-scope-cell">
+                <el-tag :type="getPublishScopeColor(row.publishScope)" size="small">
+                  {{ getPublishScopeFullName(row.publishScope) }}
+                </el-tag>
+              </div>
+            </el-tooltip>
           </template>
         </el-table-column>
         <el-table-column prop="publisherName" label="发布人" width="120" />
@@ -146,7 +161,7 @@
               编辑
             </el-button>
             <el-button
-              v-if="row.noticeStatus === '1'"
+              v-if="row.noticeStatus === 1"
               link
               type="info"
               @click="handleWithdraw(row)"
@@ -213,38 +228,54 @@
           <el-switch v-model="form.isTop" />
         </el-form-item>
         <el-form-item label="发布范围" prop="publishScope">
-          <el-radio-group v-model="form.publishScope">
-            <el-radio value="1">全部</el-radio>
-            <el-radio value="2">指定楼栋</el-radio>
-            <el-radio value="3">指定单元</el-radio>
+          <el-radio-group v-model="form.publishScope" @change="handlePublishScopeChange">
+            <el-radio :value="1">全部</el-radio>
+            <el-radio :value="2">指定范围</el-radio>
           </el-radio-group>
         </el-form-item>
-        <el-form-item v-if="form.publishScope === '2'" label="目标楼栋" prop="targetBuildingIds">
-          <el-select
-            v-model="form.targetBuildingIds"
-            placeholder="请选择楼栋"
-            multiple
-            style="width: 100%"
-          >
-            <el-option label="1号楼" value="1" />
-            <el-option label="2号楼" value="2" />
-            <el-option label="3号楼" value="3" />
-            <el-option label="4号楼" value="4" />
-          </el-select>
-        </el-form-item>
-        <el-form-item v-if="form.publishScope === '3'" label="目标单元" prop="targetUnitIds">
-          <el-select
-            v-model="form.targetUnitIds"
-            placeholder="请选择单元"
-            multiple
-            style="width: 100%"
-          >
-            <el-option label="1栋1单元" value="1-1" />
-            <el-option label="1栋2单元" value="1-2" />
-            <el-option label="2栋1单元" value="2-1" />
-            <el-option label="2栋2单元" value="2-2" />
-          </el-select>
-        </el-form-item>
+
+        <!-- 指定范围选择区域 -->
+        <template v-if="form.publishScope === 2">
+          <el-form-item label="目标楼栋" prop="targetBuildingIds">
+            <el-select
+              v-model="form.targetBuildingIds"
+              placeholder="请选择楼栋（可选择多个）"
+              multiple
+              style="width: 100%"
+              @change="handleBuildingChange"
+            >
+              <el-option
+                v-for="building in buildingList"
+                :key="building.id"
+                :label="building.buildingName"
+                :value="building.id.toString()"
+              />
+            </el-select>
+          </el-form-item>
+
+          <el-form-item label="目标单元" prop="targetUnitIds">
+            <el-select
+              v-model="form.targetUnitIds"
+              placeholder="请选择单元（可选择多个，需先选择对应楼栋）"
+              multiple
+              style="width: 100%"
+              :disabled="form.targetBuildingIds.length === 0"
+            >
+              <el-option
+                v-for="unit in availableUnits"
+                :key="unit.id"
+                :label="getUnitDisplayName(unit)"
+                :value="unit.id.toString()"
+              />
+            </el-select>
+            <div v-if="form.targetBuildingIds.length === 0" style="color: #999; font-size: 12px; margin-top: 5px;">
+              请先选择楼栋，然后可以选择对应楼栋的单元
+            </div>
+            <div v-else-if="availableUnits.length === 0" style="color: #999; font-size: 12px; margin-top: 5px;">
+              所选楼栋暂无单元数据
+            </div>
+          </el-form-item>
+        </template>
         <el-form-item label="生效时间" prop="effectiveStartTime">
           <el-date-picker
             v-model="form.effectiveStartTime"
@@ -290,6 +321,42 @@
             {{ getNoticeStatusName(currentNotice.noticeStatus) }}
           </el-tag>
         </el-descriptions-item>
+        <el-descriptions-item label="发布范围">
+          <div class="scope-detail-info">
+            <el-tag :type="getPublishScopeColor(currentNotice.publishScope)" size="default">
+              {{ getPublishScopeFullName(currentNotice.publishScope) }}
+            </el-tag>
+          </div>
+        </el-descriptions-item>
+        <el-descriptions-item label="范围详情" v-if="currentNotice.publishScope === 2">
+          <div class="scope-compact-info">
+            <!-- 指定楼栋 -->
+            <div v-if="currentNotice.targetBuildingIds" class="scope-compact-section">
+              <div class="scope-compact-header">
+                <el-icon><House /></el-icon>
+                <span>楼栋 {{ currentNotice.targetBuildingIds.split(',').length }}个</span>
+              </div>
+              <div class="scope-compact-items">
+                <span v-for="buildingId in currentNotice.targetBuildingIds.split(',')" :key="buildingId" class="scope-compact-tag">
+                  {{ getBuildingName(buildingId.trim()) }}
+                </span>
+              </div>
+            </div>
+
+            <!-- 指定单元 -->
+            <div v-if="currentNotice.targetUnitIds" class="scope-compact-section">
+              <div class="scope-compact-header">
+                <el-icon><OfficeBuilding /></el-icon>
+                <span>单元 {{ currentNotice.targetUnitIds.split(',').length }}个</span>
+              </div>
+              <div class="scope-compact-items">
+                <span v-for="unitId in currentNotice.targetUnitIds.split(',')" :key="unitId" class="scope-compact-tag">
+                  {{ getUnitDisplayNameForNotice(unitId.trim()) }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </el-descriptions-item>
         <el-descriptions-item label="是否置顶">
           {{ currentNotice.isTop ? '置顶' : '否' }}
         </el-descriptions-item>
@@ -298,29 +365,46 @@
         <el-descriptions-item label="有效期至">
           {{ currentNotice.effectiveEndTime ? formatDateTime(currentNotice.effectiveEndTime) : '永久有效' }}
         </el-descriptions-item>
+        <el-descriptions-item label="发布范围详情" v-if="currentNotice.publishScope === 2 || currentNotice.publishScope === 3">
+          {{ getPublishScopeDetails(currentNotice) }}
+        </el-descriptions-item>
       </el-descriptions>
 
-      <div style="margin-top: 20px;">
-        <h4>公告内容</h4>
-        <div class="notice-content">{{ currentNotice.noticeContent }}</div>
+      <div class="content-section">
+        <h4 class="section-title">
+          <el-icon class="section-icon"><Document /></el-icon>
+          公告内容
+        </h4>
+        <div class="notice-content-card">
+          <div class="notice-content">{{ currentNotice.noticeContent }}</div>
+        </div>
       </div>
 
-      <div v-if="currentNotice.attachmentUrls" style="margin-top: 20px;">
-        <h4>附件列表</h4>
-        <div class="attachment-list">
+      <div v-if="currentNotice.attachmentUrls" class="content-section">
+        <h4 class="section-title">
+          <el-icon class="section-icon"><Paperclip /></el-icon>
+          附件列表
+        </h4>
+        <div class="attachment-container">
           <div
             v-for="(attachment, index) in getAttachments(currentNotice.attachmentUrls)"
             :key="index"
             class="attachment-item"
           >
-            <el-icon><Document /></el-icon>
-            <span>{{ attachment }}</span>
+            <div class="attachment-icon">
+              <el-icon><Document /></el-icon>
+            </div>
+            <div class="attachment-info">
+              <span class="attachment-name">{{ attachment }}</span>
+              <span class="attachment-size">未知大小</span>
+            </div>
             <el-button
-              link
+              class="attachment-download"
               type="primary"
               size="small"
               @click="handleDownload(attachment)"
             >
+              <el-icon><Download /></el-icon>
               下载
             </el-button>
           </div>
@@ -338,8 +422,24 @@ import {
   Refresh,
   Plus,
   Download,
-  Document
+  Document,
+  House,
+  OfficeBuilding,
+  Paperclip
 } from '@element-plus/icons-vue'
+import {
+  getNoticeList,
+  getNoticeDetail,
+  addNotice,
+  updateNotice,
+  deleteNotice,
+  publishNotice,
+  setNoticeTop,
+  withdrawNotice,
+  getNoticeStats,
+  getBuildingList,
+  getUnitList
+} from '@/api/notice'
 
 // 响应式数据
 const loading = ref(false)
@@ -355,11 +455,11 @@ const form = reactive({
   noticeType: 'notice',
   noticeContent: '',
   isTop: false,
-  publishScope: '1',
+  publishScope: 1,
   targetBuildingIds: [],
   targetUnitIds: [],
-  effectiveStartTime: '',
-  effectiveEndTime: '',
+  effectiveStartTime: null,
+  effectiveEndTime: null,
   attachmentUrls: ''
 })
 
@@ -378,6 +478,11 @@ const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 const currentNotice = ref({})
+
+// 楼栋和单元数据
+const buildingList = ref([])
+const unitList = ref([])
+const availableUnits = ref([]) // 当前可选的单元列表
 
 // 表单验证规则
 const rules = {
@@ -438,6 +543,166 @@ const getNoticeStatusColor = (status) => {
   return colorMap[status] || 'info'
 }
 
+// 获取发布范围名称
+const getPublishScopeName = (scope) => {
+  const scopeMap = {
+    1: '全部',
+    2: '指定范围'
+  }
+  return scopeMap[scope] || '未知'
+}
+
+// 获取发布范围全名称
+const getPublishScopeFullName = (scope) => {
+  const scopeMap = {
+    1: '面向全部用户',
+    2: '指定发布范围'
+  }
+  return scopeMap[scope] || '未知范围'
+}
+
+// 获取发布范围颜色
+const getPublishScopeColor = (scope) => {
+  const colorMap = {
+    1: 'primary',
+    2: 'warning',
+    3: 'success'
+  }
+  return colorMap[scope] || 'info'
+}
+
+// 获取发布范围详情
+const getPublishScopeDetails = (notice) => {
+  if (notice.publishScope === 2) {
+    let details = []
+    if (notice.targetBuildingIds && notice.targetBuildingIds.trim()) {
+      const buildingIds = notice.targetBuildingIds.split(',').filter(id => id.trim())
+      details.push(`${buildingIds.length}个楼栋`)
+    }
+    if (notice.targetUnitIds && notice.targetUnitIds.trim()) {
+      const unitIds = notice.targetUnitIds.split(',').filter(id => id.trim())
+      details.push(`${unitIds.length}个单元`)
+    }
+    return details.length > 0 ? `指定范围 (${details.join('、')})` : '指定范围'
+  }
+  return '-'
+}
+
+// 获取单元显示名称
+const getUnitDisplayName = (unit) => {
+  if (unit.buildingName) {
+    let unitIdentifier = unit.unitName || unit.unitNo || '位置'
+    if (unitIdentifier === '位置') {
+      unitIdentifier = `${unit.id}单元`
+    }
+    return `${unit.buildingName} - ${unitIdentifier}`
+  }
+  return `${unit.id}单元`
+}
+
+
+// 获取发布范围详细信息（用于tooltip）
+const getPublishScopeTooltip = (notice) => {
+  if (notice.publishScope === 1) {
+    return '面向所有用户发布'
+  } else if (notice.publishScope === 2) {
+    const details = []
+
+    // 获取楼栋详细信息
+    if (notice.targetBuildingIds && notice.targetBuildingIds.trim()) {
+      const buildingIds = notice.targetBuildingIds.split(',').filter(id => id.trim())
+      if (buildingIds.length > 0) {
+        const buildingNames = getBuildingNamesSync(buildingIds)
+        details.push(`指定楼栋：${buildingNames.join('、')}`)
+      }
+    }
+
+    // 获取单元详细信息
+    if (notice.targetUnitIds && notice.targetUnitIds.trim()) {
+      const unitIds = notice.targetUnitIds.split(',').filter(id => id.trim())
+      if (unitIds.length > 0) {
+        const unitNames = getUnitNamesSync(unitIds)
+        details.push(`指定单元：${unitNames.join('、')}`)
+      }
+    }
+
+    return details.length > 0 ? details.join('\n') : '指定范围'
+  }
+  return '未知范围'
+}
+
+// 获取楼栋名称列表（同步版本）
+const getBuildingNamesSync = (buildingIds) => {
+  try {
+    // 从已加载的楼栋列表中查找
+    const names = buildingIds.map(id => {
+      const building = buildingList.value.find(b => b.id.toString() === id.toString())
+      return building ? building.buildingName : `楼栋${id}`
+    })
+    return names
+  } catch (error) {
+    console.error('获取楼栋名称失败:', error)
+    return buildingIds.map(id => `楼栋${id}`)
+  }
+}
+
+// 获取单元名称列表（同步版本）
+const getUnitNamesSync = (unitIds) => {
+  try {
+    // 从已加载的单元列表中查找
+    const names = unitIds.map(id => {
+      const unit = unitList.value.find(u => u.id.toString() === id.toString())
+      if (unit) {
+        const building = buildingList.value.find(b => b.id.toString() === unit.buildingId?.toString())
+        if (building) {
+          let unitIdentifier = unit.unitName || unit.unitNo || '位置'
+          if (unitIdentifier === '位置') {
+            unitIdentifier = `${unit.id}单元`
+          }
+          return `${building.buildingName}${unitIdentifier}`
+        }
+        let unitIdentifier = unit.unitName || unit.unitNo || '位置'
+        if (unitIdentifier === '位置') {
+          unitIdentifier = `${unit.id}单元`
+        }
+        return unitIdentifier
+      }
+      return `${id}单元`
+    })
+    return names
+  } catch (error) {
+    console.error('获取单元名称失败:', error)
+    return unitIds.map(id => `${id}单元`)
+  }
+}
+
+// 获取单个楼栋名称（用于详情显示）
+const getBuildingName = (buildingId) => {
+  const building = buildingList.value.find(b => b.id.toString() === buildingId.toString())
+  return building ? building.buildingName : `楼栋${buildingId}`
+}
+
+// 获取单个单元显示名称（用于详情显示）
+const getUnitDisplayNameForNotice = (unitId) => {
+  const unit = unitList.value.find(u => u.id.toString() === unitId.toString())
+  if (unit) {
+    const building = buildingList.value.find(b => b.id.toString() === unit.buildingId?.toString())
+    if (building) {
+      let unitIdentifier = unit.unitName || unit.unitNo || '位置'
+      if (unitIdentifier === '位置') {
+        unitIdentifier = `${unit.id}单元`
+      }
+      return `${building.buildingName}${unitIdentifier}`
+    }
+    let unitIdentifier = unit.unitName || unit.unitNo || '位置'
+    if (unitIdentifier === '位置') {
+      unitIdentifier = `${unit.id}单元`
+    }
+    return unitIdentifier
+  }
+  return `${unitId}单元`
+}
+
 // 格式化日期时间
 const formatDateTime = (dateTime) => {
   if (!dateTime) return '-'
@@ -450,65 +715,121 @@ const getAttachments = (attachmentUrls) => {
   return attachmentUrls.split(',').map(url => url.trim()).filter(url => url)
 }
 
-// 生成模拟数据
-const generateMockData = () => {
-  const notices = []
-  const titles = [
-    '关于春节期间物业服务安排的通知',
-    '小区电梯维护保养通知',
-    '物业费缴纳温馨提示',
-    '停车位调整公告',
-    '社区春节活动通知',
-    '安全防范提醒',
-    '设施维修通知',
-    '费用调整说明'
-  ]
-  const types = ['notice', 'outage', 'activity', 'policy', 'reminder']
-  const statuses = ['1', '2', '3']
-  const publishers = ['张三', '李四', '王五', '赵六']
+// 加载公告数据
+const loadNotices = async () => {
+  loading.value = true
+  try {
+    const params = {
+      pageNum: currentPage.value,
+      pageSize: pageSize.value
+    }
 
-  for (let i = 1; i <= 50; i++) {
-    const type = types[Math.floor(Math.random() * types.length)]
-    const status = statuses[Math.floor(Math.random() * statuses.length)]
-    const isTop = Math.random() > 0.8
-    const publishDate = new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000)
-    const endDate = new Date(publishDate.getTime() + (30 + Math.random() * 60) * 24 * 60 * 60 * 1000)
+    // 只添加有值的搜索条件
+    if (searchForm.noticeTitle && searchForm.noticeTitle.trim()) {
+      params.noticeTitle = searchForm.noticeTitle.trim()
+    }
+    if (searchForm.noticeType && searchForm.noticeType.trim()) {
+      params.noticeType = searchForm.noticeType.trim()
+    }
+    if (searchForm.noticeStatus !== '' && searchForm.noticeStatus !== null && searchForm.noticeStatus !== undefined) {
+      params.noticeStatus = searchForm.noticeStatus
+    }
 
-    notices.push({
-      id: i,
-      noticeTitle: titles[i % titles.length] + (i > 8 ? ` (${i})` : ''),
-      noticeType: type,
-      noticeContent: '尊敬的各位业主：为了提供更好的物业服务，现就相关事宜通知如下：请各位业主积极配合物业管理工作。如有任何问题，请及时联系物业服务中心。谢谢大家的理解与配合！',
-      isTop: isTop,
-      publishScope: '1',
-      targetBuildingIds: '',
-      targetUnitIds: '',
-      effectiveStartTime: publishDate.toISOString(),
-      effectiveEndTime: endDate.toISOString(),
-      noticeStatus: status,
-      publisherId: 1,
-      publisherName: publishers[Math.floor(Math.random() * publishers.length)],
-      readCount: Math.floor(Math.random() * 200) + 10,
-      publishTime: publishDate.toISOString(),
-      attachmentUrls: Math.random() > 0.7 ? 'https://example.com/file1.pdf,https://example.com/file2.pdf' : ''
-    })
+    // 处理日期范围
+    if (searchForm.dateRange && searchForm.dateRange.length === 2) {
+      params.beginTime = searchForm.dateRange[0]
+      params.endTime = searchForm.dateRange[1]
+    }
+
+    console.log('发送的查询参数:', params)
+    const response = await getNoticeList(params)
+    console.log('公告列表响应:', response)
+    if (response.code === 200 && response.data) {
+      console.log('原始数据记录:', response.data.rows)
+      console.log('数据总数:', response.data.total)
+      noticeList.value = response.data.rows || []
+      total.value = response.data.total || 0
+      console.log('设置后的noticeList:', noticeList.value)
+      console.log('noticeList长度:', noticeList.value.length)
+    } else {
+      console.log('API响应错误:', response)
+      ElMessage.error(response.msg || '获取公告列表失败')
+      noticeList.value = []
+      total.value = 0
+    }
+  } catch (error) {
+    console.error('加载公告数据失败:', error)
+    ElMessage.error('加载公告数据失败')
+    noticeList.value = []
+    total.value = 0
+  } finally {
+    loading.value = false
   }
-
-  return notices
 }
 
-// 加载公告数据
-const loadNotices = () => {
-  loading.value = true
-  setTimeout(() => {
-    const mockData = generateMockData()
-    noticeList.value = mockData.slice(
-      (currentPage.value - 1) * pageSize.value,
-      currentPage.value * pageSize.value
-    )
-    total.value = mockData.length
-    loading.value = false
-  }, 500)
+// 加载楼栋数据
+const loadBuildings = async () => {
+  try {
+    const response = await getBuildingList()
+    console.log('楼栋数据响应:', response)
+    if (response.code === 200 && response.data) {
+      // 检查数据结构，可能是直接返回数组还是有records属性
+      if (Array.isArray(response.data)) {
+        buildingList.value = response.data
+      } else if (response.data.records && Array.isArray(response.data.records)) {
+        buildingList.value = response.data.records
+      } else if (response.data.rows && Array.isArray(response.data.rows)) {
+        buildingList.value = response.data.rows
+      } else {
+        buildingList.value = []
+      }
+      console.log('处理后的楼栋列表:', buildingList.value)
+      console.log('楼栋列表长度:', buildingList.value.length)
+    } else {
+      console.log('响应数据格式不正确:', response)
+    }
+  } catch (error) {
+    console.error('加载楼栋数据失败:', error)
+    buildingList.value = []
+  }
+}
+
+// 加载单元数据
+const loadUnits = async (buildingId) => {
+  try {
+    const response = await getUnitList(buildingId)
+    console.log('单元数据响应:', response)
+    if (response.code === 200 && response.data) {
+      // 新API直接返回数组数据
+      if (Array.isArray(response.data)) {
+        // 为每个单元添加楼栋信息，便于显示
+        const unitsWithBuildingInfo = response.data.map(unit => {
+          const building = buildingList.value.find(b => b.id.toString() === buildingId.toString())
+          return {
+            ...unit,
+            buildingName: building ? building.buildingName : '未知楼栋'
+          }
+        })
+
+        // 将新加载的单元添加到availableUnits中，避免重复
+        const existingIds = availableUnits.value.map(u => u.id)
+        const newUnits = unitsWithBuildingInfo.filter(u => !existingIds.includes(u.id))
+        availableUnits.value.push(...newUnits)
+
+        // 如果某个楼栋被取消选择，移除对应的单元
+        const selectedBuildingIds = form.targetBuildingIds
+        availableUnits.value = availableUnits.value.filter(unit => {
+          return selectedBuildingIds.some(buildingId => {
+            const building = buildingList.value.find(b => b.id.toString() === buildingId.toString())
+            return building && building.buildingName === unit.buildingName
+          })
+        })
+      }
+      console.log('处理后的可用单元列表:', availableUnits.value)
+    }
+  } catch (error) {
+    console.error('加载单元数据失败:', error)
+  }
 }
 
 // 搜索
@@ -542,63 +863,103 @@ const handleAdd = () => {
     noticeType: 'notice',
     noticeContent: '',
     isTop: false,
-    publishScope: '1',
+    publishScope: 1,
     targetBuildingIds: [],
     targetUnitIds: [],
-    effectiveStartTime: '',
-    effectiveEndTime: '',
+    effectiveStartTime: null,
+    effectiveEndTime: null,
     attachmentUrls: ''
   })
   dialogVisible.value = true
 }
 
 // 查看
-const handleView = (row) => {
-  currentNotice.value = { ...row }
-  detailVisible.value = true
+const handleView = async (row) => {
+  try {
+    const response = await getNoticeDetail(row.id)
+    if (response.code === 200 && response.data) {
+      currentNotice.value = response.data
+      detailVisible.value = true
+    } else {
+      ElMessage.error(response.msg || '获取公告详情失败')
+    }
+  } catch (error) {
+    console.error('获取公告详情失败:', error)
+    ElMessage.error('获取公告详情失败')
+  }
 }
 
 // 编辑
-const handleEdit = (row) => {
-  dialogTitle.value = '编辑公告'
-  Object.assign(form, { ...row })
-  dialogVisible.value = true
+const handleEdit = async (row) => {
+  try {
+    const response = await getNoticeDetail(row.id)
+    if (response.code === 200 && response.data) {
+      dialogTitle.value = '编辑公告'
+      Object.assign(form, response.data)
+      dialogVisible.value = true
+    } else {
+      ElMessage.error(response.msg || '获取公告详情失败')
+    }
+  } catch (error) {
+    console.error('获取公告详情失败:', error)
+    ElMessage.error('获取公告详情失败')
+  }
 }
 
 // 撤回
-const handleWithdraw = (row) => {
-  ElMessageBox.confirm(
-    `确定要撤回公告"${row.noticeTitle}"吗？`,
-    '提示',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
+const handleWithdraw = async (row) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要撤回公告"${row.noticeTitle}"吗？`,
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    const response = await withdrawNotice(row.id)
+    if (response.code === 200) {
+      ElMessage.success('公告撤回成功')
+      loadNotices()
+    } else {
+      ElMessage.error(response.msg || '公告撤回失败')
     }
-  ).then(() => {
-    ElMessage.success('公告撤回成功')
-    loadNotices()
-  }).catch(() => {
-    // 用户取消操作
-  })
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('公告撤回失败:', error)
+      ElMessage.error('公告撤回失败')
+    }
+  }
 }
 
 // 删除
-const handleDelete = (row) => {
-  ElMessageBox.confirm(
-    `确定要删除公告"${row.noticeTitle}"吗？`,
-    '警告',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
+const handleDelete = async (row) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除公告"${row.noticeTitle}"吗？`,
+      '警告',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    const response = await deleteNotice(row.id)
+    if (response.code === 200) {
+      ElMessage.success('删除成功')
+      loadNotices()
+    } else {
+      ElMessage.error(response.msg || '删除失败')
     }
-  ).then(() => {
-    ElMessage.success('删除成功')
-    loadNotices()
-  }).catch(() => {
-    // 用户取消操作
-  })
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除公告失败:', error)
+      ElMessage.error('删除失败')
+    }
+  }
 }
 
 // 导出
@@ -612,16 +973,56 @@ const handleDownload = (attachment) => {
 }
 
 // 提交表单
-const handleSubmit = () => {
+const handleSubmit = async () => {
   if (!formRef.value) return
 
-  formRef.value.validate((valid) => {
-    if (valid) {
+  try {
+    await formRef.value.validate()
+
+    // 处理数据格式
+    const formData = { ...form }
+
+    // 设置公告状态为已发布（1）
+    formData.noticeStatus = 1
+
+    // 处理布尔值转换为数字
+    formData.isTop = formData.isTop ? 1 : 0
+
+    // 将数组转换为逗号分隔的字符串
+    if (Array.isArray(formData.targetBuildingIds) && formData.targetBuildingIds.length > 0) {
+      formData.targetBuildingIds = formData.targetBuildingIds.join(',')
+    } else {
+      formData.targetBuildingIds = ''
+    }
+
+    if (Array.isArray(formData.targetUnitIds) && formData.targetUnitIds.length > 0) {
+      formData.targetUnitIds = formData.targetUnitIds.join(',')
+    } else {
+      formData.targetUnitIds = ''
+    }
+
+    console.log('提交的表单数据:', formData)
+
+    let response
+    if (formData.id) {
+      // 编辑
+      response = await updateNotice(formData)
+    } else {
+      // 新增
+      response = await addNotice(formData)
+    }
+
+    if (response.code === 200) {
       ElMessage.success(dialogTitle.value + '成功')
       dialogVisible.value = false
       loadNotices()
+    } else {
+      ElMessage.error(response.msg || (formData.id ? '更新公告失败' : '发布公告失败'))
     }
-  })
+  } catch (error) {
+    console.error('提交表单失败:', error)
+    ElMessage.error('提交失败')
+  }
 }
 
 // 分页处理
@@ -635,9 +1036,63 @@ const handleCurrentChange = (val) => {
   loadNotices()
 }
 
+// 监听发布范围变化
+const handlePublishScopeChange = (value) => {
+  console.log('发布范围变化:', value)
+  if (value === 2) {
+    // 选择指定范围时，确保楼栋数据已加载
+    if (buildingList.value.length === 0) {
+      loadBuildings()
+    }
+  }
+
+  // 清空之前的选择
+  form.targetBuildingIds = []
+  form.targetUnitIds = []
+  availableUnits.value = []
+}
+
+// 处理楼栋选择变化
+const handleBuildingChange = async (buildingIds) => {
+  console.log('楼栋选择变化:', buildingIds)
+
+  // 清空当前选择的单元（因为楼栋变化了）
+  form.targetUnitIds = []
+
+  if (buildingIds && buildingIds.length > 0) {
+    // 加载所有选中楼栋的单元数据
+    await loadUnitsForBuildings(buildingIds)
+  } else {
+    // 清空楼栋选择时，清空单元数据
+    availableUnits.value = []
+  }
+}
+
+
+// 加载指定楼栋的单元数据
+const loadUnitsForBuildings = async (buildingIds) => {
+  try {
+    if (buildingIds && buildingIds.length > 0) {
+      console.log('开始加载选中楼栋的单元数据:', buildingIds)
+
+      // 并行加载所有选中楼栋的单元数据
+      const unitPromises = buildingIds.map(buildingId => loadUnits(buildingId))
+      await Promise.all(unitPromises)
+
+      console.log('所有楼栋的单元数据加载完成')
+    } else {
+      availableUnits.value = []
+    }
+  } catch (error) {
+    console.error('加载指定楼栋单元数据失败:', error)
+    availableUnits.value = []
+  }
+}
+
 // 初始化
 onMounted(() => {
   loadNotices()
+  loadBuildings()
 })
 </script>
 
@@ -674,32 +1129,206 @@ onMounted(() => {
 }
 
 .notice-content {
-  line-height: 1.6;
-  color: #333;
+  line-height: 1.8;
+  color: #303133;
   font-size: 14px;
   white-space: pre-wrap;
   word-break: break-all;
+  padding: 16px;
+  background: #fafbfc;
+  border-radius: 6px;
+  border: 1px solid #e8eaed;
 }
 
-.attachment-list {
-  margin-top: 10px;
+.content-section {
+  margin-top: 24px;
+
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #303133;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #409eff;
+
+    .section-icon {
+      color: #409eff;
+      font-size: 18px;
+    }
+  }
+
+  .notice-content-card {
+    background: #ffffff;
+    border: 1px solid #e8eaed;
+    border-radius: 8px;
+    padding: 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+
+    &:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      transform: translateY(-1px);
+    }
+  }
+}
+
+.attachment-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 
   .attachment-item {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 8px 12px;
-    background: #f5f7fa;
-    border-radius: 4px;
-    margin-bottom: 8px;
+    gap: 16px;
+    padding: 16px;
+    background: #ffffff;
+    border: 1px solid #e8eaed;
+    border-radius: 8px;
+    transition: all 0.3s ease;
 
-    .el-icon {
-      color: #409eff;
+    &:hover {
+      background: #f0f9ff;
+      border-color: #bfdbfe;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     }
 
-    span {
+    .attachment-icon {
+      width: 40px;
+      height: 40px;
+      background: #f0f9ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      .el-icon {
+        color: #409eff;
+        font-size: 20px;
+      }
+    }
+
+    .attachment-info {
       flex: 1;
-      color: #606266;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+
+      .attachment-name {
+        font-size: 14px;
+        font-weight: 500;
+        color: #303133;
+      }
+
+      .attachment-size {
+        font-size: 12px;
+        color: #909399;
+      }
+    }
+
+    .attachment-download {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      background: #409eff;
+      border: none;
+      border-radius: 6px;
+      color: white;
+      font-size: 13px;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: #337ecc;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
+      }
+
+      .el-icon {
+        font-size: 14px;
+      }
+    }
+  }
+}
+
+// 发布范围显示样式
+.publish-scope-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+
+  .scope-detail {
+    font-size: 12px;
+    color: #909399;
+    font-weight: 500;
+  }
+
+  &:hover {
+    .scope-detail {
+      color: #409eff;
+    }
+  }
+}
+
+// 详情弹窗中的范围显示样式
+.scope-detail-info {
+  width: 100%;
+}
+
+// 紧凑版范围显示样式
+.scope-compact-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  .scope-compact-section {
+    .scope-compact-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #303133;
+
+      .el-icon {
+        color: #409eff;
+        font-size: 14px;
+      }
+    }
+
+    .scope-compact-items {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+
+      .scope-compact-tag {
+        display: inline-block;
+        padding: 2px 6px;
+        background: #f0f9ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 4px;
+        font-size: 11px;
+        color: #1e40af;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+
+        &:hover {
+          background: #dbeafe;
+          border-color: #93c5fd;
+          transform: translateY(-1px);
+        }
+      }
     }
   }
 }

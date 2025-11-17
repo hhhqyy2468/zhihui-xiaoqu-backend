@@ -104,7 +104,16 @@ public class UnitController {
         return AjaxResult.success(unitService.getUnitsByBuildingId(buildingId));
     }
 
-    
+    /**
+     * 获取单元下的房产列表
+     */
+    @GetMapping("/{id}/houses")
+    @PreAuthorize("@ss.hasPermi('property:unit:list')")
+    public AjaxResult getUnitHouses(@NotNull(message = "单元ID不能为空") @PathVariable Long id) {
+        log.info("获取单元房产列表, unitId: {}", id);
+        return AjaxResult.success(unitService.getUnitHouses(id));
+    }
+
     /**
      * 返回AjaxResult
      */
