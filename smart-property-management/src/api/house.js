@@ -77,12 +77,12 @@ export function updateHouseStatus(data) {
   })
 }
 
-// 导出房产数据
-export function exportHouseData(params) {
+
+// 根据用户名分配房产
+export function assignHouseByUsername(data) {
   return request({
-    url: '/house/export',
-    method: 'get',
-    params,
-    responseType: 'blob'
+    url: '/property/house/assign-by-username',
+    method: 'post',
+    data
   })
 }

@@ -215,4 +215,27 @@ public class UserHouseServiceImpl extends ServiceImpl<UserHouseMapper, UserHouse
             return 0;
         }
     }
+
+    /**
+     * 根据条件更新用户房产关联
+     *
+     * @param userHouse 用户房产关联
+     * @param userId 用户ID
+     * @param isCurrent 是否当前居住
+     * @return 结果
+     */
+    @Override
+    @Transactional
+    public int updateUserHouseByCondition(UserHouse userHouse, Long userId, Boolean isCurrent) {
+        try {
+            QueryWrapper<UserHouse> queryWrapper = new QueryWrapper<>();
+            queryWrapper.eq("user_id", userId)
+                       .eq("is_current", isCurrent);
+
+            return baseMapper.update(userHouse, queryWrapper);
+        } catch (Exception e) {
+            log.error("根据条件更新用户房产关联失败, userId: {}, isCurrent: {}", userId, isCurrent, e);
+            return 0;
+        }
+    }
 }

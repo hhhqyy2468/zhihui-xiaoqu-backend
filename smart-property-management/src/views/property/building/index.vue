@@ -70,11 +70,7 @@
         <el-icon><Delete /></el-icon>
         批量删除
       </el-button>
-      <el-button @click="handleExport">
-        <el-icon><Download /></el-icon>
-        导出
-      </el-button>
-    </div>
+          </div>
 
     <!-- 楼栋表格 -->
     <div class="table-section">
@@ -546,9 +542,6 @@ const handleViewHouses = (row) => {
 }
 
 // 导出
-const handleExport = () => {
-  ElMessage.success('导出成功')
-}
 
 // 提交表单
 const handleSubmit = async () => {

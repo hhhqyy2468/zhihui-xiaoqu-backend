@@ -108,4 +108,23 @@ public class Building implements Serializable {
      */
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private Date updateTime;
+
+    
+    /**
+     * 房产总数(计算字段)
+     */
+    @TableField(exist = false)
+    private Integer houseCount;
+
+    /**
+     * 已售数量(计算字段)
+     */
+    @TableField(exist = false)
+    private Integer soldCount;
+
+    /**
+     * 空置数量(计算字段)
+     */
+    @TableField(exist = false)
+    private Integer vacantCount;
 }

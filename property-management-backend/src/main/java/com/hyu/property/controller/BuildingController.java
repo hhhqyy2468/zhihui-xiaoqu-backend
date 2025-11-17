@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
-import java.util.List;
 
 /**
  * 楼栋信息
@@ -102,6 +101,7 @@ public class BuildingController {
         return toAjax(buildingService.removeByIds(java.util.Arrays.asList(ids)));
     }
 
+    
     /**
      * 返回AjaxResult
      */

@@ -72,14 +72,6 @@
         新增业主
       </el-button>
       <el-button
-        type="success"
-        @click="handleImport"
-        v-permission="'property:owner:import'"
-      >
-        <el-icon><Upload /></el-icon>
-        导入业主
-      </el-button>
-      <el-button
         type="warning"
         @click="handleExport"
       >
@@ -105,9 +97,29 @@
         @selection-change="handleSelectionChange"
       >
         <el-table-column type="selection" width="55" />
-        <el-table-column prop="userId" label="业主编号" width="100" />
-        <el-table-column prop="realName" label="业主姓名" width="120" />
-        <el-table-column label="房产信息" width="250">
+        <el-table-column prop="userId" label="业主编号" width="80" />
+        <el-table-column prop="realName" label="业主姓名" width="100" />
+        <el-table-column prop="gender" label="性别" width="60">
+          <template #default="{ row }">
+            {{ row.gender === 0 ? '女' : row.gender === 1 ? '男' : '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="phone" label="手机号码" width="120" />
+        <el-table-column prop="residentStatus" label="住户状态" width="80">
+          <template #default="{ row }">
+            <el-tag :type="row.residentStatus === 1 ? 'success' : 'info'" size="small">
+              {{ row.residentStatus === 1 ? '在住' : '已搬离' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="status" label="状态" width="70">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
+              {{ row.status === 1 ? '正常' : '禁用' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="房产信息" width="200">
           <template #default="{ row }">
             <div v-if="row.houseList && row.houseList.length > 0">
               <div v-for="(house, index) in row.houseList" :key="index" class="house-info">
@@ -125,28 +137,7 @@
             <span v-else class="no-house">暂无房产</span>
           </template>
         </el-table-column>
-        <el-table-column prop="gender" label="性别" width="80">
-          <template #default="{ row }">
-            {{ row.gender === 1 ? '男' : row.gender === 2 ? '女' : '未知' }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="phone" label="手机号码" width="140" />
-        <el-table-column prop="idCard" label="身份证号" width="180" />
-        <el-table-column prop="residentStatus" label="住户状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="row.residentStatus === 1 ? 'success' : 'info'">
-              {{ row.residentStatus === 1 ? '在住' : '已搬离' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="status" label="用户状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'danger'">
-              {{ row.status === 1 ? '正常' : '禁用' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="createTime" label="登记时间" width="180">
+          <el-table-column prop="createTime" label="登记时间" width="180">
           <template #default="{ row }">
             {{ formatDateTime(row.createTime) }}
           </template>
@@ -171,7 +162,7 @@
             <el-button
               link
               type="warning"
-              @click="handleManageProperty(row)"
+              @click="handleViewProperties(row)"
               v-permission="'property:house:view'"
             >
               房产
@@ -184,15 +175,7 @@
             >
               账单
             </el-button>
-            <el-button
-              link
-              :type="row.status === 1 ? 'danger' : 'success'"
-              @click="handleToggleStatus(row)"
-              v-permission="'property:owner:edit'"
-            >
-              {{ row.status === 1 ? '冻结' : '解冻' }}
-            </el-button>
-            <el-button
+              <el-button
               link
               type="danger"
               @click="handleDelete(row)"
@@ -220,7 +203,7 @@
     <!-- 新增/编辑业主对话框 -->
     <el-dialog
       v-model="ownerDialogVisible"
-      :title="ownerForm.ownerId ? '编辑业主' : '新增业主'"
+      :title="ownerForm.userId ? '编辑业主' : '新增业主'"
       width="800px"
     >
       <el-form
@@ -231,60 +214,65 @@
       >
         <el-row :gutter="20">
           <el-col :span="12">
+            <el-form-item label="登录账号" prop="username">
+              <el-input v-model="ownerForm.username" placeholder="请输入登录账号" :disabled="!!ownerForm.userId" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
             <el-form-item label="业主姓名" prop="realName">
               <el-input v-model="ownerForm.realName" placeholder="请输入业主姓名" />
             </el-form-item>
           </el-col>
+        </el-row>
+
+        <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="性别" prop="gender">
               <el-radio-group v-model="ownerForm.gender">
                 <el-radio :label="1">男</el-radio>
-                <el-radio :label="2">女</el-radio>
+                <el-radio :label="0">女</el-radio>
               </el-radio-group>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="登录密码" prop="password" v-if="!ownerForm.userId">
+              <el-input v-model="ownerForm.password" type="password" placeholder="请输入登录密码" show-password />
             </el-form-item>
           </el-col>
         </el-row>
 
         <el-row :gutter="20">
-          <el-col :span="12">
+          <el-col :span="24">
             <el-form-item label="手机号码" prop="phone">
               <el-input v-model="ownerForm.phone" placeholder="请输入手机号码" />
             </el-form-item>
           </el-col>
-          <el-col :span="12">
-            <el-form-item label="身份证号" prop="idCard">
-              <el-input v-model="ownerForm.idCard" placeholder="请输入身份证号" />
-            </el-form-item>
-          </el-col>
         </el-row>
 
         <el-row :gutter="20">
-          <el-col :span="12">
+          <el-col :span="24">
             <el-form-item label="电子邮箱" prop="email">
               <el-input v-model="ownerForm.email" placeholder="请输入电子邮箱" />
             </el-form-item>
           </el-col>
-          <el-col :span="12">
-            <el-form-item label="住户状态" prop="residentStatus">
-              <el-select v-model="ownerForm.residentStatus" placeholder="请选择住户状态" style="width: 100%">
-                <el-option label="在住" :value="1" />
-                <el-option label="已搬离" :value="0" />
-              </el-select>
-            </el-form-item>
-          </el-col>
         </el-row>
 
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="业主状态" prop="status">
-              <el-radio-group v-model="ownerForm.status">
-                <el-radio :label="1">正常</el-radio>
-                <el-radio :label="0">冻结</el-radio>
-              </el-radio-group>
+            <el-form-item label="住户状态" prop="residentStatus">
+              <el-select v-model="ownerForm.residentStatus" placeholder="请选择住户状态" style="width: 100%">
+                <el-option label="在住" :value="1" />
+                <el-option label="搬离" :value="2" />
+              </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <!-- 空列 -->
+            <el-form-item label="业主状态" prop="status">
+              <el-select v-model="ownerForm.status" placeholder="请选择业主状态" style="width: 100%">
+                <el-option label="正常" :value="1" />
+                <el-option label="冻结" :value="0" />
+              </el-select>
+            </el-form-item>
           </el-col>
         </el-row>
 
@@ -336,21 +324,21 @@
           <el-descriptions-item label="备注">{{ ownerDetail.remark || '无' }}</el-descriptions-item>
         </el-descriptions>
 
-        <div class="detail-section" v-if="ownerDetail.properties && ownerDetail.properties.length > 0">
+        <div class="detail-section" v-if="ownerDetail.houseList && ownerDetail.houseList.length > 0">
           <h4>相关房产</h4>
-          <el-table :data="ownerDetail.properties" size="small">
+          <el-table :data="ownerDetail.houseList" size="small">
             <el-table-column prop="buildingName" label="楼栋" width="100" />
             <el-table-column prop="unitName" label="单元" width="100" />
-            <el-table-column prop="houseNumber" label="房号" width="120" />
+            <el-table-column prop="houseNo" label="房号" width="120" />
             <el-table-column prop="houseType" label="户型" width="100" />
-            <el-table-column prop="area" label="面积" width="120">
+            <el-table-column prop="buildingArea" label="建筑面积" width="120">
               <template #default="{ row }">
-                {{ row.area }}m²
+                {{ row.buildingArea }}m²
               </template>
             </el-table-column>
-            <el-table-column prop="status" label="状态" width="100">
+            <el-table-column prop="relationType" label="关系" width="100">
               <template #default="{ row }">
-                {{ row.status === 1 ? '正常' : '未知' }}
+                {{ row.relationType === 1 ? '业主' : '租户' }}
               </template>
             </el-table-column>
           </el-table>
@@ -372,20 +360,206 @@
         </div>
       </div>
     </el-dialog>
+
+    <!-- 房产详情对话框 -->
+    <el-dialog
+      v-model="propertyDialogVisible"
+      title="业主房产信息"
+      width="900px"
+    >
+      <template #header="{ titleId, titleClass }">
+        <div class="dialog-header">
+          <span :id="titleId" :class="titleClass">业主房产信息</span>
+          <el-button
+            type="primary"
+            size="small"
+            @click="handleAssignProperty(propertyOwner)"
+          >
+            <el-icon><Plus /></el-icon>
+            分配房产
+          </el-button>
+        </div>
+      </template>
+      <div class="property-content">
+        <!-- 业主基本信息 -->
+        <el-descriptions :column="3" border class="owner-basic-info">
+          <el-descriptions-item label="业主姓名">{{ propertyOwner.realName }}</el-descriptions-item>
+          <el-descriptions-item label="性别">{{ propertyOwner.gender === 1 ? '男' : '女' }}</el-descriptions-item>
+          <el-descriptions-item label="手机号码">{{ propertyOwner.phone }}</el-descriptions-item>
+        </el-descriptions>
+
+        <!-- 房产列表 -->
+        <div class="property-list-section" v-if="propertyOwner.houseList && propertyOwner.houseList.length > 0">
+          <h4 style="margin: 20px 0 15px 0; color: #409EFF;">房产列表 ({{ propertyOwner.houseList.length }}套)</h4>
+          <el-table :data="propertyOwner.houseList" stripe>
+            <el-table-column prop="buildingName" label="楼栋" width="120" />
+            <el-table-column prop="unitName" label="单元" width="100" />
+            <el-table-column prop="houseNo" label="房号" width="120" />
+            <el-table-column prop="houseType" label="户型" width="150" />
+            <el-table-column prop="buildingAreaNum" label="建筑面积(m²)" width="120">
+              <template #default="{ row }">
+                {{ row.buildingAreaNum || '-' }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="usableArea" label="使用面积(m²)" width="120">
+              <template #default="{ row }">
+                {{ row.usableArea || '-' }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="relationType" label="房产关系" width="100">
+              <template #default="{ row }">
+                <el-tag :type="row.relationTypeNum === 1 ? 'success' : 'warning'" size="small">
+                  {{ row.relationTypeNum === 1 ? '业主' : '租户' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="isCurrent" label="当前居住" width="100">
+              <template #default="{ row }">
+                <el-tag :type="row.isCurrent ? 'success' : 'info'" size="small">
+                  {{ row.isCurrent ? '是' : '否' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+          </el-table>
+
+          <!-- 房产统计信息 -->
+          <div class="property-summary" style="margin-top: 20px;">
+            <el-row :gutter="20">
+              <el-col :span="8">
+                <el-statistic title="房产总数" :value="propertyOwner.houseList.length" suffix="套" />
+              </el-col>
+              <el-col :span="8">
+                <el-statistic
+                  title="总建筑面积"
+                  :value="propertyOwner.houseList.reduce((sum, house) => sum + (house.buildingAreaNum || 0), 0)"
+                  suffix="m²"
+                />
+              </el-col>
+              <el-col :span="8">
+                <el-statistic
+                  title="当前居住"
+                  :value="propertyOwner.houseList.filter(house => house.isCurrent).length"
+                  suffix="套"
+                />
+              </el-col>
+            </el-row>
+          </div>
+        </div>
+
+        <!-- 无房产提示 -->
+        <el-empty v-else description="该业主暂无房产信息" style="margin: 30px 0;" />
+      </div>
+    </el-dialog>
+
+    <!-- 分配房产对话框 -->
+    <el-dialog
+      v-model="assignPropertyDialogVisible"
+      title="分配房产"
+      width="800px"
+    >
+      <div class="assign-property-content">
+        <!-- 业主信息 -->
+        <el-alert
+          :title="`为业主「${propertyOwner.realName}」分配房产`"
+          type="info"
+          :closable="false"
+          style="margin-bottom: 20px;"
+        />
+
+        <!-- 可选房产列表 -->
+        <div class="available-houses">
+          <h4>可选房产</h4>
+          <el-table
+            :data="availableHouses"
+            style="width: 100%"
+            @selection-change="handleHouseSelectionChange"
+            max-height="400"
+          >
+            <el-table-column type="selection" width="55" />
+            <el-table-column prop="houseNo" label="房产编号" width="150" />
+            <el-table-column prop="buildingName" label="楼栋" width="120" />
+            <el-table-column prop="unitName" label="单元" width="120" />
+            <el-table-column prop="roomNumber" label="房号" width="100" />
+            <el-table-column prop="houseType" label="户型" width="120" />
+            <el-table-column prop="buildingAreaNum" label="面积(m²)" width="100">
+              <template #default="{ row }">
+                {{ row.buildingAreaNum || '-' }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="houseStatus" label="状态" width="100">
+              <template #default="{ row }">
+                <el-tag :type="row.houseStatus === 1 ? 'success' : 'warning'" size="small">
+                  {{ row.houseStatus === 1 ? '空置' : '已售' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+          </el-table>
+
+          <!-- 关系类型设置 -->
+          <div class="relation-type-section" v-if="selectedHouses.length > 0">
+            <h4>设置房产关系</h4>
+            <el-form :model="assignForm" label-width="120px">
+              <el-form-item label="关系类型">
+                <el-radio-group v-model="assignForm.relationType">
+                  <el-radio :label="1">业主</el-radio>
+                  <el-radio :label="2">租户</el-radio>
+                </el-radio-group>
+              </el-form-item>
+              <el-form-item label="开始日期">
+                <el-date-picker
+                  v-model="assignForm.startDate"
+                  type="date"
+                  placeholder="选择开始日期"
+                  style="width: 100%"
+                />
+              </el-form-item>
+              <el-form-item label="结束日期" v-if="assignForm.relationType === 2">
+                <el-date-picker
+                  v-model="assignForm.endDate"
+                  type="date"
+                  placeholder="选择结束日期（租户必填）"
+                  style="width: 100%"
+                />
+              </el-form-item>
+              <el-form-item label="设为当前居住">
+                <el-switch v-model="assignForm.isCurrent" />
+              </el-form-item>
+            </el-form>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="assignPropertyDialogVisible = false">取消</el-button>
+          <el-button
+            type="primary"
+            @click="handleConfirmAssign"
+            :loading="assigning"
+            :disabled="selectedHouses.length === 0"
+          >
+            确认分配 ({{ selectedHouses.length }})
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, Plus, Delete, Upload, Download } from '@element-plus/icons-vue'
+import { Search, Refresh, Plus, Delete, Download } from '@element-plus/icons-vue'
 import { listOwners, getOwner, addOwner, updateOwner, deleteOwners, resetPassword, changeStatus } from '@/api/owner'
 
 // 响应式数据
 const loading = ref(false)
 const submitting = ref(false)
+const assigning = ref(false)
 const ownerDialogVisible = ref(false)
 const detailDialogVisible = ref(false)
+const propertyDialogVisible = ref(false)
+const assignPropertyDialogVisible = ref(false)
 
 // 表单引用
 const ownerFormRef = ref()
@@ -406,18 +580,28 @@ const ownerForm = reactive({
   realName: '',
   gender: 0,
   phone: '',
-  idCard: '',
   email: '',
   residentType: 1,
-  residentStatus: 1,
-  status: 1,
+  residentStatus: 1, // 住户状态：1-在住，2-搬离
+  status: 1, // 用户状态：1-正常，0-禁用
   remark: ''
 })
 
 // 数据列表
 const ownerList = ref([])
 const ownerDetail = ref({})
+const propertyOwner = ref({})
 const selectedOwners = ref([])
+
+// 分配房产相关数据
+const availableHouses = ref([])
+const selectedHouses = ref([])
+const assignForm = reactive({
+  relationType: 1, // 1-业主 2-租户
+  startDate: '',
+  endDate: '',
+  isCurrent: true
+})
 
 // 分页
 const currentPage = ref(1)
@@ -442,21 +626,11 @@ const ownerRules = {
     { required: true, message: '请输入手机号码', trigger: 'blur' },
     { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号码', trigger: 'blur' }
   ],
-  idCard: [
-    { required: true, message: '请输入身份证号', trigger: 'blur' },
-    { pattern: /^[1-9]\d{5}(18|19|20)\d{2}((0[1-9])|(1[0-2]))(([0-2][1-9])|10|20|30|31)\d{3}[0-9Xx]$/, message: '请输入正确的身份证号', trigger: 'blur' }
-  ],
   email: [
     { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
   ],
   residentType: [
     { required: true, message: '请选择住户类型', trigger: 'change' }
-  ],
-  residentStatus: [
-    { required: true, message: '请选择住户状态', trigger: 'change' }
-  ],
-  status: [
-    { required: true, message: '请选择用户状态', trigger: 'change' }
   ]
 }
 
@@ -604,11 +778,9 @@ const handleAdd = () => {
     realName: '',
     gender: 0,
     phone: '',
-    idCard: '',
     email: '',
     residentType: 1,
-    residentStatus: 1,
-    status: 1,
+    status: 1, // 新增业主默认状态为启用
     remark: ''
   })
   ownerDialogVisible.value = true
@@ -616,7 +788,35 @@ const handleAdd = () => {
 
 // 编辑业主
 const handleEdit = (row) => {
-  Object.assign(ownerForm, { ...row })
+  // 清空表单
+  Object.assign(ownerForm, {
+    userId: null,
+    username: '',
+    password: '',
+    realName: '',
+    gender: 0,
+    phone: '',
+    email: '',
+    residentType: 1,
+    residentStatus: 1, // 住户状态：1-在住，2-搬离
+    status: 1, // 保持默认状态
+    remark: ''
+  })
+
+  // 填充数据，保持原有状态值
+  Object.assign(ownerForm, {
+    userId: row.userId,
+    username: row.username || '',
+    realName: row.realName || '',
+    gender: row.gender || 0,
+    phone: row.phone || '',
+    email: row.email || '',
+    residentType: row.residentType || 1,
+    residentStatus: row.residentStatus || 1, // 保持原有住户状态
+    status: row.status || 1, // 保持原有状态
+    remark: row.remark || ''
+  })
+
   ownerDialogVisible.value = true
 }
 
@@ -630,12 +830,13 @@ const handleView = (row) => {
 const handleDelete = async (row) => {
   try {
     await ElMessageBox.confirm(
-      `确定要删除业主"${row.realName}"吗？`,
-      '提示',
+      `确定要删除业主"${row.realName}"吗？删除后将无法恢复，且会清除该业主的所有关联数据。`,
+      '删除确认',
       {
-        confirmButtonText: '确定',
+        confirmButtonText: '确定删除',
         cancelButtonText: '取消',
-        type: 'warning'
+        type: 'warning',
+        confirmButtonClass: 'el-button--danger'
       }
     )
 
@@ -661,21 +862,23 @@ const handleBatchDelete = async () => {
     return
   }
 
+  const ownerNames = selectedOwners.value.map(item => item.realName).join('、')
   try {
     await ElMessageBox.confirm(
-      `确定要删除选中的 ${selectedOwners.value.length} 个业主吗？`,
-      '提示',
+      `确定要删除选中的 ${selectedOwners.value.length} 个业主吗？\n业主：${ownerNames}\n删除后将无法恢复，且会清除这些业主的所有关联数据。`,
+      '批量删除确认',
       {
-        confirmButtonText: '确定',
+        confirmButtonText: '确定删除',
         cancelButtonText: '取消',
-        type: 'warning'
+        type: 'warning',
+        confirmButtonClass: 'el-button--danger'
       }
     )
 
     const ids = selectedOwners.value.map(item => item.userId)
     const response = await deleteOwners(ids)
     if (response.code === 200) {
-      ElMessage.success('批量删除成功')
+      ElMessage.success(`成功删除 ${selectedOwners.value.length} 个业主`)
       selectedOwners.value = []
       loadOwnerList()
     } else {
@@ -689,43 +892,110 @@ const handleBatchDelete = async () => {
   }
 }
 
-// 切换业主状态
-const handleToggleStatus = async (row) => {
-  const action = row.status === 1 ? '禁用' : '启用'
+
+// 查看房产详情
+const handleViewProperties = async (row) => {
   try {
-    await ElMessageBox.confirm(
-      `确定要${action}业主"${row.realName}"吗？`,
-      '提示',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
-    )
-
-    const newStatus = row.status === 1 ? 0 : 1
-    const response = await changeStatus({
-      userId: row.userId,
-      status: newStatus
-    })
-
-    if (response.code === 200) {
-      row.status = newStatus
-      ElMessage.success(`${action}成功`)
-    } else {
-      ElMessage.error(response.msg || `${action}失败`)
-    }
+    const res = await getOwner(row.userId)
+    propertyOwner.value = res.data
+    propertyDialogVisible.value = true
   } catch (error) {
-    if (error !== 'cancel') {
-      console.error('状态切换错误:', error)
-      ElMessage.error(`${action}失败`)
-    }
+    ElMessage.error('获取业主房产信息失败')
   }
 }
 
-// 管理房产
-const handleManageProperty = (row) => {
-  ElMessage.info('跳转到房产管理页面')
+// 分配房产
+const handleAssignProperty = async (row) => {
+  try {
+    // 设置当前选中的业主
+    propertyOwner.value = row
+
+    // 获取可分配的房产列表（空置状态的房产）
+    const response = await fetch(`/api/v1/property/house/available?userId=${row.userId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    })
+
+    if (response.ok) {
+      const result = await response.json()
+      availableHouses.value = result.data || []
+      selectedHouses.value = []
+
+      // 重置表单
+      Object.assign(assignForm, {
+        relationType: 1,
+        startDate: new Date().toISOString().split('T')[0],
+        endDate: '',
+        isCurrent: true
+      })
+
+      assignPropertyDialogVisible.value = true
+    } else {
+      ElMessage.error('获取可选房产列表失败')
+    }
+  } catch (error) {
+    ElMessage.error('获取可选房产列表失败')
+  }
+}
+
+// 房产选择变化
+const handleHouseSelectionChange = (selection) => {
+  selectedHouses.value = selection
+}
+
+// 确认分配房产
+const handleConfirmAssign = async () => {
+  // 表单验证
+  if (selectedHouses.value.length === 0) {
+    ElMessage.warning('请选择要分配的房产')
+    return
+  }
+
+  if (assignForm.relationType === 2 && !assignForm.endDate) {
+    ElMessage.warning('租户关系必须设置结束日期')
+    return
+  }
+
+  assigning.value = true
+
+  try {
+    const houseIds = selectedHouses.value.map(house => house.id)
+    const assignData = {
+      userId: propertyOwner.value.userId,
+      houseIds: houseIds,
+      relationType: assignForm.relationType,
+      startDate: assignForm.startDate,
+      endDate: assignForm.endDate,
+      isCurrent: assignForm.isCurrent
+    }
+
+    const response = await fetch('/api/v1/property/house/assign', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(assignData)
+    })
+
+    if (response.ok) {
+      ElMessage.success(`成功分配 ${houseIds.length} 套房产`)
+      assignPropertyDialogVisible.value = false
+
+      // 刷新业主房产信息
+      const res = await getOwner(propertyOwner.value.userId)
+      propertyOwner.value = res.data
+
+    } else {
+      ElMessage.error('房产分配失败')
+    }
+  } catch (error) {
+    ElMessage.error('房产分配失败')
+  } finally {
+    assigning.value = false
+  }
 }
 
 // 查看账单
@@ -733,14 +1003,38 @@ const handleViewBills = (row) => {
   ElMessage.info('跳转到账单管理页面')
 }
 
-// 导入业主
-const handleImport = () => {
-  ElMessage.success('导入功能开发中')
-}
-
 // 导出业主
-const handleExport = () => {
-  ElMessage.success('导出功能开发中')
+const handleExport = async () => {
+  try {
+    const response = await fetch('/api/v1/property/owner/export?' + new URLSearchParams(searchForm), {
+      method: 'GET',
+      headers: {
+        'Authorization': 'Bearer ' + localStorage.getItem('token')
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error('导出失败')
+    }
+
+    // 创建下载链接
+    const blob = await response.blob()
+    const url = window.URL.createObjectURL(blob)
+
+    // 创建a标签并点击下载
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `业主数据_${new Date().toISOString().slice(0, 19).replace(/[:-]/g, '')}.xlsx`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+
+    ElMessage.success('导出成功')
+  } catch (error) {
+    console.error('导出失败:', error)
+    ElMessage.error('导出失败')
+  }
 }
 
 // 提交表单
@@ -749,9 +1043,17 @@ const handleSubmit = async () => {
     await ownerFormRef.value.validate()
     submitting.value = true
 
+    // 调试：打印提交的数据
+    console.log('=== 提交前的表单数据 ===')
+    console.log('ownerForm:', ownerForm)
+    console.log('realName:', ownerForm.realName)
+    console.log('userId:', ownerForm.userId)
+
     let response
     if (ownerForm.userId) {
       response = await updateOwner(ownerForm)
+      console.log('=== 编辑接口响应 ===')
+      console.log('response:', response)
     } else {
       response = await addOwner(ownerForm)
     }
@@ -759,9 +1061,13 @@ const handleSubmit = async () => {
     if (response.code === 200) {
       ElMessage.success(ownerForm.userId ? '编辑成功' : '新增成功')
       ownerDialogVisible.value = false
-      loadOwnerList()
+      // 延迟刷新列表，确保数据库更新完成
+      setTimeout(() => {
+        loadOwnerList()
+      }, 500)
     } else {
       ElMessage.error(response.msg || (ownerForm.userId ? '编辑失败' : '新增失败'))
+      console.error('接口返回错误:', response)
     }
   } catch (error) {
     console.error('提交表单错误:', error)
@@ -884,5 +1190,38 @@ onMounted(() => {
   color: #909399;
   font-size: 13px;
   font-style: italic;
+}
+
+// 分配房产对话框样式
+.dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.assign-property-content {
+  .available-houses {
+    h4 {
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #303133;
+    }
+  }
+
+  .relation-type-section {
+    margin-top: 20px;
+    padding: 16px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+
+    h4 {
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #303133;
+    }
+  }
 }
 </style>

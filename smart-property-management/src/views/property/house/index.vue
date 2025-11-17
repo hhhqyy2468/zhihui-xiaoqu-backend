@@ -105,11 +105,7 @@
         <el-icon><Delete /></el-icon>
         批量删除
       </el-button>
-      <el-button @click="handleExport">
-        <el-icon><Download /></el-icon>
-        导出
-      </el-button>
-    </div>
+          </div>
 
     <!-- 房产表格 -->
     <div class="table-section">
@@ -148,7 +144,7 @@
             {{ formatDateTime(row.createTime) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="250" fixed="right">
           <template #default="{ row }">
             <el-button
               link
@@ -156,6 +152,14 @@
               @click="handleEdit(row)"
             >
               编辑
+            </el-button>
+            <el-button
+              link
+              :type="row.houseStatus === 1 ? 'success' : 'info'"
+              :disabled="row.houseStatus !== 1"
+              @click="handleAssignOwner(row)"
+            >
+              分配业主
             </el-button>
             <el-button
               link
@@ -255,10 +259,7 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="产权人" prop="propertyOwner">
-          <el-input v-model="form.propertyOwner" placeholder="请输入产权人姓名" />
-        </el-form-item>
-        <el-form-item label="备注" prop="remark">
+                <el-form-item label="备注" prop="remark">
           <el-input
             v-model="form.remark"
             type="textarea"
@@ -271,6 +272,54 @@
         <el-button @click="dialogVisible = false">取消</el-button>
         <el-button type="primary" @click="handleSubmit">
           确定
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 分配业主对话框 -->
+    <el-dialog
+      v-model="assignOwnerDialogVisible"
+      title="分配业主"
+      width="500px"
+    >
+      <el-form
+        ref="assignFormRef"
+        :model="assignForm"
+        :rules="assignFormRules"
+        label-width="100px"
+      >
+        <el-form-item label="房产信息">
+          <el-descriptions :column="2" border>
+            <el-descriptions-item label="房产编号">
+              {{ currentHouse.houseNo }}
+            </el-descriptions-item>
+            <el-descriptions-item label="门牌号">
+              {{ currentHouse.roomNumber }}
+            </el-descriptions-item>
+            <el-descriptions-item label="楼栋名称" span="2">
+              {{ currentHouse.buildingName }}
+            </el-descriptions-item>
+          </el-descriptions>
+        </el-form-item>
+        <el-form-item label="业主账号" prop="username">
+          <el-input
+            v-model="assignForm.username"
+            placeholder="请输入业主账号名（如：owner013）"
+            clearable
+          />
+        </el-form-item>
+        <el-form-item label="关系类型" prop="relationType">
+          <el-select v-model="assignForm.relationType" placeholder="请选择关系类型" style="width: 100%">
+            <el-option label="业主" :value="1" />
+            <el-option label="租户" :value="2" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="assignOwnerDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleAssignSubmit" :loading="assignLoading">
+          确定分配
         </el-button>
       </template>
     </el-dialog>
@@ -317,16 +366,20 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus, Delete, Download } from '@element-plus/icons-vue'
-import { listHouses, getHouse, addHouse, updateHouse, deleteHouses } from '@/api/house'
+import { listHouses, getHouse, addHouse, updateHouse, deleteHouses, assignHouseByUsername } from '@/api/house'
 
 // 响应式数据
 const formRef = ref()
+const assignFormRef = ref()
 const loading = ref(false)
 const dialogVisible = ref(false)
 const residentDialogVisible = ref(false)
+const assignOwnerDialogVisible = ref(false)
+const assignLoading = ref(false)
 const selectedRows = ref([])
 const isEdit = ref(false)
 const currentResident = ref({})
+const currentHouse = ref({})
 
 // 搜索表单
 const searchForm = reactive({
@@ -383,8 +436,13 @@ const form = reactive({
   buildingArea: 0,
   usableArea: 0,
   houseStatus: 1,
-  propertyOwner: '',
   remark: ''
+})
+
+// 分配业主表单数据
+const assignForm = reactive({
+  username: '',
+  relationType: 1
 })
 
 // 表单规则
@@ -412,6 +470,16 @@ const formRules = {
   ],
   usableArea: [
     { required: true, message: '请输入使用面积', trigger: 'blur' }
+  ]
+}
+
+// 分配业主表单规则
+const assignFormRules = {
+  username: [
+    { required: true, message: '请输入业主账号名', trigger: 'blur' }
+  ],
+  relationType: [
+    { required: true, message: '请选择关系类型', trigger: 'change' }
   ]
 }
 
@@ -598,7 +666,6 @@ const handleAdd = () => {
     buildingArea: 0,
     usableArea: 0,
     houseStatus: 1,
-    propertyOwner: '',
     remark: ''
   })
   unitOptions.value = []
@@ -691,10 +758,48 @@ const handleViewResident = (row) => {
   residentDialogVisible.value = true
 }
 
-// 导出
-const handleExport = () => {
-  ElMessage.success('导出成功')
+// 分配业主
+const handleAssignOwner = (row) => {
+  currentHouse.value = { ...row }
+  Object.assign(assignForm, {
+    username: '',
+    relationType: 1
+  })
+  assignOwnerDialogVisible.value = true
 }
+
+// 提交分配
+const handleAssignSubmit = async () => {
+  if (!assignFormRef.value) return
+
+  assignFormRef.value.validate(async (valid) => {
+    if (valid) {
+      assignLoading.value = true
+      try {
+        const requestData = {
+          username: assignForm.username,
+          houseId: currentHouse.value.id,
+          relationType: assignForm.relationType
+        }
+
+        const response = await assignHouseByUsername(requestData)
+        if (response.code === 200) {
+          ElMessage.success('房产分配成功')
+          assignOwnerDialogVisible.value = false
+          loadHouses() // 重新加载数据以更新产权人信息
+        } else {
+          ElMessage.error(response.msg || '房产分配失败')
+        }
+      } catch (error) {
+        console.error('分配业主错误:', error)
+        ElMessage.error('房产分配失败')
+      } finally {
+        assignLoading.value = false
+      }
+    }
+  })
+}
+
 
 // 提交表单
 const handleSubmit = async () => {

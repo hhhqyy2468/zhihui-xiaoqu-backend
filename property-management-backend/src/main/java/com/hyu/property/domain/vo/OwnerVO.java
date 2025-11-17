@@ -31,7 +31,7 @@ public class OwnerVO {
     /** Email */
     private String email;
 
-    /** Gender: 0-Unknown 1-Male 2-Female */
+  /** Gender: 0-Female 1-Male */
     private Integer gender;
 
     /** Avatar URL */
@@ -232,4 +232,23 @@ public class OwnerVO {
 
     public String getUpdateBy() { return updateBy; }
     public void setUpdateBy(String updateBy) { this.updateBy = updateBy; }
+
+    /** 房产数量(计算字段) */
+    private Integer houseCount;
+
+    /** 入住时间 */
+    private String checkInTime;
+
+    /** 最后登录时间 */
+    private Date lastLoginTime;
+
+    // Getters and setters for new fields
+    public Integer getHouseCount() { return houseCount; }
+    public void setHouseCount(Integer houseCount) { this.houseCount = houseCount; }
+
+    public String getCheckInTime() { return checkInTime; }
+    public void setCheckInTime(String checkInTime) { this.checkInTime = checkInTime; }
+
+    public Date getLastLoginTime() { return lastLoginTime; }
+    public void setLastLoginTime(Date lastLoginTime) { this.lastLoginTime = lastLoginTime; }
 }

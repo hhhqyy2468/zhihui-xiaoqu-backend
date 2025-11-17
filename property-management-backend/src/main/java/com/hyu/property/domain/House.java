@@ -95,13 +95,7 @@ public class House implements Serializable {
     @TableField("house_status")
     private Integer houseStatus;
 
-    /**
-     * 产权人姓名
-     */
-    @Size(max = 100, message = "产权人姓名长度不能超过100")
-    @TableField("property_owner")
-    private String propertyOwner;
-
+  
     /**
      * 备注
      */
@@ -152,4 +146,5 @@ public class House implements Serializable {
      */
     @TableField(exist = false)
     private String unitName;
-}
+
+  }

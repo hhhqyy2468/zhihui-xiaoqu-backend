@@ -54,6 +54,10 @@ public class SysUser {
     @TableField("email")
     private String email;
 
+    /** 性别 0-女 1-男 */
+    @TableField("gender")
+    private Integer gender;
+
     /** 用户类型 1:管理员 2:物业管理员 3:业主 4:维修人员 */
     @TableField("user_type")
     private Integer userType;

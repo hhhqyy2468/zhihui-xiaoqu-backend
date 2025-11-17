@@ -108,4 +108,22 @@ public class Unit implements Serializable {
      */
     @TableField(exist = false)
     private String buildingName;
+
+    /**
+     * 房产总数(计算字段)
+     */
+    @TableField(exist = false)
+    private Integer houseCount;
+
+    /**
+     * 已售数量(计算字段)
+     */
+    @TableField(exist = false)
+    private Integer soldCount;
+
+    /**
+     * 空置数量(计算字段)
+     */
+    @TableField(exist = false)
+    private Integer vacantCount;
 }

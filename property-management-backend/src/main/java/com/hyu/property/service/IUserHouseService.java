@@ -119,4 +119,14 @@ public interface IUserHouseService {
      * @return 结果
      */
     int unassignHouseFromUser(Long userId, Long houseId);
+
+    /**
+     * 根据条件更新用户房产关联
+     *
+     * @param userHouse 用户房产关联
+     * @param userId 用户ID
+     * @param isCurrent 是否当前居住
+     * @return 结果
+     */
+    int updateUserHouseByCondition(UserHouse userHouse, Long userId, Boolean isCurrent);
 }
