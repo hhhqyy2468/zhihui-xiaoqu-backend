@@ -229,6 +229,22 @@ public class HouseServiceImpl extends ServiceImpl<HouseMapper, House> implements
                 if (userHouseService.insertUserHouse(userHouse) <= 0) {
                     throw new RuntimeException("分配房产失败");
                 }
+
+                // 同时更新House表的状态
+                House house = new House();
+                house.setId(houseId);
+                // 根据关系类型设置房产状态：1-业主设为已售(2)，2-租户设为已租(3)
+                if (relationType != null && relationType == 1) {
+                    house.setHouseStatus(2); // 已售
+                } else if (relationType != null && relationType == 2) {
+                    house.setHouseStatus(3); // 已租
+                } else {
+                    house.setHouseStatus(2); // 默认设为已售
+                }
+
+                if (baseMapper.updateById(house) <= 0) {
+                    throw new RuntimeException("更新房产状态失败");
+                }
             }
 
             log.info("成功为用户分配{}套房产, userId: {}, houseIds: {}", houseIds.size(), userId, houseIds);
@@ -288,6 +304,48 @@ public class HouseServiceImpl extends ServiceImpl<HouseMapper, House> implements
         } catch (Exception e) {
             log.error("根据用户名查询用户ID失败, username: {}", username, e);
             return null;
+        }
+    }
+
+    /**
+     * 根据用户名移除用户的房产
+     *
+     * @param username 用户名
+     * @param houseId 房产ID
+     * @return 移除结果
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean removeHouseFromUserByUsername(String username, Long houseId) {
+        try {
+            // 根据用户名查询用户ID
+            Long userId = getUserIdByUsername(username);
+            if (userId == null) {
+                throw new RuntimeException("用户不存在: " + username);
+            }
+
+            // 删除用户房产关联记录
+            boolean result = userHouseService.unassignHouseFromUser(userId, houseId) > 0;
+
+            if (result) {
+                // 同时更新House表的状态为空置
+                House house = new House();
+                house.setId(houseId);
+                house.setHouseStatus(1); // 1-空置
+
+                if (baseMapper.updateById(house) <= 0) {
+                    throw new RuntimeException("更新房产状态失败");
+                }
+
+                log.info("成功移除用户房产, username: {}, houseId: {}", username, houseId);
+                return true;
+            } else {
+                throw new RuntimeException("移除房产关联记录失败");
+            }
+
+        } catch (Exception e) {
+            log.error("移除用户房产失败, username: {}, houseId: {}", username, houseId, e);
+            throw new RuntimeException("移除房产失败: " + e.getMessage());
         }
     }
 }

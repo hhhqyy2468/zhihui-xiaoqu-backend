@@ -14,7 +14,13 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
-import java.util.List;
+import java.util.*;
+
+// 导入其他必要的类
+import com.hyu.property.domain.UserHouse;
+import com.hyu.property.service.IUserHouseService;
+import com.hyu.system.domain.SysUser;
+import com.hyu.system.service.ISysUserService;
 
 /**
  * 房产管理
@@ -29,6 +35,12 @@ public class HouseController {
 
     @Autowired
     private IHouseService houseService;
+
+    @Autowired
+    private IUserHouseService userHouseService;
+
+    @Autowired
+    private ISysUserService sysUserService;
 
     /**
      * 分页查询房产列表
@@ -172,6 +184,79 @@ public class HouseController {
     }
 
     /**
+     * 移除用户的房产
+     */
+    @PostMapping("/remove-by-username")
+    @PreAuthorize("@ss.hasPermi('property:house:assign')")
+    public AjaxResult removeHouseByUsername(@RequestBody RemoveHouseByUsernameRequest request) {
+        log.info("移除用户房产, username: {}, houseId: {}", request.getUsername(), request.getHouseId());
+
+        try {
+            boolean result = houseService.removeHouseFromUserByUsername(
+                    request.getUsername(),
+                    request.getHouseId()
+            );
+
+            if (result) {
+                return AjaxResult.success("房产移除成功");
+            } else {
+                return AjaxResult.error("房产移除失败");
+            }
+        } catch (Exception e) {
+            log.error("房产移除失败", e);
+            return AjaxResult.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 获取房产的住户信息
+     */
+    @GetMapping("/{id}/residents")
+    @PreAuthorize("@ss.hasPermi('property:house:query')")
+    public AjaxResult getHouseResidents(@PathVariable Long id) {
+        log.info("获取房产住户信息, houseId: {}", id);
+
+        try {
+            // 获取房产当前的住户信息
+            List<UserHouse> userHouses = userHouseService.selectUserHouseByHouseId(id);
+
+            if (userHouses.isEmpty()) {
+                return AjaxResult.success(null);
+            }
+
+            // 获取当前居住的住户信息
+            UserHouse currentResident = userHouses.stream()
+                    .filter(uh -> uh.getIsCurrent() != null && uh.getIsCurrent())
+                    .findFirst()
+                    .orElse(userHouses.get(0)); // 如果没有当前居住的，获取第一个
+
+            // 获取用户详细信息
+            SysUser user = sysUserService.getById(currentResident.getUserId());
+            if (user == null) {
+                return AjaxResult.success(null);
+            }
+
+            // 构建返回数据
+            Map<String, Object> residentInfo = new HashMap<>();
+            residentInfo.put("propertyOwner", user.getRealName());
+            residentInfo.put("ownerPhone", user.getPhone());
+            residentInfo.put("ownerIdCard", "暂无"); // SysUser表中没有身份证字段
+            residentInfo.put("checkInTime", currentResident.getStartDate() != null ?
+                    currentResident.getStartDate().toString() : "暂无");
+            residentInfo.put("residentType", currentResident.getRelationType()); // 1-业主 2-租户
+            residentInfo.put("residentStatus", 1); // 1-在住
+            residentInfo.put("relationType", currentResident.getRelationType());
+            residentInfo.put("isCurrent", currentResident.getIsCurrent());
+
+            return AjaxResult.success(residentInfo);
+
+        } catch (Exception e) {
+            log.error("获取房产住户信息失败", e);
+            return AjaxResult.error("获取住户信息失败: " + e.getMessage());
+        }
+    }
+
+    /**
      * 分配房产请求对象
      */
     public static class AssignHouseRequest {
@@ -233,7 +318,21 @@ public class HouseController {
         public void setIsCurrent(Boolean isCurrent) { this.isCurrent = isCurrent; }
     }
 
-  
+    /**
+     * 移除房产请求对象
+     */
+    public static class RemoveHouseByUsernameRequest {
+        private String username;
+        private Long houseId;
+
+        // Getters and Setters
+        public String getUsername() { return username; }
+        public void setUsername(String username) { this.username = username; }
+
+        public Long getHouseId() { return houseId; }
+        public void setHouseId(Long houseId) { this.houseId = houseId; }
+    }
+
     /**
      * 返回AjaxResult
      */

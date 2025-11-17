@@ -86,3 +86,12 @@ export function assignHouseByUsername(data) {
     data
   })
 }
+
+// 根据用户名移除房产
+export function removeHouseByUsername(data) {
+  return request({
+    url: '/property/house/remove-by-username',
+    method: 'post',
+    data
+  })
+}

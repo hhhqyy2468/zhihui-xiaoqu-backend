@@ -83,4 +83,13 @@ public interface IHouseService extends IService<House> {
      * @return 用户ID
      */
     Long getUserIdByUsername(String username);
+
+    /**
+     * 根据用户名移除用户的房产
+     *
+     * @param username 用户名
+     * @param houseId 房产ID
+     * @return 移除结果
+     */
+    boolean removeHouseFromUserByUsername(String username, Long houseId);
 }

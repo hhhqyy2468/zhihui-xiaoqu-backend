@@ -420,6 +420,18 @@
                 </el-tag>
               </template>
             </el-table-column>
+            <el-table-column label="操作" width="120" fixed="right">
+              <template #default="{ row }">
+                <el-button
+                  type="danger"
+                  size="small"
+                  @click="handleRemoveHouse(row)"
+                  :disabled="!propertyOwner.username"
+                >
+                  移除
+                </el-button>
+              </template>
+            </el-table-column>
           </el-table>
 
           <!-- 房产统计信息 -->
@@ -551,6 +563,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus, Delete, Download } from '@element-plus/icons-vue'
 import { listOwners, getOwner, addOwner, updateOwner, deleteOwners, resetPassword, changeStatus } from '@/api/owner'
+import { removeHouseByUsername } from '@/api/house'
 
 // 响应式数据
 const loading = ref(false)
@@ -995,6 +1008,43 @@ const handleConfirmAssign = async () => {
     ElMessage.error('房产分配失败')
   } finally {
     assigning.value = false
+  }
+}
+
+// 移除房产
+const handleRemoveHouse = async (house) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要移除房产"${house.houseNo}"吗？移除后该房产将变为空置状态。`,
+      '确认移除',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+
+    const removeData = {
+      username: propertyOwner.value.username,
+      houseId: house.houseId
+    }
+
+    const response = await removeHouseByUsername(removeData)
+
+    if (response.code === 200) {
+      ElMessage.success('房产移除成功')
+
+      // 刷新业主房产信息
+      const res = await getOwner(propertyOwner.value.userId)
+      propertyOwner.value = res.data
+    } else {
+      ElMessage.error(response.msg || '房产移除失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('移除房产失败:', error)
+      ElMessage.error('房产移除失败')
+    }
   }
 }
 

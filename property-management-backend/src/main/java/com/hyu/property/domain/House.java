@@ -87,11 +87,11 @@ public class House implements Serializable {
     private BigDecimal usableArea;
 
     /**
-     * 房产状态：1-空置 2-已售 3-已租 4-自住
+     * 房产状态：1-空置 2-已售 3-已租
      */
     @NotNull(message = "房产状态不能为空")
     @Min(value = 1, message = "房产状态值不正确")
-    @Max(value = 4, message = "房产状态值不正确")
+    @Max(value = 3, message = "房产状态值不正确")
     @TableField("house_status")
     private Integer houseStatus;
 

@@ -138,7 +138,7 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="propertyOwner" label="产权人" width="120" />
+        <el-table-column prop="propertyOwner" label="居住人" width="120" />
         <el-table-column prop="createTime" label="创建时间" width="180" sortable>
           <template #default="{ row }">
             {{ formatDateTime(row.createTime) }}
@@ -331,7 +331,7 @@
       width="600px"
     >
       <el-descriptions :column="2" border>
-        <el-descriptions-item label="产权人">
+        <el-descriptions-item label="居住人">
           {{ currentResident.propertyOwner || '暂无' }}
         </el-descriptions-item>
         <el-descriptions-item label="联系电话">
@@ -413,8 +413,7 @@ const unitOptions = ref([])
 const houseStatusOptions = [
   { label: '空置', value: 1 },
   { label: '已售', value: 2 },
-  { label: '已租', value: 3 },
-  { label: '自住', value: 4 }
+  { label: '已租', value: 3 }
 ]
 
 const houseTypeOptions = [
@@ -510,8 +509,7 @@ const getHouseStatusTag = (status) => {
   const tagMap = {
     1: 'info',    // 空置
     2: 'success', // 已售
-    3: 'warning', // 已租
-    4: 'primary'  // 自住
+    3: 'warning'  // 已租
   }
   return tagMap[status] || 'info'
 }
@@ -519,7 +517,7 @@ const getHouseStatusTag = (status) => {
 // 获取住户类型名称
 const getResidentTypeName = (type) => {
   const typeMap = {
-    1: '产权人',
+    1: '业主',
     2: '租户',
     3: '家庭成员'
   }
@@ -745,16 +743,55 @@ const handleBatchDelete = async () => {
 }
 
 // 查看住户
-const handleViewResident = (row) => {
-  // 模拟住户数据
-  currentResident.value = {
-    propertyOwner: row.propertyOwner || '暂无',
-    ownerPhone: row.propertyOwner ? '138****' + Math.floor(Math.random() * 10000) : '暂无',
-    ownerIdCard: row.propertyOwner ? '110****' + Math.floor(Math.random() * 1000000000000) : '暂无',
-    checkInTime: row.houseStatus > 1 ? '2024-01-15' : '暂无',
-    residentType: row.houseStatus === 4 ? 1 : 2, // 自住为产权人，其他为租户
-    residentStatus: row.houseStatus > 1 ? 1 : 0
+const handleViewResident = async (row) => {
+  try {
+    // 根据房产ID获取当前住户信息
+    const response = await fetch(`/api/v1/property/house/${row.id}/residents`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    })
+
+    if (response.ok) {
+      const result = await response.json()
+      if (result.code === 200 && result.data) {
+        currentResident.value = result.data
+      } else {
+        // 如果没有住户数据，显示基本信息
+        currentResident.value = {
+          propertyOwner: row.propertyOwner || '暂无',
+          ownerPhone: '暂无',
+          ownerIdCard: '暂无',
+          checkInTime: '暂无',
+          residentType: row.propertyOwnerId ? 1 : 0, // 有产权人就是业主，否则租户
+          residentStatus: row.houseStatus > 1 ? 1 : 0
+        }
+      }
+    } else {
+      // API调用失败，显示基本信息
+      currentResident.value = {
+        propertyOwner: row.propertyOwner || '暂无',
+        ownerPhone: '暂无',
+        ownerIdCard: '暂无',
+        checkInTime: '暂无',
+        residentType: row.propertyOwnerId ? 1 : 0,
+        residentStatus: row.houseStatus > 1 ? 1 : 0
+      }
+    }
+  } catch (error) {
+    console.error('获取住户信息失败:', error)
+    // 出错时显示基本信息
+    currentResident.value = {
+      propertyOwner: row.propertyOwner || '暂无',
+      ownerPhone: '暂无',
+      ownerIdCard: '暂无',
+      checkInTime: '暂无',
+      residentType: row.propertyOwnerId ? 1 : 0,
+      residentStatus: row.houseStatus > 1 ? 1 : 0
+    }
   }
+
   residentDialogVisible.value = true
 }
 
