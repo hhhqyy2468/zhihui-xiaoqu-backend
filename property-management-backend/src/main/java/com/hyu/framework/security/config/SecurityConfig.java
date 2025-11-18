@@ -105,10 +105,10 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             .authorizeRequests()
                 // 允许访问的端点
                 .antMatchers(
-                    "/api/v1/auth/login",
-                    "/api/v1/auth/register",
-                    "/api/v1/auth/captcha",
-                    "/api/v1/auth/refresh",
+                    "/auth/login",
+                    "/auth/register",
+                    "/auth/captcha",
+                    "/auth/refresh",
                     "/doc.html",
                     "/webjars/**",
                     "/swagger-resources/**",
