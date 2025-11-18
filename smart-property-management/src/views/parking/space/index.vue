@@ -40,9 +40,9 @@
                 clearable
                 style="width: 150px"
               >
-                <el-option label="空闲" value="1" />
-                <el-option label="已租" value="2" />
-                <el-option label="维修中" value="3" />
+                <el-option label="空闲" :value="1" />
+                <el-option label="已租" :value="2" />
+                <el-option label="维修中" :value="3" />
               </el-select>
             </el-form-item>
             <el-form-item>
@@ -87,10 +87,10 @@
             <el-table-column type="selection" width="55" />
             <el-table-column prop="spaceNo" label="车位编号" width="120" sortable />
             <el-table-column prop="location" label="车位位置" show-overflow-tooltip />
-            <el-table-column prop="status" label="车位状态" width="100">
+            <el-table-column prop="spaceStatus" label="车位状态" width="100">
               <template #default="{ row }">
-                <el-tag :type="getStatusColor(row.status)">
-                  {{ getStatusName(row.status) }}
+                <el-tag :type="getStatusColor(row.spaceStatus)">
+                  {{ getStatusName(row.spaceStatus) }}
                 </el-tag>
               </template>
             </el-table-column>
@@ -99,7 +99,7 @@
                 ¥{{ row.monthlyRent }}
               </template>
             </el-table-column>
-            <el-table-column prop="ownerName" label="使用人" width="120" />
+            <el-table-column prop="currentTenant" label="使用人" width="120" />
             <el-table-column prop="createTime" label="创建时间" width="180">
               <template #default="{ row }">
                 {{ formatDateTime(row.createTime) }}
@@ -173,11 +173,11 @@
             style="width: 100%"
           />
         </el-form-item>
-        <el-form-item label="车位状态" prop="status">
-          <el-radio-group v-model="form.status">
-            <el-radio value="1">空闲</el-radio>
-            <el-radio value="2">已租</el-radio>
-            <el-radio value="3">维修中</el-radio>
+        <el-form-item label="车位状态" prop="spaceStatus">
+          <el-radio-group v-model="form.spaceStatus">
+            <el-radio :value="1">空闲</el-radio>
+            <el-radio :value="2">已租</el-radio>
+            <el-radio :value="3">维修中</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="备注" prop="remark">
@@ -226,8 +226,8 @@ const formRef = ref()
 const form = reactive({
   spaceNo: '',
   location: '',
+  spaceStatus: 1,
   monthlyRent: 0,
-  status: '1',
   remark: ''
 })
 
@@ -235,7 +235,7 @@ const form = reactive({
 const searchForm = reactive({
   spaceNo: '',
   location: '',
-  status: ''
+  status: null
 })
 
 // 车位数据
@@ -253,6 +253,9 @@ const rules = {
   ],
   location: [
     { required: true, message: '请输入车位位置', trigger: 'blur' }
+  ],
+  spaceStatus: [
+    { required: true, message: '请选择车位状态', trigger: 'change' }
   ],
   monthlyRent: [
     { required: true, message: '请输入月租金', trigger: 'blur' }
@@ -328,7 +331,7 @@ const handleReset = () => {
   Object.assign(searchForm, {
     spaceNo: '',
     location: '',
-    status: ''
+    status: null
   })
   handleSearch()
 }
@@ -339,8 +342,8 @@ const handleAdd = () => {
   Object.assign(form, {
     spaceNo: '',
     location: '',
+    spaceStatus: 1,
     monthlyRent: 0,
-    status: '1',
     remark: ''
   })
   dialogVisible.value = true

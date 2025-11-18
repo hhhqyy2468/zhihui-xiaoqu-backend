@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hyu.property.mapper.ParkingSpaceMapper">
+
+    <resultMap type="ParkingSpace" id="ParkingSpaceResult">
+        <result property="id" column="id"/>
+        <result property="spaceNo" column="space_no"/>
+        <result property="location" column="location"/>
+        <result property="spaceStatus" column="space_status"/>
+        <result property="monthlyRent" column="monthly_rent"/>
+        <result property="remark" column="remark"/>
+        <result property="deleted" column="deleted"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <sql id="selectParkingSpaceVo">
+        select id, space_no, location, space_status, monthly_rent, remark, deleted,
+               create_by, create_time, update_by, update_time
+        from parking_space
+    </sql>
+
+    <select id="selectParkingSpaceList" parameterType="ParkingSpace" resultMap="ParkingSpaceResult">
+        <include refid="selectParkingSpaceVo"/>
+        <where>
+            deleted = 0
+            <if test="spaceNo != null and spaceNo != ''">
+                and space_no like concat('%', #{spaceNo}, '%')
+            </if>
+            <if test="location != null and location != ''">
+                and location like concat('%', #{location}, '%')
+            </if>
+            <if test="spaceStatus != null">
+                and space_status = #{spaceStatus}
+            </if>
+        </where>
+        order by create_time desc
+    </select>
+
+    <select id="selectParkingSpaceById" parameterType="Long" resultMap="ParkingSpaceResult">
+        <include refid="selectParkingSpaceVo"/>
+        where id = #{id} and deleted = 0
+    </select>
+
+</mapper>
