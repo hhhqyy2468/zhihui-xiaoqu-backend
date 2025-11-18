@@ -365,10 +365,7 @@
         <el-descriptions-item label="有效期至">
           {{ currentNotice.effectiveEndTime ? formatDateTime(currentNotice.effectiveEndTime) : '永久有效' }}
         </el-descriptions-item>
-        <el-descriptions-item label="发布范围详情" v-if="currentNotice.publishScope === 2 || currentNotice.publishScope === 3">
-          {{ getPublishScopeDetails(currentNotice) }}
-        </el-descriptions-item>
-      </el-descriptions>
+        </el-descriptions>
 
       <div class="content-section">
         <h4 class="section-title">
@@ -651,22 +648,48 @@ const getUnitNamesSync = (unitIds) => {
   try {
     // 从已加载的单元列表中查找
     const names = unitIds.map(id => {
-      const unit = unitList.value.find(u => u.id.toString() === id.toString())
+      const unit = availableUnits.value.find(u => u.id.toString() === id.toString())
       if (unit) {
-        const building = buildingList.value.find(b => b.id.toString() === unit.buildingId?.toString())
-        if (building) {
-          let unitIdentifier = unit.unitName || unit.unitNo || '位置'
-          if (unitIdentifier === '位置') {
-            unitIdentifier = `${unit.id}单元`
+        // 优先使用单元自带的buildingName属性
+        const buildingName = unit.buildingName || (
+          buildingList.value.find(b => b.id.toString() === unit.buildingId?.toString())?.buildingName
+        )
+
+        if (buildingName) {
+          // 从单元名称中提取单元编号（例如："1单元" -> "1"，或者"1" -> "1"）
+          let unitIdentifier = unit.unitName || unit.unitNo || unit.id.toString()
+          // 提取单元中的数字部分
+          const unitNumberMatch = unitIdentifier.match(/(\d+)/);
+          const unitNumber = unitNumberMatch ? unitNumberMatch[1] : unitIdentifier;
+          // 构建标准的单元标识符："X单元"
+          unitIdentifier = `${unitNumber}单元`
+
+          // 从楼栋名称中提取楼栋编号部分（例如："幸福苑1号楼" -> "1号楼"）
+          let finalBuildingName = buildingName
+          if (buildingName.includes('号楼')) {
+            // 提取最后的楼栋编号（包括"号楼"）
+            const buildingNumberMatch = buildingName.match(/(\d+号楼)$/);
+            if (buildingNumberMatch) {
+              finalBuildingName = buildingNumberMatch[1];
+            } else {
+              // 如果匹配不到，直接使用原名称
+              finalBuildingName = buildingName;
+            }
           }
-          return `${building.buildingName}${unitIdentifier}`
+
+          return `${finalBuildingName}${unitIdentifier}`
         }
-        let unitIdentifier = unit.unitName || unit.unitNo || '位置'
-        if (unitIdentifier === '位置') {
-          unitIdentifier = `${unit.id}单元`
-        }
+
+        // 没有找到对应楼栋的情况，只显示单元信息
+        let unitIdentifier = unit.unitName || unit.unitNo || unit.id.toString()
+        // 提取单元中的数字部分
+        const unitNumberMatch = unitIdentifier.match(/(\d+)/);
+        const unitNumber = unitNumberMatch ? unitNumberMatch[1] : unitIdentifier;
+        // 构建标准的单元标识符："X单元"
+        unitIdentifier = `${unitNumber}单元`
         return unitIdentifier
       }
+      // 找不到单元信息时的默认显示
       return `${id}单元`
     })
     return names
@@ -684,22 +707,48 @@ const getBuildingName = (buildingId) => {
 
 // 获取单个单元显示名称（用于详情显示）
 const getUnitDisplayNameForNotice = (unitId) => {
-  const unit = unitList.value.find(u => u.id.toString() === unitId.toString())
+  const unit = availableUnits.value.find(u => u.id.toString() === unitId.toString())
   if (unit) {
-    const building = buildingList.value.find(b => b.id.toString() === unit.buildingId?.toString())
-    if (building) {
-      let unitIdentifier = unit.unitName || unit.unitNo || '位置'
-      if (unitIdentifier === '位置') {
-        unitIdentifier = `${unit.id}单元`
+    // 优先使用单元自带的buildingName属性
+    const buildingName = unit.buildingName || (
+      buildingList.value.find(b => b.id.toString() === unit.buildingId?.toString())?.buildingName
+    )
+
+    if (buildingName) {
+      // 从单元名称中提取单元编号（例如："1单元" -> "1"，或者"1" -> "1"）
+      let unitIdentifier = unit.unitName || unit.unitNo || unit.id.toString()
+      // 提取单元中的数字部分
+      const unitNumberMatch = unitIdentifier.match(/(\d+)/);
+      const unitNumber = unitNumberMatch ? unitNumberMatch[1] : unitIdentifier;
+      // 构建标准的单元标识符："X单元"
+      unitIdentifier = `${unitNumber}单元`
+
+      // 从楼栋名称中提取楼栋编号部分（例如："幸福苑1号楼" -> "1号楼"）
+      let finalBuildingName = buildingName
+      if (buildingName.includes('号楼')) {
+        // 提取最后的楼栋编号（包括"号楼"）
+        const buildingNumberMatch = buildingName.match(/(\d+号楼)$/);
+        if (buildingNumberMatch) {
+          finalBuildingName = buildingNumberMatch[1];
+        } else {
+          // 如果匹配不到，直接使用原名称
+          finalBuildingName = buildingName;
+        }
       }
-      return `${building.buildingName}${unitIdentifier}`
+
+      return `${finalBuildingName}${unitIdentifier}`
     }
-    let unitIdentifier = unit.unitName || unit.unitNo || '位置'
-    if (unitIdentifier === '位置') {
-      unitIdentifier = `${unit.id}单元`
-    }
+
+    // 没有找到对应楼栋的情况，只显示单元信息
+    let unitIdentifier = unit.unitName || unit.unitNo || unit.id.toString()
+    // 提取单元中的数字部分
+    const unitNumberMatch = unitIdentifier.match(/(\d+)/);
+    const unitNumber = unitNumberMatch ? unitNumberMatch[1] : unitIdentifier;
+    // 构建标准的单元标识符："X单元"
+    unitIdentifier = `${unitNumber}单元`
     return unitIdentifier
   }
+  // 找不到单元信息时的默认显示
   return `${unitId}单元`
 }
 
@@ -797,6 +846,9 @@ const loadBuildings = async () => {
 // 加载单元数据
 const loadUnits = async (buildingId) => {
   try {
+    console.log(`=== 加载单元数据 buildingId: ${buildingId} ===`)
+    console.log(`当前buildingList:`, buildingList.value.map(b => ({id: b.id, name: b.buildingName})))
+
     const response = await getUnitList(buildingId)
     console.log('单元数据响应:', response)
     if (response.code === 200 && response.data) {
@@ -804,7 +856,9 @@ const loadUnits = async (buildingId) => {
       if (Array.isArray(response.data)) {
         // 为每个单元添加楼栋信息，便于显示
         const unitsWithBuildingInfo = response.data.map(unit => {
-          const building = buildingList.value.find(b => b.id.toString() === buildingId.toString())
+          console.log(`处理单元:`, unit)
+          const building = buildingList.value.find(b => b.id.toString() === unit.buildingId?.toString())
+          console.log(`找到的楼栋:`, building)
           return {
             ...unit,
             buildingName: building ? building.buildingName : '未知楼栋'
@@ -879,6 +933,39 @@ const handleView = async (row) => {
     const response = await getNoticeDetail(row.id)
     if (response.code === 200 && response.data) {
       currentNotice.value = response.data
+
+      // 确保楼栋数据已加载
+      if (buildingList.value.length === 0) {
+        await loadBuildings()
+      }
+
+      // 如果公告有指定单元，确保加载对应的单元数据
+      if (response.data.targetUnitIds) {
+        const unitIds = response.data.targetUnitIds.split(',').filter(id => id.trim())
+        if (unitIds.length > 0) {
+          // 检查是否需要加载单元数据
+          const needToLoadUnits = unitIds.some(unitId =>
+            !availableUnits.value.find(u => u.id.toString() === unitId.toString())
+          )
+
+          if (needToLoadUnits) {
+            // 从公告的targetBuildingIds中获取涉及到的楼栋ID
+            let buildingIds = []
+            if (response.data.targetBuildingIds) {
+              buildingIds = response.data.targetBuildingIds.split(',').filter(id => id.trim())
+            }
+
+            if (buildingIds.length > 0) {
+              await loadUnitsForBuildings(buildingIds)
+            } else {
+              // 如果没有指定楼栋，则加载所有楼栋的单元数据
+              const allBuildingIds = buildingList.value.map(b => b.id.toString())
+              await loadUnitsForBuildings(allBuildingIds)
+            }
+          }
+        }
+      }
+
       detailVisible.value = true
     } else {
       ElMessage.error(response.msg || '获取公告详情失败')
