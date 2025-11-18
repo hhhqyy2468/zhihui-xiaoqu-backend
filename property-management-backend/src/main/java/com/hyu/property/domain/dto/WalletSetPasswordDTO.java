@@ -16,6 +16,12 @@ import javax.validation.constraints.Size;
 public class WalletSetPasswordDTO {
 
     /**
+     * 用户ID
+     */
+    @NotNull(message = "用户ID不能为空")
+    private Long userId;
+
+    /**
      * 支付密码
      */
     @NotNull(message = "支付密码不能为空")

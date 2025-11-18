@@ -62,11 +62,7 @@
         <el-icon><CreditCard /></el-icon>
         批量充值
       </el-button>
-      <el-button @click="handleExport">
-        <el-icon><Download /></el-icon>
-        导出
-      </el-button>
-    </div>
+      </div>
 
     <!-- 钱包表格 -->
     <div class="table-section">
@@ -308,7 +304,7 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="备注">
+          <el-form-item label="备注">
           <el-input
             v-model="rechargeForm.remark"
             type="textarea"
@@ -323,6 +319,7 @@
         <el-button
           type="primary"
           :loading="rechargeLoading"
+          :disabled="rechargeLoading"
           @click="handleRechargeSubmit"
         >
           确认充值
@@ -357,14 +354,7 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="目标选择">
-          <el-radio-group v-model="batchRechargeForm.targetType">
-            <el-radio :label="1">全部业主</el-radio>
-            <el-radio :label="2">指定楼栋</el-radio>
-            <el-radio :label="3">指定业主</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="备注">
+          <el-form-item label="备注">
           <el-input
             v-model="batchRechargeForm.remark"
             type="textarea"
@@ -379,6 +369,7 @@
         <el-button
           type="primary"
           :loading="batchRechargeLoading"
+          :disabled="batchRechargeLoading"
           @click="handleBatchRechargeSubmit"
         >
           确认批量充值
@@ -391,7 +382,8 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, Download, CreditCard } from '@element-plus/icons-vue'
+import { Search, Refresh, CreditCard } from '@element-plus/icons-vue'
+import { listWallet, virtualRecharge, batchRecharge, adminRecharge, freezeWallet, unfreezeWallet } from '@/api/wallet'
 
 // 响应式数据
 const formRef = ref()
@@ -442,6 +434,7 @@ const consumeTypeOptions = ref([
 
 // 充值表单
 const rechargeForm = reactive({
+  userId: null, // 添加userId字段
   walletId: null,
   ownerName: '',
   currentBalance: 0,
@@ -454,8 +447,6 @@ const rechargeForm = reactive({
 const batchRechargeForm = reactive({
   amount: 0,
   paymentMethod: 'cash',
-  targetType: 1,
-  targetIds: [],
   remark: ''
 })
 
@@ -496,6 +487,17 @@ const getPaymentMethodName = (method) => {
 const getConsumeTypeName = (type) => {
   const option = consumeTypeOptions.value.find(item => item.value === type)
   return option ? option.label : '未知'
+}
+
+// 手机号脱敏
+const maskPhone = (phone) => {
+  if (!phone || phone === '暂无') {
+    return phone
+  }
+  if (phone.length !== 11) {
+    return phone
+  }
+  return phone.substring(0, 3) + '****' + phone.substring(7)
 }
 
 // 生成模拟数据
@@ -560,17 +562,42 @@ const generateMockConsumeData = (walletId) => {
 }
 
 // 加载钱包数据
-const loadWallets = () => {
+const loadWallets = async () => {
   loading.value = true
-  setTimeout(() => {
-    const mockData = generateMockData()
-    tableData.value = mockData.slice(
-      (pagination.current - 1) * pagination.pageSize,
-      pagination.current * pagination.pageSize
-    )
-    pagination.total = mockData.length
+  try {
+    const params = {
+      pageNum: pagination.current,
+      pageSize: pagination.pageSize,
+      ownerName: searchForm.ownerName || undefined,
+      phone: searchForm.phone || undefined,
+      status: searchForm.walletStatus !== '' && searchForm.walletStatus !== undefined ? searchForm.walletStatus : undefined
+    }
+
+    const response = await listWallet(params)
+    if (response.code === 200) {
+      tableData.value = response.data.rows.map(wallet => ({
+        id: wallet.id,
+        userId: wallet.userId, // 添加userId字段
+        ownerName: wallet.userName || `用户${wallet.userId}`,
+        phone: maskPhone(wallet.userPhone) || '暂无',
+        walletNo: `WAL${wallet.userId.toString().padStart(6, '0')}`,
+        currentBalance: wallet.balance,
+        totalRecharge: wallet.totalRecharge,
+        totalConsume: wallet.totalConsume,
+        walletStatus: wallet.status,
+        createTime: wallet.createTime,
+        payPasswordStatus: wallet.payPassword ? '已设置' : '未设置'
+      }))
+      pagination.total = response.data.total
+    } else {
+      ElMessage.error(response.msg || '查询失败')
+    }
+  } catch (error) {
+    console.error('加载钱包数据失败:', error)
+    ElMessage.error('加载钱包数据失败')
+  } finally {
     loading.value = false
-  }, 500)
+  }
 }
 
 // 搜索
@@ -606,7 +633,8 @@ const handleViewDetail = (row) => {
 // 充值
 const handleRecharge = (row) => {
   Object.assign(rechargeForm, {
-    walletId: row.walletId,
+    userId: row.userId, // 添加userId
+    walletId: row.id,
     ownerName: row.ownerName,
     currentBalance: row.currentBalance,
     amount: 0,
@@ -617,18 +645,29 @@ const handleRecharge = (row) => {
 }
 
 // 提交充值
-const handleRechargeSubmit = () => {
+const handleRechargeSubmit = async () => {
   if (!rechargeFormRef.value) return
 
-  rechargeFormRef.value.validate((valid) => {
+  rechargeFormRef.value.validate(async (valid) => {
     if (valid) {
-      rechargeLoading.value = true
-      setTimeout(() => {
-        ElMessage.success('充值成功')
-        rechargeDialogVisible.value = false
-        loadWallets()
+      try {
+        rechargeLoading.value = true
+
+        // 调用管理员充值API
+        const response = await adminRecharge(rechargeForm.userId, rechargeForm.amount)
+        if (response.code === 200) {
+          ElMessage.success('充值成功')
+          rechargeDialogVisible.value = false
+          loadWallets()
+        } else {
+          ElMessage.error(response.msg || '充值失败')
+        }
+      } catch (error) {
+        console.error('充值失败:', error)
+        ElMessage.error(error.message || '充值失败')
+      } finally {
         rechargeLoading.value = false
-      }, 1000)
+      }
     }
   })
 }
@@ -638,8 +677,6 @@ const handleBatchRecharge = () => {
   Object.assign(batchRechargeForm, {
     amount: 0,
     paymentMethod: 'cash',
-    targetType: 1,
-    targetIds: [],
     remark: ''
   })
   batchRechargeDialogVisible.value = true
@@ -652,12 +689,24 @@ const handleBatchRechargeSubmit = () => {
   batchRechargeFormRef.value.validate((valid) => {
     if (valid) {
       batchRechargeLoading.value = true
-      setTimeout(() => {
-        ElMessage.success('批量充值成功')
-        batchRechargeDialogVisible.value = false
-        loadWallets()
-        batchRechargeLoading.value = false
-      }, 2000)
+
+      batchRecharge(batchRechargeForm.amount)
+        .then((response) => {
+          if (response.code === 200) {
+            ElMessage.success(response.msg || '批量充值成功')
+            batchRechargeDialogVisible.value = false
+            loadWallets()
+          } else {
+            ElMessage.error(response.msg || '批量充值失败')
+          }
+        })
+        .catch((error) => {
+          console.error('批量充值失败:', error)
+          ElMessage.error('批量充值失败，请重试')
+        })
+        .finally(() => {
+          batchRechargeLoading.value = false
+        })
     }
   })
 }
@@ -682,16 +731,26 @@ const handleResetPassword = (row) => {
 // 冻结钱包
 const handleFreeze = (row) => {
   ElMessageBox.confirm(
-    `确定要冻结业主"${row.ownerName}"的钱包吗？`,
-    '提示',
+    `确定要冻结业主"${row.ownerName}"的钱包吗？冻结后该钱包将无法进行充值和支付操作。`,
+    '警告',
     {
-      confirmButtonText: '确定',
+      confirmButtonText: '确定冻结',
       cancelButtonText: '取消',
       type: 'warning'
     }
-  ).then(() => {
-    ElMessage.success('钱包冻结成功')
-    loadWallets()
+  ).then(async () => {
+    try {
+      const response = await freezeWallet(row.id)
+      if (response.code === 200) {
+        ElMessage.success('钱包冻结成功')
+        loadWallets()
+      } else {
+        ElMessage.error(response.msg || '冻结失败')
+      }
+    } catch (error) {
+      console.error('冻结钱包失败:', error)
+      ElMessage.error('冻结失败，请重试')
+    }
   }).catch(() => {
     // 用户取消操作
   })
@@ -707,18 +766,24 @@ const handleUnfreeze = (row) => {
       cancelButtonText: '取消',
       type: 'warning'
     }
-  ).then(() => {
-    ElMessage.success('钱包解冻成功')
-    loadWallets()
+  ).then(async () => {
+    try {
+      const response = await unfreezeWallet(row.id)
+      if (response.code === 200) {
+        ElMessage.success('钱包解冻成功')
+        loadWallets()
+      } else {
+        ElMessage.error(response.msg || '解冻失败')
+      }
+    } catch (error) {
+      console.error('解冻钱包失败:', error)
+      ElMessage.error('解冻失败，请重试')
+    }
   }).catch(() => {
     // 用户取消操作
   })
 }
 
-// 导出
-const handleExport = () => {
-  ElMessage.success('导出成功')
-}
 
 // 分页处理
 const handleSizeChange = (val) => {

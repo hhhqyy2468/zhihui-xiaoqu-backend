@@ -4,6 +4,9 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.hyu.common.core.domain.AjaxResult;
 import com.hyu.common.core.domain.PageResult;
 import com.hyu.property.domain.Wallet;
+import com.hyu.property.domain.dto.WalletRechargeDTO;
+import com.hyu.property.domain.dto.WalletSetPasswordDTO;
+import com.hyu.property.domain.dto.WalletChangePasswordDTO;
 import com.hyu.property.service.IWalletService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,12 +25,15 @@ import java.math.BigDecimal;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/v1/property/wallet")
+@RequestMapping("/property/wallet")
 @Validated
 public class WalletController {
 
     @Autowired
     private IWalletService walletService;
+
+    @Autowired
+    private com.hyu.property.mapper.WalletMapper walletMapper;
 
     /**
      * 分页查询钱包列表
@@ -37,35 +43,28 @@ public class WalletController {
     public AjaxResult list(@RequestParam(defaultValue = "1") Integer pageNum,
                           @RequestParam(defaultValue = "10") Integer pageSize,
                           @RequestParam(required = false) Long userId,
+                          @RequestParam(required = false) String ownerName,
+                          @RequestParam(required = false) String phone,
                           @RequestParam(required = false) BigDecimal minBalance,
                           @RequestParam(required = false) BigDecimal maxBalance,
-                          @RequestParam(required = false) Integer status) {
-        log.info("分页查询钱包列表, pageNum: {}, pageSize: {}, userId: {}, minBalance: {}, maxBalance: {}, status: {}",
-                pageNum, pageSize, userId, minBalance, maxBalance, status);
+                          @RequestParam(required = false) String status) {
+        log.info("分页查询钱包列表, pageNum: {}, pageSize: {}, userId: {}, ownerName: {}, phone: {}, minBalance: {}, maxBalance: {}, status: {}",
+                pageNum, pageSize, userId, ownerName, phone, minBalance, maxBalance, status);
 
+        // 转换status参数
+        Integer statusValue = null;
+        if (status != null && !status.trim().isEmpty()) {
+            try {
+                statusValue = Integer.parseInt(status);
+            } catch (NumberFormatException e) {
+                log.warn("状态参数格式错误: {}", status);
+            }
+        }
+
+        // 使用自定义查询支持模糊搜索
         Page<Wallet> page = new Page<>(pageNum, pageSize);
-        Wallet wallet = new Wallet();
-        wallet.setUserId(userId);
-
-        // Handle balance range query
-        if (minBalance != null) {
-            wallet.setBalance(minBalance);
-        }
-
-        wallet.setStatus(status);
-
-        Page<Wallet> result;
-        if (maxBalance != null) {
-            // For range queries, we need a custom approach
-            result = walletService.page(page, new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Wallet>()
-                .eq(userId != null, "user_id", userId)
-                .ge(minBalance != null, "balance", minBalance)
-                .le(maxBalance != null, "balance", maxBalance)
-                .eq(status != null, "status", status)
-                .orderByDesc("create_time"));
-        } else {
-            result = walletService.selectWalletPage(page, wallet);
-        }
+        Page<Wallet> result = walletMapper.selectWalletPageWithFuzzySearch(
+            page, ownerName, phone, userId, minBalance, maxBalance, statusValue);
 
         return AjaxResult.success("查询成功", PageResult.success(result.getTotal(), result.getRecords()));
     }
@@ -111,9 +110,154 @@ public class WalletController {
     }
 
     /**
+     * 根据用户ID获取钱包
+     */
+    @GetMapping("/user/{userId}")
+    public AjaxResult getByUserId(@NotNull(message = "用户ID不能为空") @PathVariable Long userId) {
+        log.info("根据用户ID获取钱包, userId: {}", userId);
+        Wallet wallet = walletService.getByUserId(userId);
+        if (wallet == null) {
+            return AjaxResult.error("钱包不存在");
+        }
+        return AjaxResult.success(wallet);
+    }
+
+    /**
+     * 设置支付密码
+     */
+    @PostMapping("/set-password")
+    public AjaxResult setPayPassword(@Valid @RequestBody WalletSetPasswordDTO setPasswordDTO) {
+        log.info("设置支付密码, userId: {}", setPasswordDTO.getUserId());
+        try {
+            boolean result = walletService.setPayPassword(setPasswordDTO);
+            return result ? AjaxResult.success("设置成功") : AjaxResult.error("设置失败");
+        } catch (Exception e) {
+            log.error("设置支付密码失败", e);
+            return AjaxResult.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 修改支付密码
+     */
+    @PostMapping("/change-password")
+    public AjaxResult changePayPassword(@Valid @RequestBody WalletChangePasswordDTO changePasswordDTO) {
+        log.info("修改支付密码, userId: {}", changePasswordDTO.getUserId());
+        try {
+            boolean result = walletService.changePayPassword(changePasswordDTO);
+            return result ? AjaxResult.success("修改成功") : AjaxResult.error("修改失败");
+        } catch (Exception e) {
+            log.error("修改支付密码失败", e);
+            return AjaxResult.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 虚拟充值（给自己充值）
+     */
+    @PostMapping("/virtual-recharge")
+    public AjaxResult virtualRecharge(@Valid @RequestBody WalletRechargeDTO rechargeDTO) {
+        log.info("虚拟充值, amount: {}", rechargeDTO.getAmount());
+        try {
+            boolean result = walletService.virtualRecharge(getCurrentUserId(), rechargeDTO);
+            return result ? AjaxResult.success("充值成功") : AjaxResult.error("充值失败");
+        } catch (Exception e) {
+            log.error("虚拟充值失败", e);
+            return AjaxResult.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 管理员充值（给指定用户充值）
+     */
+    @PostMapping("/admin-recharge")
+    @PreAuthorize("@ss.hasPermi('property:wallet:recharge')")
+    public AjaxResult adminRecharge(@RequestParam Long userId, @RequestParam BigDecimal amount) {
+        log.info("管理员充值, userId: {}, amount: {}", userId, amount);
+        try {
+            if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+                return AjaxResult.error("充值金额必须大于0");
+            }
+            if (amount.compareTo(new BigDecimal("10000")) > 0) {
+                return AjaxResult.error("单次充值金额不能超过10000元");
+            }
+
+            boolean result = walletService.adminRecharge(userId, amount);
+            return result ? AjaxResult.success("充值成功") : AjaxResult.error("充值失败");
+        } catch (Exception e) {
+            log.error("管理员充值失败", e);
+            return AjaxResult.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 批量充值（为所有业主充值）
+     */
+    @PostMapping("/batch-recharge")
+    @PreAuthorize("@ss.hasPermi('property:wallet:batchRecharge')")
+    public AjaxResult batchRecharge(@RequestParam BigDecimal amount) {
+        log.info("批量充值给所有业主, amount: {}", amount);
+        try {
+            if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+                return AjaxResult.error("充值金额必须大于0");
+            }
+            if (amount.compareTo(new BigDecimal("10000")) > 0) {
+                return AjaxResult.error("单次批量充值金额不能超过10000元");
+            }
+
+            int count = walletService.batchRechargeForAllOwners(amount);
+            return AjaxResult.success("批量充值成功", "共为 " + count + " 位业主充值 " + amount + " 元");
+        } catch (Exception e) {
+            log.error("批量充值失败", e);
+            return AjaxResult.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 冻结钱包
+     */
+    @PostMapping("/freeze/{id}")
+    @PreAuthorize("@ss.hasPermi('property:wallet:freeze')")
+    public AjaxResult freeze(@PathVariable Long id) {
+        log.info("冻结钱包, id: {}", id);
+        try {
+            boolean result = walletService.freezeWallet(id);
+            return result ? AjaxResult.success("冻结成功") : AjaxResult.error("冻结失败");
+        } catch (Exception e) {
+            log.error("冻结钱包失败", e);
+            return AjaxResult.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 解冻钱包
+     */
+    @PostMapping("/unfreeze/{id}")
+    @PreAuthorize("@ss.hasPermi('property:wallet:freeze')")
+    public AjaxResult unfreeze(@PathVariable Long id) {
+        log.info("解冻钱包, id: {}", id);
+        try {
+            boolean result = walletService.unfreezeWallet(id);
+            return result ? AjaxResult.success("解冻成功") : AjaxResult.error("解冻失败");
+        } catch (Exception e) {
+            log.error("解冻钱包失败", e);
+            return AjaxResult.error(e.getMessage());
+        }
+    }
+
+    /**
      * 返回AjaxResult
      */
     private AjaxResult toAjax(Boolean result) {
         return result ? AjaxResult.success() : AjaxResult.error();
+    }
+
+    /**
+     * 获取当前用户ID（临时方法，后续需要从安全上下文获取）
+     */
+    private Long getCurrentUserId() {
+        // TODO: 从Spring Security上下文获取当前用户ID
+        // 这里临时返回1，实际使用时需要修改
+        return 1L;
     }
 }
