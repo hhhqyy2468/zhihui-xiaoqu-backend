@@ -81,9 +81,13 @@ export function virtualRecharge(data) {
 // 查询交易记录列表
 export function listTransaction(query) {
   return request({
-    url: '/property/wallet/transaction/list',
+    url: '/property/wallet/transaction/page',
     method: 'get',
-    params: query
+    params: {
+      page: query.pageNum,
+      size: query.pageSize,
+      ...query
+    }
   })
 }
 

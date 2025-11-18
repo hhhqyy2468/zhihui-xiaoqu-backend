@@ -3,6 +3,7 @@ package com.hyu.property.controller;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.hyu.common.core.domain.AjaxResult;
 import com.hyu.common.core.domain.PageResult;
+import com.hyu.common.domain.LoginUser;
 import com.hyu.property.domain.Wallet;
 import com.hyu.property.domain.dto.WalletRechargeDTO;
 import com.hyu.property.domain.dto.WalletSetPasswordDTO;
@@ -11,6 +12,8 @@ import com.hyu.property.service.IWalletService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -253,11 +256,14 @@ public class WalletController {
     }
 
     /**
-     * 获取当前用户ID（临时方法，后续需要从安全上下文获取）
+     * 获取当前用户ID（从Spring Security上下文获取）
      */
     private Long getCurrentUserId() {
-        // TODO: 从Spring Security上下文获取当前用户ID
-        // 这里临时返回1，实际使用时需要修改
-        return 1L;
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof LoginUser) {
+            LoginUser loginUser = (LoginUser) authentication.getPrincipal();
+            return loginUser.getUserId();
+        }
+        throw new RuntimeException("无法获取当前用户信息");
     }
 }

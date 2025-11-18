@@ -244,6 +244,7 @@ export const PERMISSIONS = {
   PROPERTY_WALLET_RECHARGE: 'property:wallet:recharge',
   PROPERTY_WALLET_FREEZE: 'property:wallet:freeze',
   PROPERTY_WALLET_RESET_PASSWORD: 'property:wallet:resetPassword',
+  PROPERTY_TRANSACTION_LIST: 'property:transaction:list',
 
   PROPERTY_COMPLAINT_VIEW: 'property:complaint:view',
   PROPERTY_COMPLAINT_ADD: 'property:complaint:add',

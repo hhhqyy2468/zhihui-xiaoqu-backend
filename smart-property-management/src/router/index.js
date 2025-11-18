@@ -245,7 +245,7 @@ const routes = [
       {
         path: 'wallet',
         name: 'PortalWallet',
-        component: () => import('@/views/property/wallet/index.vue'),
+        component: () => import('@/views/owner/wallet/index.vue'),
         meta: { title: '我的钱包', icon: 'Money' }
       },
       {

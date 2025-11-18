@@ -252,6 +252,7 @@ export const useUserStore = defineStore('user', {
                 PERMISSIONS.PROPERTY_BILL_PAY,
                 PERMISSIONS.PROPERTY_WALLET_VIEW,
                 PERMISSIONS.PROPERTY_WALLET_RECHARGE,
+                PERMISSIONS.PROPERTY_TRANSACTION_LIST,
                 // 服务相关权限
                 PERMISSIONS.PROPERTY_COMPLAINT_ADD,
                 PERMISSIONS.PROPERTY_COMPLAINT_RATE,
@@ -295,6 +296,11 @@ export const useUserStore = defineStore('user', {
         const response = await getUserInfo()
         // 后端直接返回用户信息，不需要包装在userInfo字段中
         const userInfo = response.data
+
+        // 处理字段映射：后端返回userId，前端需要id
+        if (userInfo.userId && !userInfo.id) {
+          userInfo.id = userInfo.userId
+        }
 
         this.userInfo = userInfo
         // 从用户信息中设置权限和角色
@@ -352,6 +358,11 @@ export const useUserStore = defineStore('user', {
     initializeAuth() {
       const token = localStorage.getItem('token')
       const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+
+      // 处理字段映射：后端返回userId，前端需要id
+      if (userInfo.userId && !userInfo.id) {
+        userInfo.id = userInfo.userId
+      }
 
       if (token && userInfo.username) {
         this.token = token
