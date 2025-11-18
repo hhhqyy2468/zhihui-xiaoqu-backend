@@ -68,20 +68,14 @@
             新增车位
           </el-button>
           <el-button
-            type="success"
-            @click="handleImport"
+            type="danger"
+            :disabled="selectedSpaces.length === 0"
+            @click="handleBatchDelete"
           >
-            <el-icon><Upload /></el-icon>
-            批量导入
+            <el-icon><Delete /></el-icon>
+            批量删除
           </el-button>
-          <el-button
-            type="warning"
-            @click="handleExport"
-          >
-            <el-icon><Download /></el-icon>
-            导出数据
-          </el-button>
-        </div>
+          </div>
 
         <!-- 车位表格 -->
         <div class="table-section">
@@ -209,9 +203,17 @@ import {
   Search,
   Refresh,
   Plus,
+  Delete,
   Upload,
   Download
 } from '@element-plus/icons-vue'
+import {
+  listParkingSpaces,
+  getParkingSpace,
+  addParkingSpace,
+  updateParkingSpace,
+  deleteParkingSpaces
+} from '@/api/parkingSpace'
 
 // 响应式数据
 const activeTab = ref('list')
@@ -282,41 +284,31 @@ const formatDateTime = (dateTime) => {
   return new Date(dateTime).toLocaleString('zh-CN')
 }
 
-// 生成模拟数据
-const generateMockData = () => {
-  const spaces = []
-  const locations = ['A区地下1层', 'A区地下2层', 'B区地下1层', 'B区地下2层', 'C区地面停车场']
-  const statuses = ['1', '2', '3']
-  const owners = ['张三', '李四', '王五', '赵六', '钱七', '孙八', '周九', '吴十']
-
-  for (let i = 1; i <= 50; i++) {
-    spaces.push({
-      id: i,
-      spaceNo: `P${String(i).padStart(3, '0')}`,
-      location: locations[Math.floor(Math.random() * locations.length)] + `${Math.floor(Math.random() * 100) + 1}号`,
-      status: statuses[Math.floor(Math.random() * statuses.length)],
-      monthlyRent: Math.floor(Math.random() * 500) + 200,
-      ownerName: Math.random() > 0.3 ? owners[Math.floor(Math.random() * owners.length)] : '',
-      createTime: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000),
-      remark: ''
-    })
-  }
-
-  return spaces
-}
 
 // 加载车位数据
-const loadParkingSpaces = () => {
+const loadParkingSpaces = async () => {
   loading.value = true
-  setTimeout(() => {
-    const mockData = generateMockData()
-    parkingSpaceList.value = mockData.slice(
-      (currentPage.value - 1) * pageSize.value,
-      currentPage.value * pageSize.value
-    )
-    total.value = mockData.length
+  try {
+    const params = {
+      pageNum: currentPage.value,
+      pageSize: pageSize.value,
+      spaceNo: searchForm.spaceNo,
+      location: searchForm.location,
+      status: searchForm.status
+    }
+    const response = await listParkingSpaces(params)
+    if (response.code === 200) {
+      parkingSpaceList.value = response.data.rows
+      total.value = response.data.total
+    } else {
+      ElMessage.error(response.msg || '加载车位数据失败')
+    }
+  } catch (error) {
+    console.error('加载车位数据错误:', error)
+    ElMessage.error('加载车位数据失败')
+  } finally {
     loading.value = false
-  }, 500)
+  }
 }
 
 // 标签页切换
@@ -371,9 +363,51 @@ const handleDelete = (row) => {
       cancelButtonText: '取消',
       type: 'warning'
     }
-  ).then(() => {
-    ElMessage.success('删除成功')
-    loadParkingSpaces()
+  ).then(async () => {
+    try {
+      const response = await deleteParkingSpaces([row.id])
+      if (response.code === 200) {
+        ElMessage.success('删除成功')
+        loadParkingSpaces()
+      } else {
+        ElMessage.error(response.msg || '删除失败')
+      }
+    } catch (error) {
+      console.error('删除车位错误:', error)
+      ElMessage.error('删除失败')
+    }
+  })
+}
+
+// 批量删除
+const handleBatchDelete = () => {
+  if (selectedSpaces.value.length === 0) {
+    ElMessage.warning('请选择要删除的车位')
+    return
+  }
+
+  ElMessageBox.confirm(
+    `确定要删除选中的 ${selectedSpaces.value.length} 个车位吗？`,
+    '批量删除警告',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }
+  ).then(async () => {
+    try {
+      const ids = selectedSpaces.value.map(space => space.id)
+      const response = await deleteParkingSpaces(ids)
+      if (response.code === 200) {
+        ElMessage.success('批量删除成功')
+        loadParkingSpaces()
+      } else {
+        ElMessage.error(response.msg || '批量删除失败')
+      }
+    } catch (error) {
+      console.error('批量删除车位错误:', error)
+      ElMessage.error('批量删除失败')
+    }
   })
 }
 
@@ -382,23 +416,30 @@ const handleViewRentals = (row) => {
   ElMessage.info(`查看车位 ${row.spaceNo} 的租赁记录`)
 }
 
-// 批量导入
-const handleImport = () => {
-  ElMessage.info('批量导入功能开发中')
-}
-
-// 导出数据
-const handleExport = () => {
-  ElMessage.success('导出成功')
-}
 
 // 提交表单
-const handleSubmit = () => {
-  formRef.value.validate((valid) => {
+const handleSubmit = async () => {
+  formRef.value.validate(async (valid) => {
     if (valid) {
-      ElMessage.success(dialogTitle.value + '成功')
-      dialogVisible.value = false
-      loadParkingSpaces()
+      try {
+        let response
+        if (dialogTitle.value === '新增车位') {
+          response = await addParkingSpace(form)
+        } else {
+          response = await updateParkingSpace(form)
+        }
+
+        if (response.code === 200) {
+          ElMessage.success(dialogTitle.value + '成功')
+          dialogVisible.value = false
+          loadParkingSpaces()
+        } else {
+          ElMessage.error(response.msg || (dialogTitle.value + '失败'))
+        }
+      } catch (error) {
+        console.error(dialogTitle.value + '错误:', error)
+        ElMessage.error(dialogTitle.value + '失败')
+      }
     }
   })
 }
