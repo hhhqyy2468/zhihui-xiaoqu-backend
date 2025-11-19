@@ -23,7 +23,7 @@ import java.util.Map;
  */
 @Slf4j
 @RestController
-@RequestMapping("/parking/space")
+@RequestMapping("/api/v1/parking/space")
 @Validated
 public class ParkingSpaceController {
 

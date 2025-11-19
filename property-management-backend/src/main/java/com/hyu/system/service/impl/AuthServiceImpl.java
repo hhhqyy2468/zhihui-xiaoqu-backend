@@ -592,6 +592,7 @@ public class AuthServiceImpl implements IAuthService {
      */
     private Set<String> getOwnerPermissions() {
         Set<String> permissions = new HashSet<>();
+        permissions.add("property:owner:list");
         permissions.add("property:bill:view");
         permissions.add("property:bill:pay");
         permissions.add("property:wallet:view");

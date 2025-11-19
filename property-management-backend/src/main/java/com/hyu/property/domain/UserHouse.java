@@ -117,4 +117,40 @@ public class UserHouse implements Serializable {
      */
     @TableField(exist = false)
     private String unitName;
+
+    /**
+     * 门牌号（关联查询用）
+     */
+    @TableField(exist = false)
+    private String roomNumber;
+
+    /**
+     * 楼层（关联查询用）
+     */
+    @TableField(exist = false)
+    private Integer floor;
+
+    /**
+     * 户型（关联查询用）
+     */
+    @TableField(exist = false)
+    private String houseType;
+
+    /**
+     * 建筑面积（关联查询用）
+     */
+    @TableField(exist = false)
+    private java.math.BigDecimal buildingArea;
+
+    /**
+     * 使用面积（关联查询用）
+     */
+    @TableField(exist = false)
+    private java.math.BigDecimal usableArea;
+
+    /**
+     * 房产状态（关联查询用）
+     */
+    @TableField(exist = false)
+    private Integer houseStatus;
 }

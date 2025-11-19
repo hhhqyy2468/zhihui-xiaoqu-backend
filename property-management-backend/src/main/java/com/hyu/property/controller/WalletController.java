@@ -28,7 +28,7 @@ import java.math.BigDecimal;
  */
 @Slf4j
 @RestController
-@RequestMapping("/property/wallet")
+@RequestMapping("/api/v1/property/wallet")
 @Validated
 public class WalletController {
 

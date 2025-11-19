@@ -18,7 +18,7 @@ import java.util.List;
  */
 @Slf4j
 @RestController
-@RequestMapping("/property/wallet/transaction")
+@RequestMapping("/api/v1/property/wallet/transaction")
 @Validated
 public class WalletTransactionController {
 

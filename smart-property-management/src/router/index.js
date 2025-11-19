@@ -251,7 +251,7 @@ const routes = [
       {
         path: 'house',
         name: 'PortalHouse',
-        component: () => import('@/views/property/house/index.vue'),
+        component: () => import('@/views/owner/house/index.vue'),
         meta: { title: '我的房产', icon: 'OfficeBuilding' }
       },
       {

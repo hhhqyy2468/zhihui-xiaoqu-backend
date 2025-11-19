@@ -18,7 +18,7 @@ import java.util.List;
  */
 @Slf4j
 @RestController
-@RequestMapping("/parking/rental/application")
+@RequestMapping("/api/v1/parking/rental/application")
 public class ParkingRentalApplicationController {
 
     @Autowired

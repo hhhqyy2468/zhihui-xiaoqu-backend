@@ -76,42 +76,91 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         // 获取用户信息以判断用户类型
         SysUser user = userService.getById(userId);
         if (user != null) {
-            // 给系统管理员用户（userType=1）添加所有权限
+            // 根据用户类型添加权限
             Integer userType = user.getUserType();
-            if (userType != null && userType == 1) { // 系统管理员
-                // 添加系统管理权限
-                permissions.add("system:user:list");
-                permissions.add("system:user:view");
-                permissions.add("system:user:add");
-                permissions.add("system:user:edit");
-                permissions.add("system:user:remove");
-                permissions.add("system:user:query");
-                permissions.add("system:user:resetPwd");
-                permissions.add("system:role:list");
-                permissions.add("system:role:view");
-                permissions.add("system:menu:list");
-                permissions.add("system:config:view");
+            if (userType != null) {
+                switch (userType) {
+                    case 1: // 系统管理员
+                        // 添加系统管理权限
+                        permissions.add("system:user:list");
+                        permissions.add("system:user:view");
+                        permissions.add("system:user:add");
+                        permissions.add("system:user:edit");
+                        permissions.add("system:user:remove");
+                        permissions.add("system:user:query");
+                        permissions.add("system:user:resetPwd");
+                        permissions.add("system:role:list");
+                        permissions.add("system:role:view");
+                        permissions.add("system:menu:list");
+                        permissions.add("system:config:view");
 
-                // 添加物业管理相关权限
-                permissions.add("property:building:list");
-                permissions.add("property:building:add");
-                permissions.add("property:building:edit");
-                permissions.add("property:building:remove");
+                        // 添加物业管理相关权限
+                        permissions.add("property:building:list");
+                        permissions.add("property:building:add");
+                        permissions.add("property:building:edit");
+                        permissions.add("property:building:remove");
 
-                permissions.add("property:unit:list");
-                permissions.add("property:unit:add");
-                permissions.add("property:unit:edit");
-                permissions.add("property:unit:remove");
+                        permissions.add("property:unit:list");
+                        permissions.add("property:unit:add");
+                        permissions.add("property:unit:edit");
+                        permissions.add("property:unit:remove");
 
-                permissions.add("property:house:list");
-                permissions.add("property:house:add");
-                permissions.add("property:house:edit");
-                permissions.add("property:house:remove");
+                        permissions.add("property:house:list");
+                        permissions.add("property:house:add");
+                        permissions.add("property:house:edit");
+                        permissions.add("property:house:remove");
 
-                permissions.add("property:owner:list");
-                permissions.add("property:owner:add");
-                permissions.add("property:owner:edit");
-                permissions.add("property:owner:remove");
+                        permissions.add("property:owner:list");
+                        permissions.add("property:owner:add");
+                        permissions.add("property:owner:edit");
+                        permissions.add("property:owner:remove");
+                        break;
+
+                    case 2: // 物业管理员
+                        permissions.add("property:building:list");
+                        permissions.add("property:building:add");
+                        permissions.add("property:building:edit");
+                        permissions.add("property:building:remove");
+
+                        permissions.add("property:unit:list");
+                        permissions.add("property:unit:add");
+                        permissions.add("property:unit:edit");
+                        permissions.add("property:unit:remove");
+
+                        permissions.add("property:house:list");
+                        permissions.add("property:house:add");
+                        permissions.add("property:house:edit");
+                        permissions.add("property:house:remove");
+
+                        permissions.add("property:owner:list");
+                        permissions.add("property:owner:add");
+                        permissions.add("property:owner:edit");
+                        permissions.add("property:owner:remove");
+                        break;
+
+                    case 3: // 业主
+                        permissions.add("property:owner:list");
+                        permissions.add("property:bill:view");
+                        permissions.add("property:bill:pay");
+                        permissions.add("property:wallet:view");
+                        permissions.add("property:wallet:recharge");
+                        permissions.add("property:transaction:list");
+                        permissions.add("property:complaint:add");
+                        permissions.add("property:complaint:rate");
+                        permissions.add("property:repair:add");
+                        permissions.add("property:repair:accept");
+                        permissions.add("property:notice:view");
+                        permissions.add("portal:view");
+                        permissions.add("portal:dashboard:view");
+                        break;
+
+                    case 4: // 维修人员
+                        permissions.add("property:repair:view");
+                        permissions.add("property:repair:handle");
+                        permissions.add("property:repair:accept");
+                        permissions.add("property:notice:view");
+                        break;
+                }
             }
         }
 
