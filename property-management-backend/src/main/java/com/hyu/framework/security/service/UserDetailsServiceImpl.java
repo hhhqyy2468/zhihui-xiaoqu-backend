@@ -114,6 +114,14 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                         permissions.add("property:owner:add");
                         permissions.add("property:owner:edit");
                         permissions.add("property:owner:remove");
+
+                        // 添加费用管理权限
+                        permissions.add("property:feetype:list");
+                        permissions.add("property:feetype:view");
+                        permissions.add("property:feetype:add");
+                        permissions.add("property:feetype:edit");
+                        permissions.add("property:feetype:remove");
+                        permissions.add("property:feetype:query");
                         break;
 
                     case 2: // 物业管理员
@@ -136,6 +144,14 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                         permissions.add("property:owner:add");
                         permissions.add("property:owner:edit");
                         permissions.add("property:owner:remove");
+
+                        // 添加费用管理权限
+                        permissions.add("property:feetype:list");
+                        permissions.add("property:feetype:view");
+                        permissions.add("property:feetype:add");
+                        permissions.add("property:feetype:edit");
+                        permissions.add("property:feetype:remove");
+                        permissions.add("property:feetype:query");
                         break;
 
                     case 3: // 业主

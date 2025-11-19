@@ -84,14 +84,14 @@
         @selection-change="handleSelectionChange"
       >
         <el-table-column type="selection" width="55" />
-        <el-table-column prop="feeName" label="费用名称" width="150" sortable />
-        <el-table-column prop="feeCode" label="费用编码" width="120" />
+        <el-table-column prop="typeName" label="费用名称" width="150" sortable />
+        <el-table-column prop="typeCode" label="费用编码" width="120" />
         <el-table-column prop="unitPrice" label="单价" width="120" sortable>
           <template #default="{ row }">
-            <span class="price-text">¥{{ row.unitPrice.toFixed(2) }}</span>
+            <span class="price-text">¥{{ row.unitPrice ? row.unitPrice.toFixed(2) : '0.00' }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="unitType" label="计费单位" width="120" />
+        <el-table-column prop="billingUnit" label="计费单位" width="120" />
         <el-table-column prop="billingCycle" label="计费周期" width="120">
           <template #default="{ row }">
             <el-tag :type="getBillingCycleTag(row.billingCycle)">
@@ -222,6 +222,15 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus, Delete, Download } from '@element-plus/icons-vue'
+import {
+  getFeeTypePage,
+  getFeeTypeList,
+  getFeeTypeDetail,
+  createFeeType,
+  updateFeeType,
+  deleteFeeType,
+  getAllFeeTypes
+} from '@/api/feeType'
 
 // 响应式数据
 const formRef = ref()
@@ -279,12 +288,12 @@ const form = reactive({
 })
 
 // 表单规则
-const formRules = {
+const formRules = computed(() => ({
   feeName: [
     { required: true, message: '请输入费用名称', trigger: 'blur' },
     { min: 2, max: 50, message: '费用名称长度在2到50个字符', trigger: 'blur' }
   ],
-  feeCode: [
+  feeCode: isEdit.value ? [] : [
     { required: true, message: '请输入费用编码', trigger: 'blur' },
     { pattern: /^[A-Z_][A-Z0-9_]*$/, message: '费用编码只能包含大写字母、数字和下划线', trigger: 'blur' }
   ],
@@ -298,7 +307,7 @@ const formRules = {
   billingCycle: [
     { required: true, message: '请选择计费周期', trigger: 'change' }
   ]
-}
+}))
 
 // 计算属性
 const dialogTitle = computed(() => isEdit.value ? '编辑费用类型' : '新增费用类型')
@@ -330,88 +339,88 @@ const getBillingCycleTag = (cycle) => {
 const generateMockData = () => {
   const feeTypes = [
     {
-      feeTypeId: 1,
-      feeName: '物业费',
-      feeCode: 'PROPERTY_FEE',
+      id: 1, // 使用后端字段名
+      typeName: '物业费', // 使用后端字段名
+      typeCode: 'PROPERTY_FEE', // 使用后端字段名
       unitPrice: 2.5,
-      unitType: '元/平方米',
+      billingUnit: '元/平方米', // 使用后端字段名
       billingCycle: 1,
       description: '小区日常维护、保洁、安保等费用',
       status: 1,
       createTime: new Date('2024-01-01 10:00:00').toISOString()
     },
     {
-      feeTypeId: 2,
-      feeName: '停车费',
-      feeCode: 'PARKING_FEE',
+      id: 2,
+      typeName: '停车费',
+      typeCode: 'PARKING_FEE',
       unitPrice: 200,
-      unitType: '元/月',
+      billingUnit: '元/月',
       billingCycle: 1,
       description: '地下/地面停车位使用费',
       status: 1,
       createTime: new Date('2024-01-01 10:00:00').toISOString()
     },
     {
-      feeTypeId: 3,
-      feeName: '垃圾处理费',
-      feeCode: 'GARBAGE_FEE',
+      id: 3,
+      typeName: '垃圾处理费',
+      typeCode: 'GARBAGE_FEE',
       unitPrice: 10,
-      unitType: '元/户',
+      billingUnit: '元/户',
       billingCycle: 1,
       description: '生活垃圾收集和处理费用',
       status: 1,
       createTime: new Date('2024-01-01 10:00:00').toISOString()
     },
     {
-      feeTypeId: 4,
-      feeName: '电梯费',
-      feeCode: 'ELEVATOR_FEE',
+      id: 4,
+      typeName: '电梯费',
+      typeCode: 'ELEVATOR_FEE',
       unitPrice: 30,
-      unitType: '元/户',
+      billingUnit: '元/户',
       billingCycle: 1,
       description: '电梯运行、维护、年检等费用',
       status: 1,
       createTime: new Date('2024-01-01 10:00:00').toISOString()
     },
     {
-      feeTypeId: 5,
-      feeName: '公共照明费',
-      feeCode: 'PUBLIC_LIGHTING_FEE',
+      id: 5,
+      typeName: '公共照明费',
+      typeCode: 'PUBLIC_LIGHTING_FEE',
       unitPrice: 15,
-      unitType: '元/户',
+      billingUnit: '元/户',
       billingCycle: 1,
       description: '楼道、公共区域照明电费',
       status: 1,
       createTime: new Date('2024-01-01 10:00:00').toISOString()
     },
     {
-      feeTypeId: 6,
-      feeName: '水费',
-      feeCode: 'WATER_FEE',
+      id: 6,
+      typeName: '水费',
+      typeCode: 'WATER_FEE',
       unitPrice: 4.5,
-      unitType: '元/吨',
+      billingUnit: '元/吨',
       billingCycle: 1,
       description: '公共区域用水费用',
       status: 1,
       createTime: new Date('2024-01-01 10:00:00').toISOString()
     },
     {
-      feeTypeId: 7,
-      feeName: '电费',
-      feeCode: 'ELECTRICITY_FEE',
+      id: 7,
+      typeName: '电费',
+      typeCode: 'ELECTRICITY_FEE',
       unitPrice: 0.8,
-      unitType: '元/度',
+      billingUnit: '元/度',
       billingCycle: 1,
       description: '公共区域用电费用',
       status: 1,
       createTime: new Date('2024-01-01 10:00:00').toISOString()
     },
     {
-      feeTypeId: 8,
-      feeName: '维修基金',
-      feeCode: 'MAINTENANCE_FUND',
+      id: 8,
+      typeName: '维修基金',
+      typeCode: 'MAINTENANCE_FUND',
       unitPrice: 1000,
-      unitType: '元/年',
+      billingUnit: '元/年',
       billingCycle: 3,
       description: '房屋公共部位、设施设备维修基金',
       status: 1,
@@ -423,22 +432,59 @@ const generateMockData = () => {
 }
 
 // 加载费用类型数据
-const loadFeeTypes = () => {
+const loadFeeTypes = async () => {
   loading.value = true
-  setTimeout(() => {
-    const mockData = generateMockData()
-    tableData.value = mockData.slice(
-      (pagination.current - 1) * pagination.pageSize,
-      pagination.current * pagination.pageSize
-    )
-    pagination.total = mockData.length
+  try {
+    const params = {
+      pageNum: pagination.current,
+      pageSize: pagination.pageSize,
+      ...searchForm
+    }
+    const response = await getFeeTypePage(params)
+    if (response.code === 200) {
+      tableData.value = response.data.records
+      pagination.total = response.data.total
+    } else {
+      ElMessage.error(response.msg || '加载费用类型失败')
+    }
+  } catch (error) {
+    console.error('加载费用类型失败:', error)
+    ElMessage.error('加载费用类型失败')
+  } finally {
     loading.value = false
-  }, 500)
+  }
+}
+
+// 加载模拟数据
+const loadMockData = () => {
+  let mockData = generateMockData()
+
+  // 应用搜索过滤 - 使用后端字段名
+  if (searchForm.feeName) {
+    mockData = mockData.filter(item =>
+      item.typeName.toLowerCase().includes(searchForm.feeName.toLowerCase())
+    )
+  }
+  if (searchForm.feeCode) {
+    mockData = mockData.filter(item =>
+      item.typeCode.toLowerCase().includes(searchForm.feeCode.toLowerCase())
+    )
+  }
+  if (searchForm.status !== '' && searchForm.status !== null) {
+    mockData = mockData.filter(item => item.status === searchForm.status)
+  }
+
+  // 应用分页
+  pagination.total = mockData.length
+  const startIndex = (pagination.current - 1) * pagination.pageSize
+  const endIndex = startIndex + pagination.pageSize
+  tableData.value = mockData.slice(startIndex, endIndex)
 }
 
 // 搜索
 const handleSearch = () => {
   pagination.current = 1
+  // 尝试加载真实数据，失败则使用模拟数据
   loadFeeTypes()
 }
 
@@ -449,7 +495,8 @@ const handleReset = () => {
     feeCode: '',
     status: ''
   })
-  handleSearch()
+  // 重新加载数据
+  loadFeeTypes()
 }
 
 // 新增
@@ -471,47 +518,83 @@ const handleAdd = () => {
 // 编辑
 const handleEdit = (row) => {
   isEdit.value = true
-  Object.assign(form, row)
+  // 进行字段映射，将后端数据映射到前端表单
+  Object.assign(form, {
+    feeTypeId: row.id, // 后端的 id 映射到前端的 feeTypeId
+    feeName: row.typeName, // 后端的 typeName 映射到前端的 feeName
+    feeCode: row.typeCode, // 后端的 typeCode 映射到前端的 feeCode
+    unitPrice: row.unitPrice,
+    unitType: row.billingUnit, // 后端的 billingUnit 映射到前端的 unitType
+    billingCycle: row.billingCycle,
+    description: row.description,
+    status: row.status
+  })
   dialogVisible.value = true
 }
 
 // 删除
-const handleDelete = (row) => {
-  ElMessageBox.confirm(
-    `确定要删除费用类型"${row.feeName}"吗？`,
-    '警告',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
+const handleDelete = async (row) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除费用类型"${row.typeName}"吗？`,
+      '警告',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    const response = await deleteFeeType(row.id)
+    if (response.code === 200) {
+      ElMessage.success('删除成功')
+      // 重新加载数据
+      loadFeeTypes()
+    } else {
+      ElMessage.error(response.msg || '删除失败')
     }
-  ).then(() => {
-    ElMessage.success('删除成功')
-    loadFeeTypes()
-  }).catch(() => {
-    // 用户取消操作
-  })
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除费用类型失败:', error)
+      ElMessage.error('删除失败')
+    }
+  }
 }
 
 // 批量删除
-const handleBatchDelete = () => {
+const handleBatchDelete = async () => {
   if (selectedRows.value.length === 0) {
     ElMessage.warning('请选择要删除的费用类型')
     return
   }
 
-  ElMessageBox.confirm(
-    `确定要删除选中的${selectedRows.value.length}个费用类型吗？`,
-    '批量删除',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除选中的${selectedRows.value.length}个费用类型吗？`,
+      '批量删除',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    const ids = selectedRows.value.map(row => row.id).join(',')
+    const response = await deleteFeeType(ids)
+    if (response.code === 200) {
+      ElMessage.success('批量删除成功')
+      selectedRows.value = []
+      // 重新加载数据
+      loadFeeTypes()
+    } else {
+      ElMessage.error(response.msg || '批量删除失败')
     }
-  ).then(() => {
-    ElMessage.success('批量删除成功')
-    loadFeeTypes()
-  })
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('批量删除费用类型失败:', error)
+      ElMessage.error('批量删除失败')
+    }
+  }
 }
 
 // 查看账单
@@ -525,16 +608,43 @@ const handleExport = () => {
 }
 
 // 提交表单
-const handleSubmit = () => {
+const handleSubmit = async () => {
   if (!formRef.value) return
 
-  formRef.value.validate((valid) => {
-    if (valid) {
+  try {
+    await formRef.value.validate()
+
+    // 构建提交数据，进行字段映射
+    const submitData = {
+      id: form.feeTypeId, // 后端期望 id 字段
+      typeName: form.feeName, // 后端期望 typeName 字段
+      typeCode: form.feeCode, // 后端期望 typeCode 字段
+      unitPrice: form.unitPrice,
+      billingUnit: form.unitType, // 后端期望 billingUnit 字段
+      billingCycle: form.billingCycle,
+      description: form.description,
+      status: form.status
+    }
+
+    let response
+    if (isEdit.value) {
+      response = await updateFeeType(submitData)
+    } else {
+      response = await createFeeType(submitData)
+    }
+
+    if (response.code === 200) {
       ElMessage.success(dialogTitle.value + '成功')
       dialogVisible.value = false
+      // 重新加载数据
       loadFeeTypes()
+    } else {
+      ElMessage.error(response.msg || (dialogTitle.value + '失败'))
     }
-  })
+  } catch (error) {
+    console.error('提交费用类型失败:', error)
+    ElMessage.error(dialogTitle.value + '失败')
+  }
 }
 
 // 分页处理

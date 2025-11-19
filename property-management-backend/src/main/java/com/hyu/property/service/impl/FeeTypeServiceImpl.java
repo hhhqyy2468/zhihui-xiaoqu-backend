@@ -36,8 +36,8 @@ public class FeeTypeServiceImpl extends ServiceImpl<FeeTypeMapper, FeeType> impl
     @Override
     public Page<FeeType> selectFeeTypePage(Page<FeeType> page, FeeType feeType) {
         LambdaQueryWrapper<FeeType> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.like(StringUtils.isNotEmpty(feeType.getFeeName()), FeeType::getFeeName, feeType.getFeeName())
-                   .like(StringUtils.isNotEmpty(feeType.getFeeCode()), FeeType::getFeeCode, feeType.getFeeCode())
+        queryWrapper.like(StringUtils.isNotEmpty(feeType.getTypeName()), FeeType::getTypeName, feeType.getTypeName())
+                   .like(StringUtils.isNotEmpty(feeType.getTypeCode()), FeeType::getTypeCode, feeType.getTypeCode())
                    .eq(feeType.getStatus() != null, FeeType::getStatus, feeType.getStatus())
                    .orderByDesc(FeeType::getCreateTime);
         return page(page, queryWrapper);
@@ -52,8 +52,8 @@ public class FeeTypeServiceImpl extends ServiceImpl<FeeTypeMapper, FeeType> impl
     @Override
     public List<FeeType> selectFeeTypeList(FeeType feeType) {
         LambdaQueryWrapper<FeeType> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.like(StringUtils.isNotEmpty(feeType.getFeeName()), FeeType::getFeeName, feeType.getFeeName())
-                   .like(StringUtils.isNotEmpty(feeType.getFeeCode()), FeeType::getFeeCode, feeType.getFeeCode())
+        queryWrapper.like(StringUtils.isNotEmpty(feeType.getTypeName()), FeeType::getTypeName, feeType.getTypeName())
+                   .like(StringUtils.isNotEmpty(feeType.getTypeCode()), FeeType::getTypeCode, feeType.getTypeCode())
                    .eq(feeType.getStatus() != null, FeeType::getStatus, feeType.getStatus())
                    .orderByDesc(FeeType::getCreateTime);
         return list(queryWrapper);
@@ -68,7 +68,7 @@ public class FeeTypeServiceImpl extends ServiceImpl<FeeTypeMapper, FeeType> impl
     public List<FeeType> selectFeeTypeAll() {
         LambdaQueryWrapper<FeeType> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(FeeType::getStatus, 1);
-        queryWrapper.orderByAsc(FeeType::getFeeTypeId);
+        queryWrapper.orderByAsc(FeeType::getId);
         return list(queryWrapper);
     }
 
@@ -91,9 +91,9 @@ public class FeeTypeServiceImpl extends ServiceImpl<FeeTypeMapper, FeeType> impl
      */
     @Override
     public boolean checkFeeCodeUnique(FeeType feeType) {
-        Long feeId = feeType.getFeeTypeId() == null ? -1L : feeType.getFeeTypeId();
+        Long feeId = feeType.getId() == null ? -1L : feeType.getId();
         FeeType info = feeTypeMapper.checkFeeCodeUnique(feeType);
-        return info == null || info.getFeeTypeId().equals(feeId);
+        return info == null || info.getId().equals(feeId);
     }
 
     /**
