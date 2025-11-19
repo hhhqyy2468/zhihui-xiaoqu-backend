@@ -2,11 +2,11 @@
   <div class="log-container">
     <!-- 页面标题 -->
     <div class="page-header">
-      <h2 class="page-title">维修管理</h2>
+      <h2 class="page-title">{{ currentUserRole === 3 ? '我的报修' : '维修管理' }}</h2>
       <el-breadcrumb separator="/">
         <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
-        <el-breadcrumb-item>服务管理</el-breadcrumb-item>
-        <el-breadcrumb-item>维修管理</el-breadcrumb-item>
+        <el-breadcrumb-item>{{ currentUserRole === 3 ? '业主门户' : '服务管理' }}</el-breadcrumb-item>
+        <el-breadcrumb-item>{{ currentUserRole === 3 ? '我的报修' : '维修管理' }}</el-breadcrumb-item>
       </el-breadcrumb>
     </div>
 
@@ -18,14 +18,6 @@
           <el-input
             v-model="searchForm.orderNo"
             placeholder="请输入工单编号"
-            clearable
-            style="width: 200px"
-          />
-        </el-form-item>
-        <el-form-item label="报修人">
-          <el-input
-            v-model="searchForm.reporter"
-            placeholder="请输入报修人"
             clearable
             style="width: 200px"
           />
@@ -60,6 +52,14 @@
             />
           </el-select>
         </el-form-item>
+        <el-form-item label="联系电话">
+          <el-input
+            v-model="searchForm.phone"
+            placeholder="请输入联系电话"
+            clearable
+            style="width: 150px"
+          />
+        </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleSearch">
             <el-icon><Search /></el-icon>
@@ -80,9 +80,12 @@
         @click="handleAdd"
       >
         <el-icon><Plus /></el-icon>
-        新增工单
+        {{ currentUserRole === 3 ? '新增报修' : '新增工单' }}
       </el-button>
-      <el-button @click="handleExport">
+      <el-button
+        v-if="currentUserRole !== 3"
+        @click="handleExport"
+      >
         <el-icon><Download /></el-icon>
         导出
       </el-button>
@@ -111,9 +114,14 @@
         :data="tableData"
       >
         <el-table-column prop="orderNo" label="工单编号" width="160" sortable />
-        <el-table-column prop="reporter" label="报修人" width="120" />
+        <el-table-column
+          v-if="currentUserRole !== 3"
+          prop="reporter"
+          label="报修人"
+          width="120"
+        />
         <el-table-column prop="phone" label="联系电话" width="130" />
-        <el-table-column prop="houseCode" label="房间编号" width="140" />
+        <el-table-column prop="houseNo" label="房间编号" width="140" />
         <el-table-column prop="repairType" label="维修类型" width="120">
           <template #default="{ row }">
             <el-tag :type="getTypeTag(row.repairType)">
@@ -135,10 +143,35 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="repairerName" label="维修人员" width="120" />
+        <el-table-column
+          v-if="currentUserRole !== 3"
+          prop="repairerName"
+          label="维修人员"
+          width="120"
+        />
         <el-table-column prop="reportTime" label="报修时间" width="180" sortable>
           <template #default="{ row }">
             {{ formatDateTime(row.reportTime) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="faultDescription" label="故障描述" width="200" show-overflow-tooltip />
+        <el-table-column label="故障图片" width="120">
+          <template #default="{ row }">
+            <el-image
+              v-if="row.imageUrls && row.imageUrls.length > 0 && isValidImageUrl(row.imageUrls[0])"
+              :src="getImageUrl(row.imageUrls[0])"
+              :preview-src-list="row.imageUrls.filter(url => isValidImageUrl(url)).map(url => getImageUrl(url))"
+              fit="cover"
+              style="width: 60px; height: 60px; border-radius: 4px;"
+              :preview-teleported="true"
+              @error="handleImageError"
+            />
+            <span v-else class="no-image">无图片</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="repairCost" label="维修费用" width="120" sortable>
+          <template #default="{ row }">
+            <span class="price-text">¥{{ row.repairCost ? row.repairCost.toFixed(2) : '0.00' }}</span>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="280" fixed="right">
@@ -209,6 +242,23 @@
               >
                 评价
               </el-button>
+              <el-button
+                v-if="row.orderStatus === 0"
+                link
+                type="danger"
+                @click="handleDelete(row)"
+              >
+                删除
+              </el-button>
+              <el-button
+                v-else
+                link
+                type="info"
+                disabled
+                class="disabled-button"
+              >
+                删除
+              </el-button>
             </template>
           </template>
         </el-table-column>
@@ -239,13 +289,13 @@
         :rules="formRules"
         label-width="100px"
       >
-        <el-form-item label="报修人" prop="reporter">
+        <el-form-item v-if="currentUserRole !== 3" label="报修人" prop="reporter">
           <el-input v-model="form.reporter" placeholder="请输入报修人姓名" />
         </el-form-item>
-        <el-form-item label="联系电话" prop="phone">
+        <el-form-item v-if="currentUserRole !== 3" label="联系电话" prop="phone">
           <el-input v-model="form.phone" placeholder="请输入联系电话" />
         </el-form-item>
-        <el-form-item label="房间编号" prop="houseCode">
+        <el-form-item v-if="currentUserRole !== 3" label="房间编号" prop="houseCode">
           <el-input v-model="form.houseCode" placeholder="请输入房间编号" />
         </el-form-item>
         <el-form-item label="维修类型" prop="repairType">
@@ -316,7 +366,7 @@
           {{ currentOrder.phone }}
         </el-descriptions-item>
         <el-descriptions-item label="房间编号">
-          {{ currentOrder.houseCode }}
+          {{ currentOrder.houseNo }}
         </el-descriptions-item>
         <el-descriptions-item label="维修类型">
           <el-tag :type="getTypeTag(currentOrder.repairType)">
@@ -336,6 +386,22 @@
         <el-descriptions-item label="报修时间">
           {{ formatDateTime(currentOrder.reportTime) }}
         </el-descriptions-item>
+        <el-descriptions-item label="故障图片" v-if="currentOrder.imageUrls">
+          <div v-if="currentOrder.imageUrls && currentOrder.imageUrls.length > 0" style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <el-image
+              v-for="(imageUrl, index) in currentOrder.imageUrls.filter(url => isValidImageUrl(url))"
+              :key="index"
+              :src="getImageUrl(imageUrl)"
+              :preview-src-list="currentOrder.imageUrls.filter(url => isValidImageUrl(url)).map(url => getImageUrl(url))"
+              :initial-preview-index="index"
+              fit="cover"
+              style="width: 100px; height: 100px; border-radius: 4px;"
+              :preview-teleported="true"
+              @error="handleImageError"
+            />
+          </div>
+          <span v-else>无图片</span>
+        </el-descriptions-item>
         <el-descriptions-item label="维修人员" v-if="currentOrder.repairerName">
           {{ currentOrder.repairerName }}
         </el-descriptions-item>
@@ -346,21 +412,10 @@
 
       <div style="margin-top: 20px;">
         <h4>故障描述</h4>
-        <p>{{ currentOrder.description }}</p>
+        <p style="line-height: 1.6; white-space: pre-wrap;">{{ currentOrder.faultDescription }}</p>
       </div>
 
-      <div style="margin-top: 20px;" v-if="currentOrder.images && currentOrder.images.length > 0">
-        <h4>故障图片</h4>
-        <el-image
-          v-for="(image, index) in currentOrder.images"
-          :key="index"
-          :src="image"
-          style="width: 100px; height: 100px; margin-right: 10px;"
-          fit="cover"
-          :preview-src-list="currentOrder.images"
-        />
-      </div>
-
+  
       <div style="margin-top: 20px;" v-if="currentOrder.repairContent">
         <h4>维修记录</h4>
         <p>{{ currentOrder.repairContent }}</p>
@@ -722,7 +777,35 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, Plus, Download, DataAnalysis, FolderOpened } from '@element-plus/icons-vue'
+import { Search, Refresh, Plus, Download, DataAnalysis, FolderOpened, ArrowUp, ArrowDown } from '@element-plus/icons-vue'
+
+// 导入API接口
+import {
+  getRepairOrderPage,
+  getRepairOrderDetail,
+  createRepairOrder,
+  updateRepairOrder,
+  deleteRepairOrder,
+  assignRepairOrder,
+  acceptRepairOrder,
+  completeRepairOrder,
+  inspectRepairOrder,
+  rateRepairOrder,
+  reassignRepairOrder,
+  cancelRepairOrder,
+  getRepairerList,
+  getRepairTypeList,
+  getOrderStats,
+  getWorkerStats,
+  exportRepairOrders,
+  getMyRepairOrders,
+  ownerCreateRepairOrder,
+  ownerDeleteRepairOrder,
+  uploadRepairImages
+} from '@/api/repair'
+
+// 导入字典API
+import { getDictDataByType } from '@/api/dict'
 
 // 响应式数据
 const formRef = ref()
@@ -737,7 +820,23 @@ const isEdit = ref(false)
 // 在实际项目中，这里应该从用户store或路由中获取
 // 1: 物业经理, 2: 维修师傅, 3: 业主
 const currentUserRole = computed(() => {
-  // 模拟从localStorage或vuex获取用户信息
+  // 首先尝试从Token中解析用户类型
+  const token = localStorage.getItem('token')
+  if (token) {
+    try {
+      // 解析JWT Token的payload部分
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      const userType = payload.userType
+      if (userType) {
+        console.log('从Token解析的用户类型:', userType)
+        return userType
+      }
+    } catch (error) {
+      console.error('解析Token失败:', error)
+    }
+  }
+
+  // 备用方案：从localStorage或vuex获取用户信息
   const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
   const userRole = userInfo.role || 1 // 默认为物业经理
 
@@ -780,10 +879,11 @@ const rateFormRef = ref()
 // 搜索表单
 const searchForm = reactive({
   orderNo: '',
-  reporter: '',
   repairType: '',
-  orderStatus: ''
+  orderStatus: null,
+  phone: ''
 })
+
 
 // 表格数据
 const tableData = ref([])
@@ -796,14 +896,34 @@ const pagination = reactive({
 })
 
 // 选项数据
-const repairTypeOptions = ref([
-  { label: '水电维修', value: 'water_electric' },
-  { label: '门窗维修', value: 'door_window' },
-  { label: '家电维修', value: 'appliance' },
-  { label: '管道维修', value: 'plumbing' },
-  { label: '油漆粉刷', value: 'painting' },
-  { label: '其他维修', value: 'other' }
-])
+const repairTypeOptions = ref([])
+
+// 加载维修类型字典数据
+const loadRepairTypeOptions = async () => {
+  try {
+    const response = await getDictDataByType('repair_type')
+    if (response.code === 200) {
+      // 只显示状态为启用的字典项 (status = '1' 或者 true)
+      repairTypeOptions.value = response.data
+        .filter(item => item.status === 1 || item.status === '1' || item.status === true)
+        .map(item => ({
+          label: item.dictLabel,
+          value: item.dictValue
+        }))
+      console.log('加载到的维修类型字典:', repairTypeOptions.value)
+    }
+  } catch (error) {
+    console.error('加载维修类型字典失败:', error)
+    // 备用数据
+    repairTypeOptions.value = [
+      { label: '水电维修', value: 'water_electric' },
+      { label: '门窗维修', value: 'door_window' },
+      { label: '家电维修', value: 'appliance' },
+      { label: '管道维修', value: 'plumbing' },
+      { label: '其他维修', value: 'other' }
+    ]
+  }
+}
 
 const urgencyLevelOptions = ref([
   { label: '一般', value: 1 },
@@ -911,8 +1031,7 @@ const formRules = {
     { required: true, message: '请选择紧急程度', trigger: 'change' }
   ],
   description: [
-    { required: true, message: '请输入故障描述', trigger: 'blur' },
-    { min: 10, max: 500, message: '故障描述长度在10到500个字符', trigger: 'blur' }
+    { required: true, message: '请输入故障描述', trigger: 'blur' }
   ]
 }
 
@@ -1003,7 +1122,7 @@ const getUrgencyTag = (level) => {
 const getStatusName = (status) => {
   const statusMap = {
     0: '待派工',
-    1: '已派工',
+    1: '待接单',  // 修正：已派工改为待接单
     2: '进行中',
     3: '待验收',
     4: '已完成'
@@ -1065,17 +1184,44 @@ const generateMockData = () => {
 }
 
 // 加载维修工单数据
-const loadOrders = () => {
+const loadOrders = async () => {
   loading.value = true
-  setTimeout(() => {
-    const mockData = generateMockData()
-    tableData.value = mockData.slice(
-      (pagination.current - 1) * pagination.pageSize,
-      pagination.current * pagination.pageSize
-    )
-    pagination.total = mockData.length
+  try {
+    const params = {
+      pageNum: pagination.current,
+      pageSize: pagination.pageSize,
+      orderNo: searchForm.orderNo,
+      repairType: searchForm.repairType,
+      orderStatus: searchForm.orderStatus,
+      phone: searchForm.phone
+    }
+    console.log('发送维修工单分页查询请求:', params)
+    console.log('当前用户角色:', currentUserRole.value)
+    console.log('当前Token:', localStorage.getItem('token'))
+    // 根据用户角色选择不同的API
+    const response = currentUserRole.value === 3
+      ? await getMyRepairOrders(params)  // 业主使用专用API
+      : await getRepairOrderPage(params)  // 管理员使用通用API
+    console.log('收到维修工单响应:', response)
+    if (response.code === 200) {
+      tableData.value = (response.data.rows || []).map(item => {
+        // 处理图片URL，将字符串转换为数组
+        if (item.imageUrls && typeof item.imageUrls === 'string') {
+          item.imageUrls = item.imageUrls.split(',').filter(url => url.trim())
+        }
+        return item
+      })
+      pagination.total = response.data.total || 0
+      console.log('设置维修工单数据成功，记录数:', tableData.value.length, '总数:', pagination.total)
+    } else {
+      ElMessage.error(response.msg || '加载维修工单失败')
+    }
+  } catch (error) {
+    console.error('加载维修工单失败:', error)
+    ElMessage.error('加载维修工单失败')
+  } finally {
     loading.value = false
-  }, 500)
+  }
 }
 
 // 搜索
@@ -1088,11 +1234,100 @@ const handleSearch = () => {
 const handleReset = () => {
   Object.assign(searchForm, {
     orderNo: '',
-    reporter: '',
     repairType: '',
-    orderStatus: ''
+    orderStatus: null,
+    phone: ''
   })
   handleSearch()
+}
+
+
+// 验证图片URL是否有效
+const isValidImageUrl = (url) => {
+  if (!url || typeof url !== 'string') return false
+
+  // 检查是否是blob URL（这些通常不能跨会话访问）
+  if (url.startsWith('blob:')) return false
+
+  // 检查是否是服务器图片路径（以 /images/ 开头）
+  if (url.startsWith('/images/')) {
+    return true // 是服务器图片路径
+  }
+
+  // 检查是否是本地文件名（不带路径）
+  if (url && !url.includes('/') && !url.includes('\\') && url.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+    return true // 是本地文件名
+  }
+
+  // 检查是否是完整的HTTP/HTTPS URL
+  try {
+    const urlObj = new URL(url)
+    return urlObj.protocol === 'http:' || urlObj.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+// 转换图片URL为访问地址
+const getImageUrl = (url) => {
+  if (!url || typeof url !== 'string') return null
+
+  // 如果已经是以 /images/ 开头的完整路径，需要拼接后端地址
+  if (url.startsWith('/images/')) {
+    return `http://localhost:8080${url}`
+  }
+
+  // 如果是本地文件名，转换为完整的静态资源访问路径
+  if (!url.includes('/') && !url.includes('\\') && url.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+    return `http://localhost:8080/images/${url}`
+  }
+
+  // 如果已经是完整的HTTP/HTTPS URL，直接返回
+  try {
+    const urlObj = new URL(url)
+    if (urlObj.protocol === 'http:' || urlObj.protocol === 'https:') {
+      return url
+    }
+  } catch {
+    // URL解析失败，继续处理
+  }
+
+  return url
+}
+
+// 处理图片加载错误
+const handleImageError = (e) => {
+  console.warn('图片加载失败:', e.target.src)
+  // 可以在这里设置一个默认图片或者隐藏图片
+  e.target.style.display = 'none'
+}
+
+// 上传图片到服务器
+const uploadImages = async (imageFiles) => {
+  if (!imageFiles || imageFiles.length === 0) {
+    return []
+  }
+
+  const formData = new FormData()
+  imageFiles.forEach(file => {
+    if (file.raw) {
+      formData.append('files', file.raw)
+    } else if (file instanceof File) {
+      formData.append('files', file)
+    }
+  })
+
+  try {
+    const response = await uploadRepairImages(formData)
+    if (response.code === 200) {
+      return response.data || []
+    } else {
+      throw new Error(response.msg || '上传失败')
+    }
+  } catch (error) {
+    console.error('图片上传失败:', error)
+    throw error
+  }
 }
 
 // 新增
@@ -1117,6 +1352,30 @@ const handleViewDetail = (row) => {
   detailDialogVisible.value = true
 }
 
+// 删除维修工单
+const handleDelete = (row) => {
+  ElMessageBox.confirm(
+    `确定要删除工单"${row.orderNo}"吗？此操作不可恢复。`,
+    '删除确认',
+    { type: 'warning' }
+  ).then(async () => {
+    try {
+      const response = await ownerDeleteRepairOrder(row.id)
+      if (response.code === 200) {
+        ElMessage.success('删除成功')
+        loadOrders()
+      } else {
+        ElMessage.error(response.msg || '删除失败')
+      }
+    } catch (error) {
+      console.error('删除失败:', error)
+      ElMessage.error('删除失败')
+    }
+  }).catch(() => {
+    // 用户取消
+  })
+}
+
 // 派工
 const handleAssign = (row) => {
   Object.assign(assignForm, {
@@ -1131,19 +1390,35 @@ const handleAssign = (row) => {
 }
 
 // 提交派工
-const handleAssignSubmit = () => {
+const handleAssignSubmit = async () => {
   if (!assignForm.repairerId || !assignForm.expectedCompleteTime) {
     ElMessage.warning('请填写完整的派工信息')
     return
   }
 
   assignLoading.value = true
-  setTimeout(() => {
-    ElMessage.success('派工成功')
-    assignDialogVisible.value = false
-    loadOrders()
+  try {
+    const assignData = {
+      repairerId: assignForm.repairerId,
+      expectedCompleteTime: assignForm.expectedCompleteTime,
+      remark: assignForm.remark
+    }
+    console.log('发送派工请求:', assignForm.orderId, assignData)
+    const response = await assignRepairOrder(assignForm.orderId, assignData)
+    console.log('收到派工响应:', response)
+    if (response.code === 200) {
+      ElMessage.success('派工成功')
+      assignDialogVisible.value = false
+      loadOrders()
+    } else {
+      ElMessage.error(response.msg || '派工失败')
+    }
+  } catch (error) {
+    console.error('派工失败:', error)
+    ElMessage.error('派工失败')
+  } finally {
     assignLoading.value = false
-  }, 1000)
+  }
 }
 
 // 处理工单
@@ -1157,21 +1432,104 @@ const handleAccept = (row) => {
 }
 
 // 导出
-const handleExport = () => {
-  ElMessage.success('导出成功')
+const handleExport = async () => {
+  try {
+    const params = {
+      orderNo: searchForm.orderNo,
+      reporter: searchForm.reporter,
+      repairType: searchForm.repairType,
+      orderStatus: searchForm.orderStatus
+    }
+    console.log('发送导出维修工单请求:', params)
+    const response = await exportRepairOrders(params)
+    console.log('收到导出响应:', response)
+
+    // 创建下载链接
+    const blob = new Blob([response], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `维修工单_${new Date().toLocaleDateString('zh-CN')}.xlsx`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+
+    ElMessage.success('导出成功')
+  } catch (error) {
+    console.error('导出失败:', error)
+    ElMessage.error('导出失败')
+  }
 }
 
 // 提交表单
-const handleSubmit = () => {
+const handleSubmit = async () => {
   if (!formRef.value) return
 
-  formRef.value.validate((valid) => {
-    if (valid) {
+  try {
+    await formRef.value.validate()
+
+    // 根据用户角色构建不同的提交数据
+    let submitData
+    if (currentUserRole.value === 3) {
+      // 业主报修 - 使用简化字段，先上传图片
+      let imageUrls = []
+      if (form.images && form.images.length > 0) {
+        try {
+          imageUrls = await uploadImages(form.images)
+        } catch (error) {
+          console.error('图片上传失败:', error)
+          ElMessage.error('图片上传失败，请重试')
+          return
+        }
+      }
+
+      submitData = {
+        repairType: form.repairType,
+        urgencyLevel: form.urgencyLevel,
+        faultDescription: form.description,
+        imageUrls: imageUrls.join(',') || ''
+      }
+    } else {
+      // 管理员 - 使用完整字段
+      submitData = {
+        reporter: form.reporter,
+        phone: form.phone,
+        houseCode: form.houseCode,
+        repairType: form.repairType,
+        urgencyLevel: form.urgencyLevel,
+        description: form.description,
+        images: form.images || []
+      }
+    }
+
+    let response
+    if (isEdit.value) {
+      submitData.id = form.orderId
+      response = await updateRepairOrder(submitData)
+    } else {
+      // 根据用户角色选择不同的创建API
+      response = currentUserRole.value === 3
+        ? await ownerCreateRepairOrder(submitData)  // 业主专用API
+        : await createRepairOrder(submitData)        // 管理员API
+    }
+
+    console.log('收到提交工单响应:', response)
+    if (response.code === 200) {
       ElMessage.success(dialogTitle.value + '成功')
       dialogVisible.value = false
       loadOrders()
+    } else {
+      ElMessage.error(response.msg || (dialogTitle.value + '失败'))
     }
-  })
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('提交工单失败:', error)
+      ElMessage.error(dialogTitle.value + '失败')
+    }
+  }
 }
 
 // 分页处理
@@ -1402,14 +1760,25 @@ const handleAcceptTask = (row) => {
 }
 
 // 提交接单
-const handleAcceptSubmit = () => {
+const handleAcceptSubmit = async () => {
   acceptLoading.value = true
-  setTimeout(() => {
-    ElMessage.success('接单成功')
-    acceptDialogVisible.value = false
-    loadOrders()
+  try {
+    console.log('发送接单请求:', acceptForm.orderId)
+    const response = await acceptRepairOrder(acceptForm.orderId)
+    console.log('收到接单响应:', response)
+    if (response.code === 200) {
+      ElMessage.success('接单成功')
+      acceptDialogVisible.value = false
+      loadOrders()
+    } else {
+      ElMessage.error(response.msg || '接单失败')
+    }
+  } catch (error) {
+    console.error('接单失败:', error)
+    ElMessage.error('接单失败')
+  } finally {
     acceptLoading.value = false
-  }, 1000)
+  }
 }
 
 // 维修
@@ -1499,6 +1868,7 @@ const handleInspectSubmit = async () => {
 
 // 初始化
 onMounted(() => {
+  loadRepairTypeOptions()  // 先加载字典数据
   loadOrders()
 })
 </script>
@@ -1532,6 +1902,16 @@ onMounted(() => {
   .pagination-wrapper {
     margin-top: 20px;
     text-align: right;
+  }
+
+  .disabled-button {
+    color: #c0c4cc !important;
+    cursor: not-allowed !important;
+
+    &:hover {
+      color: #c0c4cc !important;
+      background-color: transparent !important;
+    }
   }
 }
 </style>

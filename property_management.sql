@@ -454,7 +454,7 @@ create table repair_order
     image_urls           varchar(1000)                            null comment '故障图片URLs（多个用逗号分隔，最多5张）',
     urgency_level        tinyint        default 1                 null comment '紧急程度：1-普通 2-紧急',
     appointment_time     datetime                                 null comment '预约维修时间',
-    order_status         tinyint        default 1                 null comment '工单状态：1-待派工 2-已派工 3-进行中 4-待验收 5-已完成',
+    order_status         tinyint        default 1                 null comment '工单状态：1-待派工 2-待接单 3-进行中 4-待验收 5-已完成',
     worker_id            bigint                                   null comment '维修人员ID',
     worker_name          varchar(50)                              null comment '维修人员姓名（冗余字段）',
     assign_time          datetime                                 null comment '派工时间',

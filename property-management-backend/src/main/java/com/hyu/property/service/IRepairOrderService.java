@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.hyu.property.domain.RepairOrder;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 维修工单Service接口
@@ -45,4 +46,30 @@ public interface IRepairOrderService extends IService<RepairOrder> {
      * @return 维修工单集合
      */
     List<RepairOrder> selectRepairOrdersByUserId(Long userId);
+
+    /**
+     * 维修师傅接单
+     *
+     * @param id 维修工单ID
+     * @return 结果
+     */
+    boolean acceptOrder(Long id);
+
+    /**
+     * 完成维修
+     *
+     * @param id 维修工单ID
+     * @param params 完成维修参数
+     * @return 结果
+     */
+    boolean completeOrder(Long id, Map<String, Object> params);
+
+    /**
+     * 验收维修
+     *
+     * @param id 维修工单ID
+     * @param params 验收参数
+     * @return 结果
+     */
+    boolean inspectOrder(Long id, Map<String, Object> params);
 }

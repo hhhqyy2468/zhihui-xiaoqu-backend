@@ -48,6 +48,12 @@ public class RepairOrder implements Serializable {
     private String userName;
 
     /**
+     * 联系电话
+     */
+    @TableField("phone")
+    private String phone;
+
+    /**
      * 房产ID
      */
     @TableField("house_id")
@@ -118,6 +124,12 @@ public class RepairOrder implements Serializable {
      */
     @TableField("required_finish_time")
     private LocalDateTime requiredFinishTime;
+
+    /**
+     * 关联账单ID
+     */
+    @TableField("bill_id")
+    private Long billId;
 
     /**
      * 实际故障原因
@@ -204,6 +216,12 @@ public class RepairOrder implements Serializable {
     private String createBy;
 
     /**
+     * 报修时间（前端显示用，映射到创建时间）
+     */
+    @TableField(exist = false)  // 不映射到数据库表
+    private LocalDateTime reportTime;
+
+    /**
      * 创建时间
      */
     @TableField(value = "create_time", fill = FieldFill.INSERT)
@@ -250,4 +268,10 @@ public class RepairOrder implements Serializable {
      */
     @TableField(exist = false)
     private String repairTypeName;
+
+    /**
+     * 请求参数
+     */
+    @TableField(exist = false)
+    private java.util.Map<String, Object> params;
 }
