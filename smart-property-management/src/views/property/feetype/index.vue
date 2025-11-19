@@ -438,12 +438,17 @@ const loadFeeTypes = async () => {
     const params = {
       pageNum: pagination.current,
       pageSize: pagination.pageSize,
-      ...searchForm
+      feeName: searchForm.feeName,
+      feeCode: searchForm.feeCode,
+      status: searchForm.status
     }
+    console.log('发送分页查询请求:', params)
     const response = await getFeeTypePage(params)
+    console.log('收到响应:', response)
     if (response.code === 200) {
-      tableData.value = response.data.records
-      pagination.total = response.data.total
+      tableData.value = response.data.records || []
+      pagination.total = response.data.total || 0
+      console.log('设置数据成功，记录数:', tableData.value.length, '总数:', pagination.total)
     } else {
       ElMessage.error(response.msg || '加载费用类型失败')
     }
