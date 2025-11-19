@@ -53,7 +53,7 @@ public class RepairOrderController {
     @Autowired
     private IUserHouseService userHouseService;
 
-    @Value("${repair.upload.path:src/main/resources/static/images}")
+    @Value("${repair.upload.path:./uploads/images}")
     private String uploadPath;
 
     /**

@@ -1,5 +1,6 @@
 package com.hyu.property.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -12,14 +13,17 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
 
+    @Value("${repair.upload.path:./uploads/images}")
+    private String uploadPath;
+
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // 配置静态资源映射
+        // 配置外部上传目录的静态资源映射
         registry.addResourceHandler("/images/**")
-                .addResourceLocations("classpath:/static/images/");
+                .addResourceLocations("file:" + uploadPath + "/");
 
-        // 也可以配置整个static目录
-        registry.addResourceHandler("/static/**")
-                .addResourceLocations("classpath:/static/");
+        // 保持原有的classpath资源映射（兼容旧图片）
+        registry.addResourceHandler("/static/images/**")
+                .addResourceLocations("classpath:/static/images/");
     }
 }
