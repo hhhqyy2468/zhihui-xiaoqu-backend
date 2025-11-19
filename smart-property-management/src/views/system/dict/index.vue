@@ -62,15 +62,7 @@
         <el-icon><Plus /></el-icon>
         新增字典
       </el-button>
-      <el-button
-        type="success"
-        @click="handleRefreshCache"
-        v-permission="'system:dict:refresh'"
-      >
-        <el-icon><Refresh /></el-icon>
-        刷新缓存
-      </el-button>
-      <el-button
+        <el-button
         type="danger"
         @click="handleBatchDelete"
         :disabled="!selectedDicts.length"
@@ -89,13 +81,13 @@
         @selection-change="handleSelectionChange"
       >
         <el-table-column type="selection" width="55" />
-        <el-table-column prop="dictId" label="字典编码" width="80" />
+        <el-table-column prop="id" label="字典编码" width="80" />
         <el-table-column prop="dictName" label="字典名称" show-overflow-tooltip />
         <el-table-column prop="dictType" label="字典类型" show-overflow-tooltip />
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'danger'">
-              {{ row.status === 1 ? '启用' : '停用' }}
+            <el-tag :type="row.status === '1' ? 'success' : 'danger'">
+              {{ row.status === '1' ? '启用' : '停用' }}
             </el-tag>
           </template>
         </el-table-column>
@@ -136,10 +128,10 @@
 
       <div class="pagination-wrapper">
         <el-pagination
-          v-model:current-page="currentPage"
-          v-model:page-size="pageSize"
+          :current-page="pagination.current"
+          :page-size="pagination.pageSize"
           :page-sizes="[10, 20, 50, 100]"
-          :total="total"
+          :total="pagination.total"
           layout="total, sizes, prev, pager, next, jumper"
           @size-change="handleSizeChange"
           @current-change="handleCurrentChange"
@@ -150,7 +142,7 @@
     <!-- 新增/编辑字典对话框 -->
     <el-dialog
       v-model="dictDialogVisible"
-      :title="dictForm.dictId ? '编辑字典' : '新增字典'"
+      :title="dictForm.id ? '编辑字典' : '新增字典'"
       width="600px"
     >
       <el-form
@@ -166,7 +158,7 @@
           <el-input
             v-model="dictForm.dictType"
             placeholder="请输入字典类型"
-            :disabled="!!dictForm.dictId"
+            :disabled="!!dictForm.id"
           />
         </el-form-item>
         <el-form-item label="状态" prop="status">
@@ -207,40 +199,99 @@
             type="primary"
             size="small"
             @click="handleAddData"
+            v-permission="'system:dict:add'"
           >
             <el-icon><Plus /></el-icon>
             新增数据
           </el-button>
+          <el-button
+            type="success"
+            size="small"
+            @click="handleBatchEnableData"
+            :disabled="!selectedDictData.length"
+            v-permission="'system:dict:edit'"
+          >
+            <el-icon><Switch /></el-icon>
+            批量启用
+          </el-button>
+          <el-button
+            type="warning"
+            size="small"
+            @click="handleBatchDisableData"
+            :disabled="!selectedDictData.length"
+            v-permission="'system:dict:edit'"
+          >
+            <el-icon><Switch /></el-icon>
+            批量停用
+          </el-button>
+          <el-button
+            type="danger"
+            size="small"
+            @click="handleBatchDeleteData"
+            :disabled="!selectedDictData.length"
+            v-permission="'system:dict:delete'"
+          >
+            <el-icon><Delete /></el-icon>
+            批量删除
+          </el-button>
         </div>
 
-        <el-table :data="dictDataList" v-loading="dataLoading">
-          <el-table-column prop="dataSort" label="排序" width="80" />
-          <el-table-column prop="dataLabel" label="字典标签" />
-          <el-table-column prop="dataValue" label="字典值" />
+        <el-table
+          :data="dictDataList"
+          v-loading="dataLoading"
+          @selection-change="handleDataSelectionChange"
+        >
+          <el-table-column type="selection" width="55" />
+          <el-table-column prop="dictSort" label="排序" width="80" />
+          <el-table-column prop="dictLabel" label="字典标签" />
+          <el-table-column prop="dictValue" label="字典值" />
           <el-table-column prop="status" label="状态" width="100">
             <template #default="{ row }">
-              <el-tag :type="row.status === 1 ? 'success' : 'danger'">
-                {{ row.status === 1 ? '启用' : '停用' }}
+              <el-tag :type="row.status === '1' ? 'success' : 'danger'">
+                {{ row.status === '1' ? '启用' : '停用' }}
               </el-tag>
             </template>
           </el-table-column>
           <el-table-column prop="remark" label="备注" show-overflow-tooltip />
-          <el-table-column label="操作" width="150">
+          <el-table-column label="操作" width="200" fixed="right">
             <template #default="{ row }">
               <el-button
                 link
                 type="primary"
                 size="small"
                 @click="handleEditData(row)"
+                v-permission="'system:dict:edit'"
               >
+                <el-icon><Edit /></el-icon>
                 编辑
+              </el-button>
+              <el-button
+                link
+                :type="row.status === '1' ? 'warning' : 'success'"
+                size="small"
+                @click="handleToggleDataStatus(row)"
+                v-permission="'system:dict:edit'"
+              >
+                <el-icon><Switch /></el-icon>
+                {{ row.status === '1' ? '停用' : '启用' }}
+              </el-button>
+              <el-button
+                link
+                type="info"
+                size="small"
+                @click="handleCopyData(row)"
+              >
+                <el-icon><CopyDocument /></el-icon>
+                复制
               </el-button>
               <el-button
                 link
                 type="danger"
                 size="small"
                 @click="handleDeleteData(row)"
+                v-permission="'system:dict:delete'"
               >
+                <el-icon><Delete /></el-icon>
                 删除
               </el-button>
             </template>
@@ -258,7 +309,7 @@
     <!-- 新增/编辑字典数据对话框 -->
     <el-dialog
       v-model="dataFormDialogVisible"
-      :title="dataForm.dataId ? '编辑字典数据' : '新增字典数据'"
+      :title="dataForm.id ? '编辑字典数据' : '新增字典数据'"
       width="500px"
     >
       <el-form
@@ -267,14 +318,14 @@
         :rules="dataRules"
         label-width="100px"
       >
-        <el-form-item label="数据标签" prop="dataLabel">
-          <el-input v-model="dataForm.dataLabel" placeholder="请输入数据标签" />
+        <el-form-item label="数据标签" prop="dictLabel">
+          <el-input v-model="dataForm.dictLabel" placeholder="请输入数据标签" />
         </el-form-item>
-        <el-form-item label="数据值" prop="dataValue">
-          <el-input v-model="dataForm.dataValue" placeholder="请输入数据值" />
+        <el-form-item label="数据值" prop="dictValue">
+          <el-input v-model="dataForm.dictValue" placeholder="请输入数据值" />
         </el-form-item>
-        <el-form-item label="显示排序" prop="dataSort">
-          <el-input-number v-model="dataForm.dataSort" :min="0" :max="999" />
+        <el-form-item label="显示排序" prop="dictSort">
+          <el-input-number v-model="dataForm.dictSort" :min="0" :max="999" />
         </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-radio-group v-model="dataForm.status">
@@ -307,7 +358,19 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, Plus, Delete } from '@element-plus/icons-vue'
+import { Search, Refresh, Plus, Delete, Edit, Switch, CopyDocument } from '@element-plus/icons-vue'
+
+// 导入API接口
+import {
+  getDictTypePage,
+  addDictType,
+  updateDictType,
+  deleteDictType,
+  getDictDataByType,
+  addDictData,
+  updateDictData,
+  deleteDictData
+} from '@/api/dict'
 
 // 响应式数据
 const loading = ref(false)
@@ -331,21 +394,21 @@ const searchForm = reactive({
 
 // 字典表单
 const dictForm = reactive({
-  dictId: null,
+  id: null,
   dictName: '',
   dictType: '',
-  status: 1,
+  status: '1',
   remark: ''
 })
 
 // 字典数据表单
 const dataForm = reactive({
-  dataId: null,
+  id: null,
   dictType: '',
-  dataLabel: '',
-  dataValue: '',
-  dataSort: 0,
-  status: 1,
+  dictLabel: '',
+  dictValue: '',
+  dictSort: 0,
+  status: '1',
   remark: ''
 })
 
@@ -353,11 +416,14 @@ const dataForm = reactive({
 const dictList = ref([])
 const dictDataList = ref([])
 const selectedDicts = ref([])
+const selectedDictData = ref([])
 
 // 分页
-const currentPage = ref(1)
-const pageSize = ref(10)
-const total = ref(0)
+const pagination = reactive({
+  current: 1,
+  pageSize: 10,
+  total: 0
+})
 
 // 表单验证规则
 const dictRules = {
@@ -376,13 +442,13 @@ const dictRules = {
 }
 
 const dataRules = {
-  dataLabel: [
+  dictLabel: [
     { required: true, message: '请输入数据标签', trigger: 'blur' }
   ],
-  dataValue: [
+  dictValue: [
     { required: true, message: '请输入数据值', trigger: 'blur' }
   ],
-  dataSort: [
+  dictSort: [
     { required: true, message: '请输入显示排序', trigger: 'blur' }
   ],
   status: [
@@ -395,108 +461,52 @@ const formatDateTime = (dateTime) => {
   return new Date(dateTime).toLocaleString('zh-CN')
 }
 
-// 生成模拟字典数据
-const generateMockDicts = () => {
-  const dicts = [
-    {
-      dictId: 1,
-      dictName: '用户性别',
-      dictType: 'sys_user_sex',
-      status: 1,
-      remark: '用户性别字典',
-      createTime: new Date()
-    },
-    {
-      dictId: 2,
-      dictName: '用户状态',
-      dictType: 'sys_user_status',
-      status: 1,
-      remark: '用户状态字典',
-      createTime: new Date()
-    },
-    {
-      dictId: 3,
-      dictName: '费用类型',
-      dictType: 'fee_type',
-      status: 1,
-      remark: '物业费用类型',
-      createTime: new Date()
-    },
-    {
-      dictId: 4,
-      dictName: '投诉类型',
-      dictType: 'complaint_type',
-      status: 1,
-      remark: '投诉分类字典',
-      createTime: new Date()
-    },
-    {
-      dictId: 5,
-      dictName: '维修类型',
-      dictType: 'repair_type',
-      status: 1,
-      remark: '维修分类字典',
-      createTime: new Date()
-    }
-  ]
-
-  // 模拟分页数据
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  total.value = dicts.length
-  return dicts.slice(start, end)
-}
-
-// 生成模拟字典数据
-const generateMockDictData = (dictType) => {
-  const dataMap = {
-    'sys_user_sex': [
-      { dataId: 1, dictType, dataLabel: '男', dataValue: '1', dataSort: 1, status: 1, remark: '男性' },
-      { dataId: 2, dictType, dataLabel: '女', dataValue: '2', dataSort: 2, status: 1, remark: '女性' }
-    ],
-    'sys_user_status': [
-      { dataId: 3, dictType, dataLabel: '正常', dataValue: '1', dataSort: 1, status: 1, remark: '正常状态' },
-      { dataId: 4, dictType, dataLabel: '停用', dataValue: '0', dataSort: 2, status: 1, remark: '停用状态' }
-    ],
-    'fee_type': [
-      { dataId: 5, dictType, dataLabel: '物业费', dataValue: '1', dataSort: 1, status: 1, remark: '物业管理费' },
-      { dataId: 6, dictType, dataLabel: '停车费', dataValue: '2', dataSort: 2, status: 1, remark: '停车管理费' },
-      { dataId: 7, dictType, dataLabel: '水电费', dataValue: '3', dataSort: 3, status: 1, remark: '水电费用' }
-    ],
-    'complaint_type': [
-      { dataId: 8, dictType, dataLabel: '噪音投诉', dataValue: '1', dataSort: 1, status: 1, remark: '噪音扰民' },
-      { dataId: 9, dictType, dataLabel: '设施损坏', dataValue: '2', dataSort: 2, status: 1, remark: '公共设施损坏' }
-    ],
-    'repair_type': [
-      { dataId: 10, dictType, dataLabel: '水电维修', dataValue: '1', dataSort: 1, status: 1, remark: '水电设施维修' },
-      { dataId: 11, dictType, dataLabel: '门窗维修', dataValue: '2', dataSort: 2, status: 1, remark: '门窗维修' }
-    ]
-  }
-
-  return dataMap[dictType] || []
-}
-
 // 加载字典列表
-const loadDictList = () => {
+const loadDictList = async () => {
   loading.value = true
-  setTimeout(() => {
-    dictList.value = generateMockDicts()
+  try {
+    const params = {
+      pageNum: pagination.current,
+      pageSize: pagination.pageSize,
+      ...searchForm
+    }
+    const response = await getDictTypePage(params)
+    if (response.code === 200) {
+      dictList.value = response.data.records
+      pagination.total = response.data.total
+    } else {
+      ElMessage.error(response.message || '获取字典类型列表失败')
+    }
+  } catch (error) {
+    console.error('加载字典类型列表失败:', error)
+    ElMessage.error('加载字典类型列表失败')
+  } finally {
     loading.value = false
-  }, 500)
+  }
 }
 
 // 加载字典数据
-const loadDictData = (dictType) => {
+const loadDictData = async (dictType) => {
   dataLoading.value = true
-  setTimeout(() => {
-    dictDataList.value = generateMockDictData(dictType)
+  try {
+    const response = await getDictDataByType(dictType)
+    if (response.code === 200) {
+      dictDataList.value = response.data
+    } else {
+      ElMessage.error(response.message || '获取字典数据失败')
+    }
+  } catch (error) {
+    console.error('加载字典数据失败:', error)
+    ElMessage.error('加载字典数据失败')
+  } finally {
     dataLoading.value = false
-  }, 300)
+  }
 }
+
 
 // 搜索
 const handleSearch = () => {
-  currentPage.value = 1
+  pagination.current = 1
   loadDictList()
 }
 
@@ -515,13 +525,18 @@ const handleSelectionChange = (selection) => {
   selectedDicts.value = selection
 }
 
+// 字典数据选择变更
+const handleDataSelectionChange = (selection) => {
+  selectedDictData.value = selection
+}
+
 // 新增字典
 const handleAdd = () => {
   Object.assign(dictForm, {
-    dictId: null,
+    id: null,
     dictName: '',
     dictType: '',
-    status: 1,
+    status: '1',
     remark: ''
   })
   dictDialogVisible.value = true
@@ -534,35 +549,60 @@ const handleEdit = (row) => {
 }
 
 // 删除字典
-const handleDelete = (row) => {
-  ElMessageBox.confirm(
-    `确定要删除字典"${row.dictName}"吗？`,
-    '提示',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
+const handleDelete = async (row) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除字典"${row.dictName}"吗？`,
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    const response = await deleteDictType(row.id)
+    if (response.code === 200) {
+      ElMessage.success('删除成功')
+      loadDictList()
+    } else {
+      ElMessage.error(response.message || '删除失败')
     }
-  ).then(() => {
-    ElMessage.success('删除成功')
-    loadDictList()
-  })
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除字典失败:', error)
+      ElMessage.error('删除失败')
+    }
+  }
 }
 
 // 批量删除
-const handleBatchDelete = () => {
-  ElMessageBox.confirm(
-    `确定要删除选中的 ${selectedDicts.value.length} 个字典吗？`,
-    '提示',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
+const handleBatchDelete = async () => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除选中的 ${selectedDicts.value.length} 个字典吗？`,
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    const dictIds = selectedDicts.value.map(item => item.id).join(',')
+    const response = await deleteDictType(dictIds)
+    if (response.code === 200) {
+      ElMessage.success('批量删除成功')
+      loadDictList()
+    } else {
+      ElMessage.error(response.message || '批量删除失败')
     }
-  ).then(() => {
-    ElMessage.success('批量删除成功')
-    loadDictList()
-  })
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('批量删除失败:', error)
+      ElMessage.error('批量删除失败')
+    }
+  }
 }
 
 // 提交字典表单
@@ -571,13 +611,23 @@ const handleDictSubmit = async () => {
     await dictFormRef.value.validate()
     submitting.value = true
 
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    const response = dictForm.id
+      ? await updateDictType(dictForm)
+      : await addDictType(dictForm)
 
-    ElMessage.success(dictForm.dictId ? '编辑成功' : '新增成功')
-    dictDialogVisible.value = false
-    loadDictList()
+    if (response.code === 200) {
+      ElMessage.success(dictForm.id ? '编辑成功' : '新增成功')
+      dictDialogVisible.value = false
+      loadDictList()
+    } else {
+      ElMessage.error(response.message || '操作失败')
+    }
   } catch (error) {
-    console.error('表单验证失败:', error)
+    if (error.response) {
+      ElMessage.error(error.response.data.message || '操作失败')
+    } else {
+      console.error('表单验证失败:', error)
+    }
   } finally {
     submitting.value = false
   }
@@ -593,12 +643,12 @@ const handleViewData = (row) => {
 // 新增字典数据
 const handleAddData = () => {
   Object.assign(dataForm, {
-    dataId: null,
+    id: null,
     dictType: dataForm.dictType,
-    dataLabel: '',
-    dataValue: '',
-    dataSort: 0,
-    status: 1,
+    dictLabel: '',
+    dictValue: '',
+    dictSort: 0,
+    status: '1',
     remark: ''
   })
   dataFormDialogVisible.value = true
@@ -610,20 +660,161 @@ const handleEditData = (row) => {
   dataFormDialogVisible.value = true
 }
 
-// 删除字典数据
-const handleDeleteData = (row) => {
-  ElMessageBox.confirm(
-    `确定要删除字典数据"${row.dataLabel}"吗？`,
-    '提示',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
+// 切换字典数据状态
+const handleToggleDataStatus = async (row) => {
+  try {
+    const newStatus = row.status === '1' ? '0' : '1'
+    const action = newStatus === '1' ? '启用' : '停用'
+
+    await ElMessageBox.confirm(
+      `确定要${action}字典数据"${row.dictLabel}"吗？`,
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    const updateData = { ...row, status: newStatus }
+    const response = await updateDictData(updateData)
+
+    if (response.code === 200) {
+      ElMessage.success(`${action}成功`)
+      loadDictData(dataForm.dictType)
+    } else {
+      ElMessage.error(response.message || `${action}失败`)
     }
-  ).then(() => {
-    ElMessage.success('删除成功')
-    loadDictData(dataForm.dictType)
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('切换状态失败:', error)
+      ElMessage.error('操作失败')
+    }
+  }
+}
+
+// 复制字典数据
+const handleCopyData = (row) => {
+  Object.assign(dataForm, {
+    ...row,
+    id: null,
+    dictLabel: row.dictLabel + '_副本',
+    dictValue: row.dictValue + '_copy'
   })
+  dataFormDialogVisible.value = true
+  ElMessage.info('已复制数据，请修改后保存')
+}
+
+// 批量启用字典数据
+const handleBatchEnableData = async () => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要启用选中的 ${selectedDictData.value.length} 条字典数据吗？`,
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    const promises = selectedDictData.value.map(item =>
+      updateDictData({ ...item, status: '1' })
+    )
+
+    await Promise.all(promises)
+    ElMessage.success('批量启用成功')
+    loadDictData(dataForm.dictType)
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('批量启用失败:', error)
+      ElMessage.error('批量启用失败')
+    }
+  }
+}
+
+// 批量停用字典数据
+const handleBatchDisableData = async () => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要停用选中的 ${selectedDictData.value.length} 条字典数据吗？`,
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    const promises = selectedDictData.value.map(item =>
+      updateDictData({ ...item, status: '0' })
+    )
+
+    await Promise.all(promises)
+    ElMessage.success('批量停用成功')
+    loadDictData(dataForm.dictType)
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('批量停用失败:', error)
+      ElMessage.error('批量停用失败')
+    }
+  }
+}
+
+// 批量删除字典数据
+const handleBatchDeleteData = async () => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除选中的 ${selectedDictData.value.length} 条字典数据吗？`,
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    const promises = selectedDictData.value.map(item =>
+      deleteDictData(item.id)
+    )
+
+    await Promise.all(promises)
+    ElMessage.success('批量删除成功')
+    loadDictData(dataForm.dictType)
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('批量删除失败:', error)
+      ElMessage.error('批量删除失败')
+    }
+  }
+}
+
+// 删除字典数据
+const handleDeleteData = async (row) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除字典数据"${row.dictLabel}"吗？`,
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    const response = await deleteDictData(row.id)
+    if (response.code === 200) {
+      ElMessage.success('删除成功')
+      loadDictData(dataForm.dictType)
+    } else {
+      ElMessage.error(response.message || '删除失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除字典数据失败:', error)
+      ElMessage.error('删除失败')
+    }
+  }
 }
 
 // 提交字典数据表单
@@ -632,31 +823,37 @@ const handleDataSubmit = async () => {
     await dataFormRef.value.validate()
     dataSubmitting.value = true
 
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    const response = dataForm.id
+      ? await updateDictData(dataForm)
+      : await addDictData(dataForm)
 
-    ElMessage.success(dataForm.dataId ? '编辑成功' : '新增成功')
-    dataFormDialogVisible.value = false
-    loadDictData(dataForm.dictType)
+    if (response.code === 200) {
+      ElMessage.success(dataForm.id ? '编辑成功' : '新增成功')
+      dataFormDialogVisible.value = false
+      loadDictData(dataForm.dictType)
+    } else {
+      ElMessage.error(response.message || '操作失败')
+    }
   } catch (error) {
-    console.error('表单验证失败:', error)
+    if (error.response) {
+      ElMessage.error(error.response.data.message || '操作失败')
+    } else {
+      console.error('表单验证失败:', error)
+    }
   } finally {
     dataSubmitting.value = false
   }
 }
 
-// 刷新缓存
-const handleRefreshCache = () => {
-  ElMessage.success('缓存刷新成功')
-}
 
 // 分页处理
 const handleSizeChange = (val) => {
-  pageSize.value = val
+  pagination.pageSize = val
   loadDictList()
 }
 
 const handleCurrentChange = (val) => {
-  currentPage.value = val
+  pagination.current = val
   loadDictList()
 }
 
@@ -700,6 +897,25 @@ onMounted(() => {
 .dict-data-section {
   .dict-data-actions {
     margin-bottom: 16px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+
+    .el-button {
+      .el-icon {
+        margin-right: 4px;
+      }
+    }
+  }
+
+  .el-table {
+    .el-button {
+      padding: 4px 8px;
+
+      .el-icon {
+        margin-right: 2px;
+      }
+    }
   }
 }
 </style>

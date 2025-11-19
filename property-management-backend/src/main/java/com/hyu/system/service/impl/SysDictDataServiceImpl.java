@@ -38,7 +38,7 @@ public class SysDictDataServiceImpl extends ServiceImpl<SysDictDataMapper, SysDi
         queryWrapper.like(StringUtils.isNotEmpty(dictData.getDictLabel()), "dict_label", dictData.getDictLabel())
                    .eq(StringUtils.isNotEmpty(dictData.getDictType()), "dict_type", dictData.getDictType())
                    .eq(StringUtils.isNotEmpty(dictData.getStatus()), "status", dictData.getStatus())
-                   .orderByAsc("dict_sort");
+                   .orderByAsc("id");
         return page(page, queryWrapper);
     }
 

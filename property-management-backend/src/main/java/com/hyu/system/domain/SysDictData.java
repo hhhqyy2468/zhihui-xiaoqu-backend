@@ -20,14 +20,8 @@ public class SysDictData implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    @TableId(value = "dict_code", type = IdType.AUTO)
-    private Long dictCode;
-
-    /**
-     * 字典排序
-     */
-    @TableField("dict_sort")
-    private Integer dictSort;
+    @TableId(value = "id", type = IdType.AUTO)
+    private Long id;
 
     /**
      * 字典标签
@@ -54,22 +48,10 @@ public class SysDictData implements Serializable {
     private String dictType;
 
     /**
-     * 样式属性（其他样式扩展）
+     * 字典排序
      */
-    @TableField("css_class")
-    private String cssClass;
-
-    /**
-     * 表格回显样式
-     */
-    @TableField("list_class")
-    private String listClass;
-
-    /**
-     * 是否默认（Y是 N否）
-     */
-    @TableField("is_default")
-    private String isDefault;
+    @TableField("dict_sort")
+    private Integer dictSort;
 
     /**
      * 状态（0正常 1停用）

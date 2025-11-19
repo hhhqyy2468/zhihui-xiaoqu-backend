@@ -36,7 +36,7 @@ public class SysDictTypeController {
      */
     @GetMapping("/list")
     @PreAuthorize("@ss.hasPermi('system:dict:list')")
-    public PageResult list(@RequestParam(defaultValue = "1") Integer pageNum,
+    public AjaxResult list(@RequestParam(defaultValue = "1") Integer pageNum,
                            @RequestParam(defaultValue = "10") Integer pageSize,
                            @RequestParam(required = false) String dictName,
                            @RequestParam(required = false) String dictType,
@@ -51,7 +51,7 @@ public class SysDictTypeController {
         dictTypeQuery.setStatus(status);
 
         Page<SysDictType> result = dictTypeService.selectDictTypePage(page, dictTypeQuery);
-        return PageResult.success(result.getTotal(), result.getRecords());
+        return AjaxResult.success(result);
     }
 
     /**
