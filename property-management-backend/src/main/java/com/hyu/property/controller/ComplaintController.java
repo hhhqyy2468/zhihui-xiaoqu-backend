@@ -115,7 +115,7 @@ public class ComplaintController {
      * 查询投诉详情
      */
     @GetMapping("/{id}")
-    @PreAuthorize("@ss.hasPermi('property:complaint:query')")
+    @PreAuthorize("@ss.hasPermi('property:complaint:list')")
     public AjaxResult getInfo(@NotNull(message = "投诉ID不能为空") @PathVariable Long id) {
         log.info("查询投诉详情, id: {}", id);
         Complaint complaint = complaintService.selectComplaintById(id);

@@ -129,7 +129,7 @@ export function getComplaintStatusDict() {
 // 获取可用的处理人列表
 export function getAvailableHandlers() {
   return request({
-    url: '/handlers',
+    url: '/property/complaint/handlers',
     method: 'get'
   })
 }
