@@ -2,11 +2,11 @@
   <div class="log-container">
     <!-- 页面标题 -->
     <div class="page-header">
-      <h2 class="page-title">投诉管理</h2>
+      <h2 class="page-title">{{ getPageTitle() }}</h2>
       <el-breadcrumb separator="/">
         <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
-        <el-breadcrumb-item>服务管理</el-breadcrumb-item>
-        <el-breadcrumb-item>投诉管理</el-breadcrumb-item>
+        <el-breadcrumb-item>{{ getBreadcrumbParent() }}</el-breadcrumb-item>
+        <el-breadcrumb-item>{{ getPageTitle() }}</el-breadcrumb-item>
       </el-breadcrumb>
     </div>
 
@@ -23,7 +23,7 @@
         </el-form-item>
         <el-form-item label="投诉人">
           <el-input
-            v-model="searchForm.complainant"
+            v-model="searchForm.userName"
             placeholder="请输入投诉人"
             clearable
             style="width: 200px"
@@ -38,9 +38,9 @@
           >
             <el-option
               v-for="item in complaintTypeOptions"
-              :key="item.value"
-              :label="item.label"
-              :value="item.value"
+              :key="item.dictValue"
+              :label="item.dictLabel"
+              :value="item.dictValue"
             />
           </el-select>
         </el-form-item>
@@ -53,11 +53,19 @@
           >
             <el-option
               v-for="item in complaintStatusOptions"
-              :key="item.value"
-              :label="item.label"
-              :value="item.value"
+              :key="item.dictValue"
+              :label="item.dictLabel"
+              :value="item.dictValue"
             />
           </el-select>
+        </el-form-item>
+        <el-form-item label="联系电话">
+          <el-input
+            v-model="searchForm.phone"
+            placeholder="请输入联系电话"
+            clearable
+            style="width: 150px"
+          />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleSearch">
@@ -75,15 +83,12 @@
     <!-- 操作按钮 -->
     <div class="action-section">
       <el-button
+        v-if="currentUserRole !== 4"
         type="primary"
         @click="handleAdd"
       >
         <el-icon><Plus /></el-icon>
-        新增投诉
-      </el-button>
-      <el-button @click="handleExport">
-        <el-icon><Download /></el-icon>
-        导出
+        {{ currentUserRole === 3 ? '发起投诉' : '新增投诉' }}
       </el-button>
     </div>
 
@@ -94,9 +99,14 @@
         :data="tableData"
       >
         <el-table-column prop="complaintNo" label="投诉单号" width="160" sortable />
-        <el-table-column prop="complainant" label="投诉人" width="120" />
+          <el-table-column
+          v-if="currentUserRole !== 3"
+          prop="userName"
+          label="投诉人"
+          width="120"
+        />
         <el-table-column prop="phone" label="联系电话" width="130" />
-        <el-table-column prop="houseCode" label="房间编号" width="140" />
+        <el-table-column prop="houseNo" label="房间编号" width="140" />
         <el-table-column prop="complaintType" label="投诉类型" width="120">
           <template #default="{ row }">
             <el-tag :type="getTypeTag(row.complaintType)">
@@ -119,9 +129,9 @@
           </template>
         </el-table-column>
         <el-table-column prop="handlerName" label="处理人" width="120" />
-        <el-table-column prop="complaintTime" label="投诉时间" width="180" sortable>
+        <el-table-column prop="createTime" label="投诉时间" width="180" sortable>
           <template #default="{ row }">
-            {{ formatDateTime(row.complaintTime) }}
+            {{ formatDateTime(row.createTime) }}
           </template>
         </el-table-column>
         <el-table-column label="操作" width="280" fixed="right">
@@ -199,9 +209,9 @@
           <el-select v-model="form.complaintType" placeholder="请选择投诉类型" style="width: 100%">
             <el-option
               v-for="item in complaintTypeOptions"
-              :key="item.value"
-              :label="item.label"
-              :value="item.value"
+              :key="item.dictValue"
+              :label="item.dictLabel"
+              :value="item.dictValue"
             />
           </el-select>
         </el-form-item>
@@ -216,9 +226,9 @@
             </el-radio>
           </el-radio-group>
         </el-form-item>
-        <el-form-item label="投诉内容" prop="content">
+        <el-form-item label="投诉内容" prop="complaintContent">
           <el-input
-            v-model="form.content"
+            v-model="form.complaintContent"
             type="textarea"
             placeholder="请详细描述投诉内容"
             :rows="4"
@@ -226,10 +236,14 @@
         </el-form-item>
         <el-form-item label="相关图片">
           <el-upload
-            v-model:file-list="form.images"
-            action="#"
+            :file-list="fileList"
+            :action="uploadUrl"
+            :headers="uploadHeaders"
             list-type="picture-card"
-            :auto-upload="false"
+            :before-upload="beforeUpload"
+            :on-success="handleUploadSuccess"
+            :on-remove="handleRemove"
+            :on-change="handleFileChange"
             multiple
             :limit="5"
           >
@@ -281,7 +295,7 @@
           </el-tag>
         </el-descriptions-item>
         <el-descriptions-item label="投诉时间">
-          {{ formatDateTime(currentComplaint.complaintTime) }}
+          {{ formatDateTime(currentComplaint.createTime) }}
         </el-descriptions-item>
         <el-descriptions-item label="处理人" v-if="currentComplaint.handlerName">
           {{ currentComplaint.handlerName }}
@@ -293,18 +307,18 @@
 
       <div style="margin-top: 20px;">
         <h4>投诉内容</h4>
-        <p>{{ currentComplaint.content }}</p>
+        <p>{{ currentComplaint.complaintContent }}</p>
       </div>
 
-      <div style="margin-top: 20px;" v-if="currentComplaint.images && currentComplaint.images.length > 0">
+      <div style="margin-top: 20px;" v-if="currentComplaint.imageUrls && currentComplaint.imageUrls.length > 0">
         <h4>相关图片</h4>
         <el-image
-          v-for="(image, index) in currentComplaint.images"
+          v-for="(image, index) in getImageList(currentComplaint.imageUrls)"
           :key="index"
-          :src="image"
+          :src="getImageUrl(image)"
           style="width: 100px; height: 100px; margin-right: 10px;"
           fit="cover"
-          :preview-src-list="currentComplaint.images"
+          :preview-src-list="getImageList(currentComplaint.imageUrls).map(url => getImageUrl(url))"
         />
       </div>
 
@@ -460,7 +474,23 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, Plus, Download } from '@element-plus/icons-vue'
+import { Search, Refresh, Plus } from '@element-plus/icons-vue'
+
+// 导入API接口
+import {
+  getComplaintPage,
+  getComplaintDetail,
+  createComplaint,
+  updateComplaint,
+  deleteComplaint,
+  assignComplaint,
+  handleComplaint,
+  rateComplaint,
+  getMyComplaints,
+  uploadComplaintImage,
+  getComplaintTypeDict,
+  getComplaintStatusDict
+} from '@/api/complaint'
 
 // 响应式数据
 const formRef = ref()
@@ -470,6 +500,7 @@ const loading = ref(false)
 const assignLoading = ref(false)
 const processLoading = ref(false)
 const rateLoading = ref(false)
+const submitLoading = ref(false)
 const dialogVisible = ref(false)
 const detailDialogVisible = ref(false)
 const assignDialogVisible = ref(false)
@@ -477,12 +508,57 @@ const processDialogVisible = ref(false)
 const rateDialogVisible = ref(false)
 const isEdit = ref(false)
 
+// 用户角色判断
+const currentUserRole = computed(() => {
+  const token = localStorage.getItem('token')
+  if (token) {
+    try {
+      const tokenParts = token.split('.')
+      if (tokenParts.length >= 2) {
+        let payload = tokenParts[1]
+        payload = payload.replace(/-/g, '+').replace(/_/g, '/')
+        while (payload.length % 4) {
+          payload += '='
+        }
+        const decoded = JSON.parse(atob(payload))
+        return decoded.userType || 1
+      }
+    } catch (error) {
+      console.error('解析Token失败:', error)
+    }
+  }
+  return 1
+})
+
+// 获取页面标题
+const getPageTitle = () => {
+  switch (currentUserRole.value) {
+    case 1: return '投诉管理'
+    case 2: return '投诉管理'
+    case 3: return '我的投诉'
+    default: return '投诉管理'
+  }
+}
+
+// 获取面包屑父级标题
+const getBreadcrumbParent = () => {
+  switch (currentUserRole.value) {
+    case 1: return '服务管理'
+    case 2: return '服务管理'
+    case 3: return '业主门户'
+    default: return '服务管理'
+  }
+}
+
 // 搜索表单
 const searchForm = reactive({
   complaintNo: '',
-  complainant: '',
+  userName: '',
+  houseNo: '',
   complaintType: '',
-  complaintStatus: ''
+  urgencyLevel: null,
+  complaintStatus: null,
+  phone: ''
 })
 
 // 表格数据
@@ -495,29 +571,16 @@ const pagination = reactive({
   total: 0
 })
 
-// 选项数据
-const complaintTypeOptions = ref([
-  { label: '设施维修', value: 'facility' },
-  { label: '环境卫生', value: 'environment' },
-  { label: '噪音扰民', value: 'noise' },
-  { label: '安全隐患', value: 'safety' },
-  { label: '服务态度', value: 'service' },
-  { label: '费用争议', value: 'fee' },
-  { label: '其他问题', value: 'other' }
-])
+// 字典数据
+const complaintTypeOptions = ref([])
+const complaintStatusOptions = ref([])
 
-const urgencyLevelOptions = ref([
-  { label: '一般', value: 1 },
-  { label: '紧急', value: 2 },
-  { label: '特急', value: 3 }
-])
-
-const complaintStatusOptions = ref([
-  { label: '待处理', value: 0 },
-  { label: '处理中', value: 1 },
-  { label: '已处理', value: 2 },
-  { label: '已关闭', value: 3 }
-])
+// 文件上传
+const fileList = ref([])
+const uploadUrl = `${import.meta.env.VITE_APP_BASE_API}/property/complaint/upload`
+const uploadHeaders = {
+  Authorization: 'Bearer ' + localStorage.getItem('token')
+}
 
 const handlerOptions = ref([
   { label: '物业管家-张三', value: 1 },
@@ -526,16 +589,21 @@ const handlerOptions = ref([
   { label: '物业经理-赵六', value: 4 }
 ])
 
+const urgencyLevelOptions = ref([
+  { label: '普通', value: 1 },
+  { label: '紧急', value: 2 }
+])
+
 // 表单数据
 const form = reactive({
-  complaintId: null,
-  complainant: '',
-  phone: '',
-  houseCode: '',
+  id: null,
+  complaintNo: '',
+  houseNo: '',
   complaintType: '',
   urgencyLevel: 1,
-  content: '',
-  images: []
+  phone: '',
+  complaintContent: '',
+  imageUrls: ''
 })
 
 // 分配表单
@@ -569,26 +637,16 @@ const rateForm = reactive({
 // 当前投诉
 const currentComplaint = ref({})
 
-// 表单规则
+// 表单验证规则
 const formRules = {
-  complainant: [
-    { required: true, message: '请输入投诉人姓名', trigger: 'blur' }
-  ],
-  phone: [
-    { required: true, message: '请输入联系电话', trigger: 'blur' },
-    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
-  ],
-  houseCode: [
-    { required: true, message: '请输入房间编号', trigger: 'blur' }
+  houseNo: [
+    { required: true, message: '房屋编号不能为空', trigger: 'blur' }
   ],
   complaintType: [
-    { required: true, message: '请选择投诉类型', trigger: 'change' }
+    { required: true, message: '投诉类型不能为空', trigger: 'change' }
   ],
-  urgencyLevel: [
-    { required: true, message: '请选择紧急程度', trigger: 'change' }
-  ],
-  content: [
-    { required: true, message: '请输入投诉内容', trigger: 'blur' },
+  complaintContent: [
+    { required: true, message: '投诉内容不能为空', trigger: 'blur' },
     { min: 10, max: 500, message: '投诉内容长度在10到500个字符', trigger: 'blur' }
   ]
 }
@@ -614,111 +672,59 @@ const rateRules = {
 // 计算属性
 const dialogTitle = computed(() => isEdit.value ? '编辑投诉' : '新增投诉')
 
-// 格式化日期时间
-const formatDateTime = (dateTime) => {
-  if (!dateTime) return '-'
-  return new Date(dateTime).toLocaleString('zh-CN')
-}
 
-// 获取投诉类型名称
-const getTypeName = (type) => {
-  const option = complaintTypeOptions.value.find(item => item.value === type)
-  return option ? option.label : '未知'
-}
 
-// 获取投诉类型标签
-const getTypeTag = (type) => {
-  const tagMap = {
-    'facility': 'primary',
-    'environment': 'success',
-    'noise': 'warning',
-    'safety': 'danger',
-    'service': 'info',
-    'fee': 'warning',
-    'other': 'info'
+
+// 加载字典数据
+const loadDictData = async () => {
+  try {
+    const [typeRes, statusRes] = await Promise.all([
+      getComplaintTypeDict(),
+      getComplaintStatusDict()
+    ])
+
+    if (typeRes.code === 200) {
+      complaintTypeOptions.value = typeRes.data || []
+    }
+    if (statusRes.code === 200) {
+      complaintStatusOptions.value = statusRes.data || []
+    }
+  } catch (error) {
+    console.error('加载字典数据失败:', error)
   }
-  return tagMap[type] || 'info'
-}
-
-// 获取紧急程度名称
-const getUrgencyName = (level) => {
-  const option = urgencyLevelOptions.value.find(item => item.value === level)
-  return option ? option.label : '未知'
-}
-
-// 获取紧急程度标签
-const getUrgencyTag = (level) => {
-  const tagMap = {
-    1: 'info',    // 一般
-    2: 'warning', // 紧急
-    3: 'danger'   // 特急
-  }
-  return tagMap[level] || 'info'
-}
-
-// 获取状态名称
-const getStatusName = (status) => {
-  const option = complaintStatusOptions.value.find(item => item.value === status)
-  return option ? option.label : '未知'
-}
-
-// 获取状态标签
-const getStatusTag = (status) => {
-  const tagMap = {
-    0: 'warning', // 待处理
-    1: 'primary', // 处理中
-    2: 'success', // 已完成
-    3: 'info'     // 已关闭
-  }
-  return tagMap[status] || 'info'
-}
-
-// 生成模拟数据
-const generateMockData = () => {
-  const complaints = []
-  const complainants = ['张三', '李四', '王五', '赵六', '钱七', '孙八', '周九', '吴十']
-  const types = ['facility', 'environment', 'noise', 'safety', 'service', 'fee', 'other']
-  const statuses = [0, 1, 2, 3]
-  const urgencyLevels = [1, 2, 3]
-
-  for (let i = 0; i < 50; i++) {
-    const type = types[Math.floor(Math.random() * types.length)]
-    const status = statuses[Math.floor(Math.random() * statuses.length)]
-    const urgency = urgencyLevels[Math.floor(Math.random() * urgencyLevels.length)]
-
-    complaints.push({
-      complaintId: i + 1,
-      complaintNo: `COMP${(i + 1).toString().padStart(6, '0')}`,
-      complainant: complainants[i % complainants.length],
-      phone: '138****' + Math.floor(Math.random() * 10000).toString().padStart(4, '0'),
-      houseCode: `H${Math.floor(Math.random() * 4 + 1)}${Math.floor(Math.random() * 18 + 1)}${Math.floor(Math.random() * 3 + 1)}`,
-      complaintType: type,
-      urgencyLevel: urgency,
-      complaintStatus: status,
-      content: '详细描述投诉内容和相关问题',
-      images: Math.random() > 0.5 ? [`https://picsum.photos/200/200?random=${i}`] : [],
-      handlerName: status > 0 ? handlerOptions.value[Math.floor(Math.random() * handlerOptions.value.length)].label : '',
-      handleTime: status > 0 ? new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString() : '',
-      handleContent: status === 2 ? '问题已处理完成，业主表示满意' : '',
-      complaintTime: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString()
-    })
-  }
-
-  return complaints
 }
 
 // 加载投诉数据
-const loadComplaints = () => {
+const loadComplaints = async () => {
   loading.value = true
-  setTimeout(() => {
-    const mockData = generateMockData()
-    tableData.value = mockData.slice(
-      (pagination.current - 1) * pagination.pageSize,
-      pagination.current * pagination.pageSize
-    )
-    pagination.total = mockData.length
+  try {
+    const params = {
+      pageNum: pagination.current,
+      pageSize: pagination.pageSize,
+      ...searchForm
+    }
+
+    let response
+    if (currentUserRole.value === 3) {
+      // 业主使用专用API - 查看自己的投诉
+      response = await getMyComplaints(params)
+    } else {
+      // 管理员和物业经理使用通用API - 查看所有投诉
+      response = await getComplaintPage(params)
+    }
+
+    if (response.code === 200) {
+      tableData.value = response.data.rows || response.data.records || []
+      pagination.total = response.data.total || 0
+    } else {
+      ElMessage.error(response.msg || '加载投诉失败')
+    }
+  } catch (error) {
+    console.error('加载投诉失败:', error)
+    ElMessage.error('加载投诉失败')
+  } finally {
     loading.value = false
-  }, 500)
+  }
 }
 
 // 搜索
@@ -729,35 +735,36 @@ const handleSearch = () => {
 
 // 重置
 const handleReset = () => {
-  Object.assign(searchForm, {
-    complaintNo: '',
-    complainant: '',
-    complaintType: '',
-    complaintStatus: ''
+  Object.keys(searchForm).forEach(key => {
+    if (typeof searchForm[key] === 'string') {
+      searchForm[key] = ''
+    } else {
+      searchForm[key] = null
+    }
   })
   handleSearch()
 }
 
-// 新增
+// 新增投诉
 const handleAdd = () => {
-  isEdit.value = false
-  Object.assign(form, {
-    complaintId: null,
-    complainant: '',
-    phone: '',
-    houseCode: '',
-    complaintType: '',
-    urgencyLevel: 1,
-    content: '',
-    images: []
-  })
+  resetForm()
   dialogVisible.value = true
 }
 
 // 查看详情
-const handleViewDetail = (row) => {
-  currentComplaint.value = { ...row }
-  detailDialogVisible.value = true
+const handleViewDetail = async (row) => {
+  try {
+    const response = await getComplaintDetail(row.id)
+    if (response.code === 200) {
+      currentComplaint.value = response.data
+      detailDialogVisible.value = true
+    } else {
+      ElMessage.error(response.msg || '获取投诉详情失败')
+    }
+  } catch (error) {
+    console.error('获取投诉详情失败:', error)
+    ElMessage.error('获取投诉详情失败')
+  }
 }
 
 // 分配处理人
@@ -859,16 +866,171 @@ const handleExport = () => {
 }
 
 // 提交表单
-const handleSubmit = () => {
-  if (!formRef.value) return
+const handleSubmit = async () => {
+  try {
+    await formRef.value.validate()
+    submitLoading.value = true
 
-  formRef.value.validate((valid) => {
-    if (valid) {
-      ElMessage.success(dialogTitle.value + '成功')
+    // 处理图片URL
+    const imageUrls = fileList.value.map(file => {
+      if (file.response) {
+        return file.response
+      }
+      return file.url
+    }).join(',')
+
+    const formData = { ...form, imageUrls }
+    const response = await createComplaint(formData)
+
+    if (response.code === 200) {
+      ElMessage.success('投诉提交成功')
       dialogVisible.value = false
       loadComplaints()
+    } else {
+      ElMessage.error(response.msg || '投诉提交失败')
     }
+  } catch (error) {
+    console.error('提交失败:', error)
+  } finally {
+    submitLoading.value = false
+  }
+}
+
+// 删除投诉
+const handleDelete = async (row) => {
+  try {
+    await ElMessageBox.confirm(`确定要删除投诉"${row.complaintNo}"吗？`, '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+
+    const response = await deleteComplaint(row.id)
+    if (response.code === 200) {
+      ElMessage.success('删除成功')
+      loadComplaints()
+    } else {
+      ElMessage.error(response.msg || '删除失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除失败:', error)
+      ElMessage.error('删除失败')
+    }
+  }
+}
+
+// 重置表单
+const resetForm = () => {
+  Object.assign(form, {
+    id: null,
+    complaintNo: '',
+    houseNo: '',
+    complaintType: '',
+    urgencyLevel: 1,
+    phone: '',
+    complaintContent: '',
+    imageUrls: ''
   })
+  fileList.value = []
+  formRef.value?.resetFields()
+}
+
+// 文件上传相关
+const beforeUpload = (file) => {
+  const isValidType = ['image/jpeg', 'image/png', 'image/gif'].includes(file.type)
+  const isLt5M = file.size / 1024 / 1024 < 5
+
+  if (!isValidType) {
+    ElMessage.error('只能上传JPG/PNG/GIF格式的图片!')
+  }
+  if (!isLt5M) {
+    ElMessage.error('图片大小不能超过5MB!')
+  }
+  return isValidType && isLt5M
+}
+
+const handleUploadSuccess = (response) => {
+  if (response.code === 200) {
+    ElMessage.success('图片上传成功')
+  } else {
+    ElMessage.error(response.msg || '图片上传失败')
+  }
+}
+
+const handleRemove = (file, fileList) => {
+  console.log('移除文件:', file, fileList)
+}
+
+const handleFileChange = (file, fileList) => {
+  console.log('文件变化:', file, fileList)
+}
+
+// 工具函数
+const getTypeTag = (type) => {
+  const tagMap = {
+    'sanitation': 'warning',
+    'noise': 'danger',
+    'facility_damage': 'primary',
+    'service_attitude': 'info',
+    'safety_hazard': 'danger',
+    'other': 'info'
+  }
+  return tagMap[type] || 'info'
+}
+
+const getTypeName = (type) => {
+  return getComplaintTypeName(type)
+}
+
+const getUrgencyTag = (urgency) => {
+  return urgency === 2 ? 'danger' : 'info'
+}
+
+const getUrgencyName = (urgency) => {
+  return urgency === 2 ? '紧急' : '普通'
+}
+
+const getStatusTag = (status) => {
+  const tagMap = {
+    1: 'warning',
+    2: 'primary',
+    3: 'success',
+    4: 'info'
+  }
+  return tagMap[status] || 'info'
+}
+
+const getStatusName = (status) => {
+  const statusMap = {
+    1: '待处理',
+    2: '处理中',
+    3: '已处理',
+    4: '已关闭'
+  }
+  return statusMap[status] || '未知'
+}
+
+const getComplaintTypeName = (type) => {
+  const option = complaintTypeOptions.value.find(item => item.dictValue === type)
+  return option ? option.dictLabel : type
+}
+
+const formatDateTime = (dateTime) => {
+  if (!dateTime) return ''
+  return new Date(dateTime).toLocaleString('zh-CN')
+}
+
+const getImageList = (imageUrls) => {
+  if (!imageUrls) return []
+  if (Array.isArray(imageUrls)) return imageUrls
+  return imageUrls.split(',').filter(url => url.trim())
+}
+
+const getImageUrl = (url) => {
+  if (!url) return ''
+  if (url.startsWith('http')) return url
+  return `${import.meta.env.VITE_APP_BASE_API}${url}`
 }
 
 // 分页处理
@@ -884,6 +1046,7 @@ const handleCurrentChange = (val) => {
 
 // 初始化
 onMounted(() => {
+  loadDictData()
   loadComplaints()
 })
 </script>
@@ -891,6 +1054,23 @@ onMounted(() => {
 <style lang="scss" scoped>
 .log-container {
   padding: 20px;
+}
+
+.breadcrumb-section {
+  margin-bottom: 20px;
+  padding: 10px 0;
+  border-bottom: 1px solid #e4e7ed;
+}
+
+.page-header {
+  margin-bottom: 20px;
+}
+
+.page-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #303133;
+  margin: 0;
 }
 
 .page-header {
