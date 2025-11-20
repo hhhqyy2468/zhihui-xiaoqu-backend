@@ -250,11 +250,11 @@
           <el-card class="dashboard-card">
             <div class="card-content">
               <div class="card-icon">
-                <el-icon size="40" color="#e6a23c"><View /></el-icon>
+                <el-icon size="40" color="#67c23a"><CircleCheck /></el-icon>
               </div>
               <div class="card-info">
-                <div class="card-title">待验收</div>
-                <div class="card-value">{{ workerStats.pendingAcceptOrders }}</div>
+                <div class="card-title">已完成</div>
+                <div class="card-value">{{ workerStats.completedOrders }}</div>
               </div>
             </div>
           </el-card>
@@ -276,7 +276,7 @@
                 <span class="order-title">{{ order.title }}</span>
                 <span class="order-location">{{ order.location }}</span>
                 <span class="order-time">{{ order.time }}</span>
-                <el-button v-if="order.status === '待接单'" type="primary" size="small" @click="acceptOrder(order.id)">接单</el-button>
+                <el-button v-if="order.statusNum === 2" type="primary" size="small" @click="acceptOrder(order.id)">接单</el-button>
               </div>
             </div>
           </el-card>
@@ -290,6 +290,9 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
+
+// 导入维修工单API
+import { getMyWorkerOrders } from '@/api/repair'
 
 const userStore = useUserStore()
 
@@ -314,7 +317,7 @@ const managerStats = reactive({
 const workerStats = reactive({
   pendingOrders: 0,
   processingOrders: 0,
-  pendingAcceptOrders: 0
+  completedOrders: 0
 })
 
 // 模拟数据
@@ -366,10 +369,101 @@ const acceptOrder = (orderId) => {
   updateWorkerStats()
 }
 
+// 加载真实的维修员统计数据和最新工单
+const loadWorkerData = async () => {
+  try {
+    console.log('加载维修员数据...')
+
+    // 获取维修员的全部工单数据（不分页，设置较大的页面大小）
+    const params = {
+      pageNum: 1,
+      pageSize: 1000, // 设置足够大的页面大小获取所有数据
+      orderNo: '',
+      repairType: '',
+      orderStatus: '',
+      phone: ''
+    }
+
+    const response = await getMyWorkerOrders(params)
+    console.log('维修员工单数据响应:', response)
+
+    if (response.code === 200) {
+      const allOrders = response.data.records || []
+      console.log('维修员总工单数:', allOrders.length)
+
+      // 计算统计数据
+      const pendingOrders = allOrders.filter(order => order.orderStatus === 2) // 待接单
+      const processingOrders = allOrders.filter(order => order.orderStatus === 3) // 进行中
+      const completedOrders = allOrders.filter(order => order.orderStatus === 5 || order.orderStatus === 6) // 已完成或已归档
+
+      // 更新统计数据
+      workerStats.pendingOrders = pendingOrders.length
+      workerStats.processingOrders = processingOrders.length
+      workerStats.completedOrders = completedOrders.length
+
+      // 更新最新工单列表 - 按创建时间倒序，取前5个
+      recentOrders.value = allOrders
+        .sort((a, b) => new Date(b.createTime) - new Date(a.createTime))
+        .slice(0, 5)
+        .map(order => ({
+          id: order.id,
+          status: getStatusName(order.orderStatus),
+          statusNum: order.orderStatus,
+          title: order.faultDescription,
+          location: order.houseNo,
+          time: formatRelativeTime(order.createTime),
+          orderNo: order.orderNo
+        }))
+
+      console.log('维修员统计数据更新完成:', workerStats)
+      console.log('最新工单列表更新完成:', recentOrders.value)
+    } else {
+      console.error('获取维修员工单数据失败:', response.msg)
+      ElMessage.error('获取工单数据失败')
+    }
+  } catch (error) {
+    console.error('加载维修员数据失败:', error)
+    ElMessage.error('获取工单数据失败')
+  }
+}
+
+// 获取状态名称
+const getStatusName = (status) => {
+  const statusMap = {
+    1: '待派工',
+    2: '待接单',
+    3: '进行中',
+    4: '待验收',
+    5: '已完成',
+    6: '已归档'
+  }
+  return statusMap[status] || '未知状态'
+}
+
+// 格式化相对时间
+const formatRelativeTime = (timeStr) => {
+  const now = new Date()
+  const time = new Date(timeStr)
+  const diff = now - time
+
+  const minutes = Math.floor(diff / (1000 * 60))
+  const hours = Math.floor(diff / (1000 * 60 * 60))
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+
+  if (minutes < 60) {
+    return `${minutes}分钟前`
+  } else if (hours < 24) {
+    return `${hours}小时前`
+  } else {
+    return `${days}天前`
+  }
+}
+
 const updateWorkerStats = () => {
+  // 保留这个函数用于接单后的模拟更新，但实际数据以API为准
   workerStats.pendingOrders = recentOrders.value.filter(order => order.status === '待接单').length
   workerStats.processingOrders = recentOrders.value.filter(order => order.status === '进行中').length
-  workerStats.pendingAcceptOrders = recentOrders.value.filter(order => order.status === '待验收').length
+  workerStats.completedOrders = recentOrders.value.filter(order => order.status === '已完成').length
 }
 
 onMounted(() => {
@@ -388,8 +482,8 @@ onMounted(() => {
     managerStats.unpaidBills = 28
     managerStats.pendingTasks = 15
   } else if (userStore.userType === 4) {
-    // 维修人员数据
-    updateWorkerStats()
+    // 维修人员数据 - 加载真实API数据
+    loadWorkerData()
   }
 })
 </script>
