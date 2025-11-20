@@ -125,3 +125,11 @@ export function getComplaintStatusDict() {
     method: 'get'
   })
 }
+
+// 获取可用的处理人列表
+export function getAvailableHandlers() {
+  return request({
+    url: '/handlers',
+    method: 'get'
+  })
+}

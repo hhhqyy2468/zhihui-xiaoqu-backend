@@ -489,7 +489,8 @@ import {
   getMyComplaints,
   uploadComplaintImage,
   getComplaintTypeDict,
-  getComplaintStatusDict
+  getComplaintStatusDict,
+  getAvailableHandlers
 } from '@/api/complaint'
 
 // 响应式数据
@@ -582,12 +583,7 @@ const uploadHeaders = {
   Authorization: 'Bearer ' + localStorage.getItem('token')
 }
 
-const handlerOptions = ref([
-  { label: '物业管家-张三', value: 1 },
-  { label: '物业管家-李四', value: 2 },
-  { label: '物业管理员-王五', value: 3 },
-  { label: '物业经理-赵六', value: 4 }
-])
+const handlerOptions = ref([])
 
 const urgencyLevelOptions = ref([
   { label: '普通', value: 1 },
@@ -678,9 +674,10 @@ const dialogTitle = computed(() => isEdit.value ? '编辑投诉' : '新增投诉
 // 加载字典数据
 const loadDictData = async () => {
   try {
-    const [typeRes, statusRes] = await Promise.all([
+    const [typeRes, statusRes, handlersRes] = await Promise.all([
       getComplaintTypeDict(),
-      getComplaintStatusDict()
+      getComplaintStatusDict(),
+      getAvailableHandlers()
     ])
 
     if (typeRes.code === 200) {
@@ -688,6 +685,9 @@ const loadDictData = async () => {
     }
     if (statusRes.code === 200) {
       complaintStatusOptions.value = statusRes.data || []
+    }
+    if (handlersRes.code === 200) {
+      handlerOptions.value = handlersRes.data || []
     }
   } catch (error) {
     console.error('加载字典数据失败:', error)

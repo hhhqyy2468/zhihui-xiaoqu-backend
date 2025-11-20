@@ -138,4 +138,11 @@ public interface IComplaintService extends IService<Complaint> {
      * @return 统计结果
      */
     Map<String, Object> countComplaintStats(Complaint complaint);
+
+    /**
+     * 获取可用的处理人列表（物业管理员）
+     *
+     * @return 处理人列表
+     */
+    List<Map<String, Object>> getAvailableHandlers();
 }

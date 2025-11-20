@@ -341,6 +341,20 @@ public class ComplaintController {
     }
 
     /**
+     * 获取可用的处理人列表（物业管理员）
+     */
+    @GetMapping("/handlers")
+    @PreAuthorize("@ss.hasPermi('property:complaint:assign')")
+    public AjaxResult getAvailableHandlers() {
+        log.info("获取可用的投诉处理人列表");
+
+        // 获取物业管理员列表（userType=2）
+        List<Map<String, Object>> handlers = complaintService.getAvailableHandlers();
+
+        return AjaxResult.success(handlers);
+    }
+
+    /**
      * 响应返回结果
      *
      * @param rows 影响行数
