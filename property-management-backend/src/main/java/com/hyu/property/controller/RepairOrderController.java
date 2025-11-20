@@ -1,13 +1,17 @@
 package com.hyu.property.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.hyu.common.core.domain.AjaxResult;
 import com.hyu.common.core.domain.PageResult;
 import com.hyu.common.utils.SecurityUtils;
+import com.hyu.common.utils.StringUtils;
 import com.hyu.property.domain.RepairOrder;
 import com.hyu.property.service.IRepairOrderService;
 import com.hyu.property.service.IUserHouseService;
 import com.hyu.property.domain.UserHouse;
+import com.hyu.system.domain.SysUser;
+import com.hyu.system.service.ISysUserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -52,6 +56,9 @@ public class RepairOrderController {
 
     @Autowired
     private IUserHouseService userHouseService;
+
+    @Autowired
+    private ISysUserService userService;
 
     @Value("${repair.upload.path:./uploads/images}")
     private String uploadPath;
@@ -169,6 +176,84 @@ public class RepairOrderController {
         }
         repairOrder.setUpdateBy(SecurityUtils.getUsername());
         return toAjax(repairOrderService.updateById(repairOrder));
+    }
+
+    /**
+     * 获取维修人员列表
+     */
+    @GetMapping("/repairers")
+    @PreAuthorize("@ss.hasPermi('property:repair:list')")
+    public AjaxResult getRepairers() {
+        log.info("获取维修人员列表");
+        List<Map<String, Object>> repairers = repairOrderService.getRepairerList();
+        return AjaxResult.success(repairers);
+    }
+
+    /**
+     * 维修人员查看分配给自己的工单
+     */
+    @GetMapping("/worker/my-orders")
+    @PreAuthorize("@ss.hasPermi('property:repair:accept')")
+    public AjaxResult getMyWorkerOrders(@RequestParam(defaultValue = "1") Integer pageNum,
+                                         @RequestParam(defaultValue = "10") Integer pageSize,
+                                         @RequestParam(required = false) String orderNo,
+                                         @RequestParam(required = false) String repairType,
+                                         @RequestParam(required = false) Integer orderStatus,
+                                         @RequestParam(required = false) String phone) {
+        log.info("维修人员查看我的工单, pageNum: {}, pageSize: {}, orderNo: {}, repairType: {}, orderStatus: {}, phone: {}",
+                 pageNum, pageSize, orderNo, repairType, orderStatus, phone);
+
+        Page<RepairOrder> page = new Page<>(pageNum, pageSize);
+        QueryWrapper<RepairOrder> queryWrapper = new QueryWrapper<>();
+
+        // 只查询分配给当前维修人员的工单
+        queryWrapper.eq("worker_id", SecurityUtils.getUserId())
+                   .eq("deleted", 0);
+
+        if (StringUtils.isNotEmpty(orderNo)) {
+            queryWrapper.like("order_no", orderNo);
+        }
+        if (StringUtils.isNotEmpty(repairType)) {
+            queryWrapper.eq("repair_type", repairType);
+        }
+        if (orderStatus != null) {
+            queryWrapper.eq("order_status", orderStatus);
+        }
+        if (StringUtils.isNotEmpty(phone)) {
+            queryWrapper.like("phone", phone);
+        }
+
+        queryWrapper.orderByDesc("create_time");
+
+        Page<RepairOrder> resultPage = repairOrderService.page(page, queryWrapper);
+
+        // 设置维修人员真实姓名和电话
+        resultPage.getRecords().forEach(order -> {
+            if (order.getCreateTime() != null) {
+                order.setReportTime(order.getCreateTime());
+            }
+
+            // 获取报修人真实姓名
+            if (order.getUserId() != null) {
+                SysUser user = userService.getById(order.getUserId());
+                if (user != null && StringUtils.isNotEmpty(user.getRealName())) {
+                    order.setRealName(user.getRealName());
+                }
+            }
+        });
+
+        return AjaxResult.success(resultPage);
+    }
+
+    /**
+     * 系统管理员派工
+     */
+    @PutMapping("/assign/{id}")
+    @PreAuthorize("@ss.hasPermi('property:repair:assign')")
+    public AjaxResult assign(@NotNull(message = "维修工单ID不能为空") @PathVariable Long id,
+                            @RequestBody Map<String, Object> params) {
+        log.info("系统管理员派工, id: {}, params: {}", id, params);
+        return toAjax(repairOrderService.assignOrder(id, params));
     }
 
     /**

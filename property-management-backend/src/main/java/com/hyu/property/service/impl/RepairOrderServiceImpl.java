@@ -10,6 +10,13 @@ import com.hyu.property.domain.Bill;
 import com.hyu.property.mapper.RepairOrderMapper;
 import com.hyu.property.service.IRepairOrderService;
 import com.hyu.property.service.IBillService;
+import com.hyu.system.domain.SysUser;
+import com.hyu.system.service.ISysUserService;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -32,6 +39,9 @@ public class RepairOrderServiceImpl extends ServiceImpl<RepairOrderMapper, Repai
 
     @Autowired
     private IBillService billService;
+
+    @Autowired
+    private ISysUserService userService;
 
     /**
      * 分页查询维修工单列表
@@ -103,10 +113,26 @@ public class RepairOrderServiceImpl extends ServiceImpl<RepairOrderMapper, Repai
 
         Page<RepairOrder> resultPage = page(page, queryWrapper);
 
-        // 设置报修时间为创建时间（前端显示用）
+        // 设置报修时间和真实姓名（前端显示用）
         resultPage.getRecords().forEach(order -> {
             if (order.getCreateTime() != null) {
                 order.setReportTime(order.getCreateTime());
+            }
+
+            // 获取用户真实姓名
+            if (order.getUserId() != null) {
+                SysUser user = userService.getById(order.getUserId());
+                if (user != null && StringUtils.isNotEmpty(user.getRealName())) {
+                    order.setRealName(user.getRealName());
+                }
+            }
+
+            // 获取维修人员电话
+            if (order.getWorkerId() != null) {
+                SysUser worker = userService.getById(order.getWorkerId());
+                if (worker != null && StringUtils.isNotEmpty(worker.getPhone())) {
+                    order.setWorkerPhone(worker.getPhone());
+                }
             }
         });
 
@@ -141,7 +167,33 @@ public class RepairOrderServiceImpl extends ServiceImpl<RepairOrderMapper, Repai
      */
     @Override
     public RepairOrder selectRepairOrderById(Long id) {
-        return getById(id);
+        RepairOrder repairOrder = getById(id);
+        if (repairOrder == null) {
+            return null;
+        }
+
+        // 设置报修时间和真实姓名
+        if (repairOrder.getCreateTime() != null) {
+            repairOrder.setReportTime(repairOrder.getCreateTime());
+        }
+
+        // 获取用户真实姓名
+        if (repairOrder.getUserId() != null) {
+            SysUser user = userService.getById(repairOrder.getUserId());
+            if (user != null && StringUtils.isNotEmpty(user.getRealName())) {
+                repairOrder.setRealName(user.getRealName());
+            }
+        }
+
+        // 获取维修人员电话
+        if (repairOrder.getWorkerId() != null) {
+            SysUser worker = userService.getById(repairOrder.getWorkerId());
+            if (worker != null && StringUtils.isNotEmpty(worker.getPhone())) {
+                repairOrder.setWorkerPhone(worker.getPhone());
+            }
+        }
+
+        return repairOrder;
     }
 
     /**
@@ -157,6 +209,79 @@ public class RepairOrderServiceImpl extends ServiceImpl<RepairOrderMapper, Repai
                    .eq("deleted", 0)
                    .orderByDesc("create_time");
         return list(queryWrapper);
+    }
+
+    /**
+     * 获取维修人员列表
+     */
+    @Override
+    public List<Map<String, Object>> getRepairerList() {
+        try {
+            // 查询所有状态正常的维修人员 (user_type = 4)
+            List<Map<String, Object>> repairers = userService.list(
+                new QueryWrapper<SysUser>()
+                    .eq("status", 1) // 正常状态
+                    .eq("user_type", 4) // 维修人员
+                    .orderByAsc("real_name")
+            ).stream()
+            .filter(user -> user.getRealName() != null && !user.getRealName().isEmpty())
+            .map(user -> {
+                Map<String, Object> repairer = new HashMap<>();
+                repairer.put("value", user.getUserId());
+                repairer.put("label", user.getRealName() + (user.getPhone() != null ? "-" + user.getPhone() : ""));
+                repairer.put("realName", user.getRealName());
+                repairer.put("phone", user.getPhone());
+                return repairer;
+            })
+            .collect(Collectors.toList());
+
+            log.info("获取到{}个维修人员", repairers.size());
+            return repairers;
+        } catch (Exception e) {
+            log.error("获取维修人员列表失败: {}", e.getMessage(), e);
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * 系统管理员派工
+     */
+    @Override
+    public boolean assignOrder(Long id, Map<String, Object> params) {
+        RepairOrder repairOrder = getById(id);
+        if (repairOrder == null || repairOrder.getOrderStatus() != 0) {
+            log.warn("维修工单状态不正确，无法派工: {}", id);
+            return false;
+        }
+
+        try {
+            // 获取派工参数
+            Long repairerId = Long.valueOf(params.get("repairerId").toString());
+            String expectedCompleteTime = params.get("expectedCompleteTime").toString();
+            BigDecimal repairCost = new BigDecimal(params.get("repairCost").toString());
+            String remark = params.get("remark") != null ? params.get("remark").toString() : null;
+
+            // 获取维修人员信息
+            SysUser worker = userService.getById(repairerId);
+            if (worker == null) {
+                log.warn("维修人员不存在: {}", repairerId);
+                return false;
+            }
+
+            // 更新工单信息
+            repairOrder.setWorkerId(repairerId);
+            repairOrder.setWorkerName(worker.getRealName());
+            repairOrder.setRequiredFinishTime(LocalDateTime.parse(expectedCompleteTime, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
+            repairOrder.setRepairCost(repairCost);
+            repairOrder.setAssignTime(LocalDateTime.now());
+            repairOrder.setOrderStatus(1); // 状态改为已派工
+            repairOrder.setUpdateBy(SecurityUtils.getUsername());
+
+            return updateById(repairOrder);
+        } catch (Exception e) {
+            log.error("派工失败: {}", e.getMessage(), e);
+            return false;
+        }
     }
 
     /**

@@ -2,11 +2,11 @@
   <div class="log-container">
     <!-- 页面标题 -->
     <div class="page-header">
-      <h2 class="page-title">{{ currentUserRole === 3 ? '我的报修' : '维修管理' }}</h2>
+      <h2 class="page-title">{{ getPageTitle() }}</h2>
       <el-breadcrumb separator="/">
         <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
-        <el-breadcrumb-item>{{ currentUserRole === 3 ? '业主门户' : '服务管理' }}</el-breadcrumb-item>
-        <el-breadcrumb-item>{{ currentUserRole === 3 ? '我的报修' : '维修管理' }}</el-breadcrumb-item>
+        <el-breadcrumb-item>{{ getBreadcrumbParent() }}</el-breadcrumb-item>
+        <el-breadcrumb-item>{{ getPageTitle() }}</el-breadcrumb-item>
       </el-breadcrumb>
     </div>
 
@@ -75,7 +75,9 @@
 
     <!-- 操作按钮 -->
     <div class="action-section">
+      
       <el-button
+        v-if="currentUserRole !== 4"
         type="primary"
         @click="handleAdd"
       >
@@ -116,11 +118,21 @@
         <el-table-column prop="orderNo" label="工单编号" width="160" sortable />
         <el-table-column
           v-if="currentUserRole !== 3"
-          prop="reporter"
+          prop="realName"
           label="报修人"
           width="120"
         />
         <el-table-column prop="phone" label="联系电话" width="130" />
+        <el-table-column
+          v-if="currentUserRole !== 4"
+          label="维修人员"
+          width="180"
+        >
+          <template #default="{ row }">
+            <span v-if="row.workerName">{{ row.workerName }}{{ row.workerPhone ? '-' + row.workerPhone : '' }}</span>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="houseNo" label="房间编号" width="140" />
         <el-table-column prop="repairType" label="维修类型" width="120">
           <template #default="{ row }">
@@ -143,12 +155,6 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column
-          v-if="currentUserRole !== 3"
-          prop="repairerName"
-          label="维修人员"
-          width="120"
-        />
         <el-table-column prop="reportTime" label="报修时间" width="180" sortable>
           <template #default="{ row }">
             {{ formatDateTime(row.reportTime) }}
@@ -213,7 +219,7 @@
             </template>
 
             <!-- 维修师傅操作 -->
-            <template v-if="currentUserRole === 2">
+            <template v-if="currentUserRole === 4">
               <el-button
                 v-if="row.orderStatus === 1"
                 link
@@ -360,7 +366,7 @@
           {{ currentOrder.orderNo }}
         </el-descriptions-item>
         <el-descriptions-item label="报修人">
-          {{ currentOrder.reporter }}
+          {{ currentOrder.realName || currentOrder.userName }}
         </el-descriptions-item>
         <el-descriptions-item label="联系电话">
           {{ currentOrder.phone }}
@@ -402,11 +408,17 @@
           </div>
           <span v-else>无图片</span>
         </el-descriptions-item>
-        <el-descriptions-item label="维修人员" v-if="currentOrder.repairerName">
-          {{ currentOrder.repairerName }}
+        <el-descriptions-item label="维修人员" v-if="currentOrder.workerName">
+          {{ currentOrder.workerName }}{{ currentOrder.workerPhone ? '-' + currentOrder.workerPhone : '' }}
         </el-descriptions-item>
         <el-descriptions-item label="派工时间" v-if="currentOrder.assignTime">
           {{ formatDateTime(currentOrder.assignTime) }}
+        </el-descriptions-item>
+        <el-descriptions-item label="维修金额" v-if="currentOrder.repairCost">
+          ¥{{ currentOrder.repairCost }}
+        </el-descriptions-item>
+        <el-descriptions-item label="预计完成时间" v-if="currentOrder.requiredFinishTime">
+          {{ formatDateTime(currentOrder.requiredFinishTime) }}
         </el-descriptions-item>
       </el-descriptions>
 
@@ -442,44 +454,66 @@
     <el-dialog
       v-model="assignDialogVisible"
       title="派工"
-      width="500px"
+      width="600px"
     >
-      <el-form :model="assignForm" label-width="100px">
-        <el-form-item label="工单编号">
-          <el-input v-model="assignForm.orderNo" disabled />
-        </el-form-item>
-        <el-form-item label="报修人">
-          <el-input v-model="assignForm.reporter" disabled />
-        </el-form-item>
-        <el-form-item label="维修人员" required>
-          <el-select v-model="assignForm.repairerId" placeholder="请选择维修人员" style="width: 200px">
-            <el-option
-              v-for="item in repairerOptions"
-              :key="item.value"
-              :label="item.label"
-              :value="item.value"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="预计完成时间" required>
-          <el-date-picker
-            v-model="assignForm.expectedCompleteTime"
-            type="datetime"
-            placeholder="请选择预计完成时间"
-            format="YYYY-MM-DD HH:mm"
-            value-format="YYYY-MM-DD HH:mm"
+      <el-form :model="assignForm" label-width="120px" :rules="assignRules" ref="assignFormRef">
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="工单编号">
+              <el-input v-model="assignForm.orderNo" disabled />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="报修人">
+              <el-input v-model="assignForm.reporter" disabled />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="维修人员" prop="repairerId">
+              <el-select
+                v-model="assignForm.repairerId"
+                placeholder="请选择维修人员"
+                style="width: 100%"
+                filterable
+              >
+                <el-option
+                  v-for="item in repairerOptions"
+                  :key="item.value"
+                  :label="item.label"
+                  :value="item.value"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="预计完成时间" prop="expectedCompleteTime">
+              <el-date-picker
+                v-model="assignForm.expectedCompleteTime"
+                type="datetime"
+                placeholder="请选择预计完成时间"
+                format="YYYY-MM-DD HH:mm"
+                value-format="YYYY-MM-DD HH:mm"
+                style="width: 100%"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-form-item label="维修金额" prop="repairCost">
+          <el-input-number
+            v-model="assignForm.repairCost"
+            placeholder="请输入维修金额"
+            :min="0"
+            :precision="2"
+            :step="0.01"
             style="width: 200px"
           />
+          <span style="margin-left: 10px; color: #666; font-size: 14px;">元</span>
         </el-form-item>
-        <el-form-item label="备注">
-          <el-input
-            v-model="assignForm.remark"
-            type="textarea"
-            placeholder="请输入备注信息"
-            :rows="3"
-          />
-        </el-form-item>
-      </el-form>
+        </el-form>
 
       <template #footer>
         <el-button @click="assignDialogVisible = false">取消</el-button>
@@ -756,7 +790,7 @@
         </el-table-column>
         <el-table-column label="操作" width="100">
           <template #default="{ row }">
-            <el-button link type="primary" @click="handleViewArchiveDetail(row)">
+            <el-button link @click="handleViewArchiveDetail(row)">
               详情
             </el-button>
           </template>
@@ -775,7 +809,8 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus, Download, DataAnalysis, FolderOpened, ArrowUp, ArrowDown } from '@element-plus/icons-vue'
 
@@ -801,14 +836,20 @@ import {
   getMyRepairOrders,
   ownerCreateRepairOrder,
   ownerDeleteRepairOrder,
-  uploadRepairImages
+  uploadRepairImages,
+  getRepairers,
+  getMyWorkerOrders
 } from '@/api/repair'
 
 // 导入字典API
 import { getDictDataByType } from '@/api/dict'
 
+// 路由实例
+const route = useRoute()
+
 // 响应式数据
 const formRef = ref()
+const assignFormRef = ref()
 const loading = ref(false)
 const assignLoading = ref(false)
 const dialogVisible = ref(false)
@@ -818,21 +859,31 @@ const isEdit = ref(false)
 
 // 用户角色 - 从用户登录信息中获取
 // 在实际项目中，这里应该从用户store或路由中获取
-// 1: 物业经理, 2: 维修师傅, 3: 业主
 const currentUserRole = computed(() => {
   // 首先尝试从Token中解析用户类型
   const token = localStorage.getItem('token')
   if (token) {
     try {
       // 解析JWT Token的payload部分
-      const payload = JSON.parse(atob(token.split('.')[1]))
-      const userType = payload.userType
-      if (userType) {
-        console.log('从Token解析的用户类型:', userType)
-        return userType
+      const tokenParts = token.split('.')
+      if (tokenParts.length >= 2) {
+        // 对于URL安全的base64编码，需要处理替换
+        let payload = tokenParts[1]
+        payload = payload.replace(/-/g, '+').replace(/_/g, '/')
+        // 补全padding
+        while (payload.length % 4) {
+          payload += '='
+        }
+        const decoded = JSON.parse(atob(payload))
+        const userType = decoded.userType
+        if (userType) {
+          console.log('从Token解析的用户类型:', userType)
+          return userType
+        }
       }
     } catch (error) {
       console.error('解析Token失败:', error)
+      console.error('Token前100字符:', token.substring(0, 100))
     }
   }
 
@@ -842,16 +893,40 @@ const currentUserRole = computed(() => {
 
   // 根据用户角色名称转换为数字
   const roleMap = {
-    'property_manager': 1,  // 物业经理
-    'repairman': 2,         // 维修师傅
+    'admin': 1,             // 系统管理员
+    'manager': 2,           // 物业经理
     'owner': 3,             // 业主
-    '物业经理': 1,
-    '维修师傅': 2,
-    '业主': 3
+    'repairer': 4,          // 维修人员
+    '系统管理员': 1,
+    '物业管理员': 2,
+    '业主': 3,
+    '维修人员': 4
   }
 
   return roleMap[userInfo.roleName] || roleMap[userInfo.role] || userRole
 })
+
+// 获取页面标题
+const getPageTitle = () => {
+  switch (currentUserRole.value) {
+    case 1: return '维修管理'
+    case 2: return '维修管理'
+    case 3: return '我的报修'
+    case 4: return '我的工单'
+    default: return '维修管理'
+  }
+}
+
+// 获取面包屑父级标题
+const getBreadcrumbParent = () => {
+  switch (currentUserRole.value) {
+    case 1: return '服务管理'
+    case 2: return '服务管理'
+    case 3: return '业主门户'
+    case 4: return '维修工作台'
+    default: return '服务管理'
+  }
+}
 
 // 归档数据存储 (模拟数据库表)
 const archivedOrders = ref([])
@@ -939,12 +1014,28 @@ const orderStatusOptions = ref([
   { label: '已完成', value: 4 }
 ])
 
-const repairerOptions = ref([
-  { label: '维修工张师傅', value: 1 },
-  { label: '维修工李师傅', value: 2 },
-  { label: '维修工王师傅', value: 3 },
-  { label: '维修工赵师傅', value: 4 }
-])
+const repairerOptions = ref([])
+
+// 加载维修人员列表
+const loadRepairers = async () => {
+  // 只有系统管理员和物业经理才需要加载维修人员列表
+  if (currentUserRole.value === 3 || currentUserRole.value === 4) {
+    return // 业主和维修人员不需要加载维修人员列表
+  }
+
+  try {
+    const response = await getRepairers()
+    if (response.code === 200) {
+      repairerOptions.value = response.data.map(item => ({
+        value: item.value,
+        label: item.label
+      }))
+    }
+  } catch (error) {
+    console.error('加载维修人员列表失败:', error)
+    ElMessage.error('加载维修人员列表失败')
+  }
+}
 
 // 表单数据
 const form = reactive({
@@ -965,8 +1056,22 @@ const assignForm = reactive({
   reporter: '',
   repairerId: '',
   expectedCompleteTime: '',
-  remark: ''
+  repairCost: null
 })
+
+// 派工表单验证规则
+const assignRules = {
+  repairerId: [
+    { required: true, message: '请选择维修人员', trigger: 'change' }
+  ],
+  expectedCompleteTime: [
+    { required: true, message: '请选择预计完成时间', trigger: 'change' }
+  ],
+  repairCost: [
+    { required: true, message: '请输入维修金额', trigger: 'blur' },
+    { type: 'number', min: 0, message: '维修金额不能小于0', trigger: 'blur' }
+  ]
+}
 
 // 接单表单
 const acceptForm = reactive({
@@ -1199,12 +1304,22 @@ const loadOrders = async () => {
     console.log('当前用户角色:', currentUserRole.value)
     console.log('当前Token:', localStorage.getItem('token'))
     // 根据用户角色选择不同的API
-    const response = currentUserRole.value === 3
-      ? await getMyRepairOrders(params)  // 业主使用专用API
-      : await getRepairOrderPage(params)  // 管理员使用通用API
+    let response
+    if (currentUserRole.value === 3) {
+      // 业主使用专用API - 查看自己的报修
+      response = await getMyRepairOrders(params)
+    } else if (currentUserRole.value === 4) {
+      // 维修人员使用专用API - 查看分配给自己的工单
+      response = await getMyWorkerOrders(params)
+    } else {
+      // 系统管理员和物业经理使用通用API - 查看所有工单
+      response = await getRepairOrderPage(params)
+    }
     console.log('收到维修工单响应:', response)
     if (response.code === 200) {
-      tableData.value = (response.data.rows || []).map(item => {
+      // 处理不同的数据结构：管理员API返回rows，维修员API返回records
+      const dataRows = response.data.rows || response.data.records || []
+      tableData.value = dataRows.map(item => {
         // 处理图片URL，将字符串转换为数组
         if (item.imageUrls && typeof item.imageUrls === 'string') {
           item.imageUrls = item.imageUrls.split(',').filter(url => url.trim())
@@ -1379,29 +1494,28 @@ const handleDelete = (row) => {
 // 派工
 const handleAssign = (row) => {
   Object.assign(assignForm, {
-    orderId: row.orderId,
+    orderId: row.id,
     orderNo: row.orderNo,
-    reporter: row.reporter,
+    reporter: row.realName || row.userName,
     repairerId: '',
     expectedCompleteTime: '',
-    remark: ''
+    repairCost: null
   })
   assignDialogVisible.value = true
 }
 
 // 提交派工
 const handleAssignSubmit = async () => {
-  if (!assignForm.repairerId || !assignForm.expectedCompleteTime) {
-    ElMessage.warning('请填写完整的派工信息')
-    return
-  }
+  if (!assignFormRef.value) return
 
-  assignLoading.value = true
   try {
+    await assignFormRef.value.validate()
+
+    assignLoading.value = true
     const assignData = {
       repairerId: assignForm.repairerId,
       expectedCompleteTime: assignForm.expectedCompleteTime,
-      remark: assignForm.remark
+      repairCost: assignForm.repairCost
     }
     console.log('发送派工请求:', assignForm.orderId, assignData)
     const response = await assignRepairOrder(assignForm.orderId, assignData)
@@ -1414,6 +1528,10 @@ const handleAssignSubmit = async () => {
       ElMessage.error(response.msg || '派工失败')
     }
   } catch (error) {
+    if (error.constructor.name !== 'Error') {
+      // 表单验证错误，不需要提示
+      return
+    }
     console.error('派工失败:', error)
     ElMessage.error('派工失败')
   } finally {
@@ -1866,11 +1984,52 @@ const handleInspectSubmit = async () => {
   }
 }
 
+// 根据路由路径设置状态筛选
+const setStatusFromRoute = () => {
+  if (currentUserRole.value === 4) { // 只对维修人员生效
+    const path = route.path
+    console.log('当前路径:', path)
+
+    // 精确匹配路径，避免 includes() 造成的冲突
+    if (path === '/work/pending' || path.endsWith('/work/pending')) {
+      searchForm.orderStatus = 1 // 待接单
+      console.log('设置筛选: 待接单 (status=1)')
+    } else if (path === '/work/processing' || path.endsWith('/work/processing')) {
+      searchForm.orderStatus = 2 // 进行中
+      console.log('设置筛选: 进行中 (status=2)')
+    } else if (path === '/work/pending-accept' || path.endsWith('/work/pending-accept')) {
+      searchForm.orderStatus = 3 // 待验收
+      console.log('设置筛选: 待验收 (status=3)')
+    } else if (path === '/work/completed' || path.endsWith('/work/completed')) {
+      searchForm.orderStatus = 4 // 已完成
+      console.log('设置筛选: 已完成 (status=4)')
+    } else {
+      searchForm.orderStatus = null // 其他情况显示全部
+      console.log('设置筛选: 显示全部')
+    }
+
+    console.log('最终状态筛选:', searchForm.orderStatus)
+  }
+}
+
 // 初始化
 onMounted(() => {
+  setStatusFromRoute() // 根据当前路径设置状态
   loadRepairTypeOptions()  // 先加载字典数据
+  loadRepairers()          // 加载维修人员列表
   loadOrders()
 })
+
+// 监听路由变化
+watch(
+  () => route.path,
+  () => {
+    console.log('路由路径变化:', route.path)
+    setStatusFromRoute() // 重新设置状态筛选
+    pagination.current = 1 // 重置页码
+    loadOrders() // 重新加载数据
+  }
+)
 </script>
 
 <style lang="scss" scoped>

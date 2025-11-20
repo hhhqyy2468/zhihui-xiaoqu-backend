@@ -48,6 +48,12 @@ public class RepairOrder implements Serializable {
     private String userName;
 
     /**
+     * 用户真实姓名（非数据库字段）
+     */
+    @TableField(exist = false)
+    private String realName;
+
+    /**
      * 联系电话
      */
     @TableField("phone")
@@ -112,6 +118,12 @@ public class RepairOrder implements Serializable {
      */
     @TableField("worker_name")
     private String workerName;
+
+    /**
+     * 维修人员电话（显示字段，不存数据库）
+     */
+    @TableField(exist = false)
+    private String workerPhone;
 
     /**
      * 派工时间

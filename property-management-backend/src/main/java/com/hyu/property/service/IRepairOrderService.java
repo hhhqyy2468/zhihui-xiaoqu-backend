@@ -48,6 +48,22 @@ public interface IRepairOrderService extends IService<RepairOrder> {
     List<RepairOrder> selectRepairOrdersByUserId(Long userId);
 
     /**
+     * 获取维修人员列表
+     *
+     * @return 维修人员列表
+     */
+    List<Map<String, Object>> getRepairerList();
+
+    /**
+     * 系统管理员派工
+     *
+     * @param id 维修工单ID
+     * @param params 派工参数
+     * @return 结果
+     */
+    boolean assignOrder(Long id, Map<String, Object> params);
+
+    /**
      * 维修师傅接单
      *
      * @param id 维修工单ID

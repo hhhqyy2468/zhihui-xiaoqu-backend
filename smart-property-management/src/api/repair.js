@@ -43,6 +43,23 @@ export function deleteRepairOrder(ids) {
   })
 }
 
+// 获取维修人员列表
+export function getRepairers() {
+  return request({
+    url: '/property/repair/repairers',
+    method: 'get'
+  })
+}
+
+// 维修人员查看自己的工单
+export function getMyWorkerOrders(params) {
+  return request({
+    url: '/property/repair/worker/my-orders',
+    method: 'get',
+    params
+  })
+}
+
 // 派工维修工单
 export function assignRepairOrder(id, data) {
   return request({

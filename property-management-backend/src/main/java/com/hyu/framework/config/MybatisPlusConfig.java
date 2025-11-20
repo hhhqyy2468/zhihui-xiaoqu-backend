@@ -18,15 +18,7 @@ import java.time.LocalDateTime;
 @Configuration
 public class MybatisPlusConfig {
 
-    /**
-     * 添加分页插件 - 暂时禁用，解决重复LIMIT问题
-     */
-    // @Bean
-    // public MybatisPlusInterceptor mybatisPlusInterceptor() {
-    //     MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
-    //     interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
-    //     return interceptor;
-    // }
+
 
     /**
      * 自动填充配置
