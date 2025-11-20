@@ -84,22 +84,7 @@
         <el-icon><Plus /></el-icon>
         {{ currentUserRole === 3 ? '新增报修' : '新增工单' }}
       </el-button>
-      <el-button
-        v-if="currentUserRole !== 3"
-        @click="handleExport"
-      >
-        <el-icon><Download /></el-icon>
-        导出
-      </el-button>
-      <el-button
-        v-if="currentUserRole === 1"
-        type="info"
-        @click="handleViewStats"
-      >
-        <el-icon><DataAnalysis /></el-icon>
-        维修统计
-      </el-button>
-      <el-button
+            <el-button
         v-if="currentUserRole === 1"
         type="warning"
         @click="handleViewArchives"
@@ -193,7 +178,7 @@
             <!-- 物业经理操作 -->
             <template v-if="currentUserRole === 1">
               <el-button
-                v-if="row.orderStatus === 0"
+                v-if="row.orderStatus === 1"
                 link
                 type="warning"
                 @click="handleAssign(row)"
@@ -201,7 +186,7 @@
                 派工
               </el-button>
               <el-button
-                v-if="row.orderStatus === 4 && row.isRated"
+                v-if="row.orderStatus === 5 && row.isRated"
                 link
                 type="success"
                 @click="handleFinalProcess(row)"
@@ -209,7 +194,7 @@
                 完成处理
               </el-button>
               <el-button
-                v-if="row.orderStatus === 4 && row.isRated && row.inspectResult === 0"
+                v-if="row.orderStatus === 5 && row.isRated && row.inspectResult === 0"
                 link
                 type="warning"
                 @click="handleReassign(row)"
@@ -218,10 +203,22 @@
               </el-button>
             </template>
 
+            <!-- 系统管理员和物业经理操作 -->
+            <template v-if="currentUserRole === 1 || currentUserRole === 2">
+              <el-button
+                v-if="row.orderStatus === 5"
+                link
+                type="warning"
+                @click="handleArchive(row)"
+              >
+                归档
+              </el-button>
+            </template>
+
             <!-- 维修师傅操作 -->
             <template v-if="currentUserRole === 4">
               <el-button
-                v-if="row.orderStatus === 1"
+                v-if="row.orderStatus === 2"
                 link
                 type="success"
                 @click="handleAcceptTask(row)"
@@ -229,7 +226,7 @@
                 接单
               </el-button>
               <el-button
-                v-if="row.orderStatus === 2"
+                v-if="row.orderStatus === 3"
                 link
                 type="primary"
                 @click="handleRepair(row)"
@@ -241,7 +238,7 @@
             <!-- 业主操作 -->
             <template v-if="currentUserRole === 3">
               <el-button
-                v-if="row.orderStatus === 3"
+                v-if="row.orderStatus === 4"
                 link
                 type="info"
                 @click="handleRate(row)"
@@ -249,7 +246,7 @@
                 评价
               </el-button>
               <el-button
-                v-if="row.orderStatus === 0"
+                v-if="row.orderStatus === 1"
                 link
                 type="danger"
                 @click="handleDelete(row)"
@@ -735,38 +732,7 @@
       </template>
     </el-dialog>
 
-    <!-- 维修统计对话框 -->
-    <el-dialog
-      v-model="statsDialogVisible"
-      title="维修人员工作量统计"
-      width="800px"
-    >
-      <el-table :data="Object.entries(repairerStats).map(([name, stats]) => ({ name, ...stats }))" style="width: 100%">
-        <el-table-column prop="name" label="维修人员" width="150" />
-        <el-table-column prop="totalOrders" label="总工单数" width="100" sortable />
-        <el-table-column prop="completedOrders" label="完成工单数" width="120" sortable />
-        <el-table-column prop="archiveCount" label="归档数量" width="100" sortable />
-        <el-table-column prop="avgRating" label="平均评分" width="100" sortable>
-          <template #default="{ row }">
-            <el-rate v-model="row.avgRating" disabled show-score />
-          </template>
-        </el-table-column>
-        <el-table-column label="完成率" width="100">
-          <template #default="{ row }">
-            {{ ((row.completedOrders / row.totalOrders) * 100).toFixed(1) }}%
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <template #footer>
-        <el-button @click="statsDialogVisible = false">关闭</el-button>
-        <el-button type="primary" @click="handleExportStats">
-          <el-icon><Download /></el-icon>
-          导出统计
-        </el-button>
-      </template>
-    </el-dialog>
-
+    
     <!-- 归档记录对话框 -->
     <el-dialog
       v-model="archiveDialogVisible"
@@ -780,22 +746,22 @@
 
       <el-table :data="archivedOrders" style="width: 100%" max-height="400">
         <el-table-column prop="orderNo" label="工单编号" width="140" />
-        <el-table-column prop="reporter" label="报修人" width="100" />
-        <el-table-column prop="repairerName" label="维修人员" width="120" />
+        <el-table-column prop="realName" label="报修人" width="100" />
+        <el-table-column prop="workerName" label="维修人员" width="120" />
         <el-table-column prop="orderStatus" label="状态" width="100">
           <template #default="{ row }">
-            <el-tag type="success">已完成</el-tag>
+            <el-tag :type="getStatusTag(row.orderStatus)">{{ getStatusName(row.orderStatus) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="archiveTime" label="归档时间" width="180">
+        <el-table-column prop="updateTime" label="归档时间" width="180">
           <template #default="{ row }">
-            {{ formatDateTime(row.archiveTime) }}
+            {{ formatDateTime(row.updateTime) }}
           </template>
         </el-table-column>
-        <el-table-column prop="archiveBy" label="归档人" width="100" />
-        <el-table-column prop="rating" label="评分" width="120">
+        <el-table-column prop="updateBy" label="归档人" width="100" />
+        <el-table-column prop="overallRating" label="评分" width="120">
           <template #default="{ row }">
-            <el-rate v-model="row.rating" disabled show-score v-if="row.rating > 0" />
+            <el-rate v-model="row.overallRating" disabled show-score v-if="row.overallRating > 0" />
             <span v-else>未评分</span>
           </template>
         </el-table-column>
@@ -810,10 +776,6 @@
 
       <template #footer>
         <el-button @click="archiveDialogVisible = false">关闭</el-button>
-        <el-button type="warning" @click="handleExportArchives">
-          <el-icon><Download /></el-icon>
-          导出归档
-        </el-button>
       </template>
     </el-dialog>
   </div>
@@ -823,7 +785,7 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, Plus, Download, DataAnalysis, FolderOpened, ArrowUp, ArrowDown } from '@element-plus/icons-vue'
+import { Search, Refresh, Plus, FolderOpened, ArrowUp, ArrowDown } from '@element-plus/icons-vue'
 
 // 导入API接口
 import {
@@ -842,15 +804,15 @@ import {
   cancelRepairOrder,
   getRepairerList,
   getRepairTypeList,
-  getOrderStats,
-  getWorkerStats,
-  exportRepairOrders,
-  getMyRepairOrders,
+    getMyRepairOrders,
   ownerCreateRepairOrder,
   ownerDeleteRepairOrder,
   uploadRepairImages,
   getRepairers,
-  getMyWorkerOrders
+  getMyWorkerOrders,
+  archiveRepairOrder,
+  batchArchiveRepairOrders,
+  getArchivedRepairOrders
 } from '@/api/repair'
 
 // 导入字典API
@@ -943,11 +905,6 @@ const getBreadcrumbParent = () => {
 // 归档数据存储 (模拟数据库表)
 const archivedOrders = ref([])
 
-// 维修人员工作量统计 (模拟数据库表)
-const repairerStats = ref({})
-
-// 对话框状态
-const statsDialogVisible = ref(false)
 const archiveDialogVisible = ref(false)
 const acceptDialogVisible = ref(false)
 const acceptLoading = ref(false)
@@ -1018,13 +975,31 @@ const urgencyLevelOptions = ref([
   { label: '特急', value: 3 }
 ])
 
-const orderStatusOptions = ref([
-  { label: '待派工', value: 0 },
-  { label: '已派工', value: 1 },
-  { label: '进行中', value: 2 },
-  { label: '待验收', value: 3 },
-  { label: '已完成', value: 4 }
-])
+const orderStatusOptions = ref([])
+
+// 加载工单状态选项
+const loadOrderStatusOptions = async () => {
+  try {
+    const response = await getDictDataByType('order_status')
+    if (response.code === 200) {
+      orderStatusOptions.value = response.data.map(item => ({
+        label: item.dictLabel,
+        value: parseInt(item.dictValue)
+      }))
+    }
+  } catch (error) {
+    console.error('加载工单状态选项失败:', error)
+    // 如果字典加载失败，使用默认选项
+    orderStatusOptions.value = [
+      { label: '待派工', value: 1 },
+      { label: '待接单', value: 2 },
+      { label: '进行中', value: 3 },
+      { label: '待验收', value: 4 },
+      { label: '已完成', value: 5 },
+      { label: '已归档', value: 6 }
+    ]
+  }
+}
 
 const repairerOptions = ref([])
 
@@ -1233,24 +1208,20 @@ const getUrgencyTag = (level) => {
 
 // 获取状态名称
 const getStatusName = (status) => {
-  const statusMap = {
-    0: '待派工',
-    1: '待接单',  // 已派工，等待维修员接单
-    2: '进行中',  // 维修员正在处理
-    4: '待验收',  // 维修完成，等待业主评价
-    5: '已完成'   // 评价完成，工单结束
-  }
-  return statusMap[status] || '未知状态'
+  // 使用字典数据获取状态名称
+  const statusOption = orderStatusOptions.value.find(item => item.value === status)
+  return statusOption ? statusOption.label : '未知状态'
 }
 
 // 获取状态标签
 const getStatusTag = (status) => {
   const tagMap = {
-    0: 'warning', // 待派工 - 橙色
-    1: 'primary', // 待接单 - 蓝色
-    2: 'success', // 进行中 - 绿色
+    1: 'warning', // 待派工 - 橙色
+    2: 'primary', // 待接单 - 蓝色
+    3: 'success', // 进行中 - 绿色
     4: 'info',    // 待验收 - 灰色（等待业主操作）
-    5: 'success'  // 已完成 - 绿色
+    5: 'success', // 已完成 - 绿色
+    6: ''         // 已归档 - 默认颜色
   }
   return tagMap[status] || 'warning'
 }
@@ -1516,6 +1487,30 @@ const handleDelete = (row) => {
   })
 }
 
+// 归档维修工单
+const handleArchive = (row) => {
+  ElMessageBox.confirm(
+    `确定要归档工单"${row.orderNo}"吗？归档后工单状态将变为已归档。`,
+    '归档确认',
+    { type: 'warning' }
+  ).then(async () => {
+    try {
+      const response = await archiveRepairOrder(row.id)
+      if (response.code === 200) {
+        ElMessage.success('归档成功')
+        loadOrders()
+      } else {
+        ElMessage.error(response.msg || '归档失败')
+      }
+    } catch (error) {
+      console.error('归档失败:', error)
+      ElMessage.error('归档失败')
+    }
+  }).catch(() => {
+    // 用户取消
+  })
+}
+
 // 派工
 const handleAssign = (row) => {
   Object.assign(assignForm, {
@@ -1574,38 +1569,6 @@ const handleAccept = (row) => {
   ElMessage.info(`验收工单 ${row.orderNo}`)
 }
 
-// 导出
-const handleExport = async () => {
-  try {
-    const params = {
-      orderNo: searchForm.orderNo,
-      reporter: searchForm.reporter,
-      repairType: searchForm.repairType,
-      orderStatus: searchForm.orderStatus
-    }
-    console.log('发送导出维修工单请求:', params)
-    const response = await exportRepairOrders(params)
-    console.log('收到导出响应:', response)
-
-    // 创建下载链接
-    const blob = new Blob([response], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `维修工单_${new Date().toLocaleDateString('zh-CN')}.xlsx`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    window.URL.revokeObjectURL(url)
-
-    ElMessage.success('导出成功')
-  } catch (error) {
-    console.error('导出失败:', error)
-    ElMessage.error('导出失败')
-  }
-}
 
 // 提交表单
 const handleSubmit = async () => {
@@ -1699,68 +1662,6 @@ const handleViewInspectResult = (row) => {
   )
 }
 
-// 归档维修记录
-const handleArchive = (row) => {
-  ElMessageBox.confirm(
-    `确定要归档工单"${row.orderNo}"吗？\n归档后将从当前列表中移除并保存到归档库。`,
-    '归档确认',
-    { type: 'warning' }
-  ).then(() => {
-    // 1. 创建归档记录
-    const archiveRecord = {
-      ...row,
-      archiveId: Date.now(),
-      archiveTime: new Date().toISOString(),
-      archiveBy: '物业经理', // 实际应该从用户信息获取
-      archiveReason: '正常归档'
-    }
-
-    // 2. 添加到归档数据表
-    archivedOrders.value.push(archiveRecord)
-
-    // 3. 更新维修人员工作量统计
-    if (row.repairerName) {
-      if (!repairerStats.value[row.repairerName]) {
-        repairerStats.value[row.repairerName] = {
-          totalOrders: 0,
-          completedOrders: 0,
-          totalRating: 0,
-          avgRating: 0,
-          archiveCount: 0
-        }
-      }
-
-      const stats = repairerStats.value[row.repairerName]
-      stats.totalOrders += 1
-      stats.completedOrders += 1
-      stats.archiveCount += 1
-
-      if (row.rating > 0) {
-        stats.totalRating += row.rating
-        stats.avgRating = (stats.totalRating / stats.completedOrders).toFixed(1)
-      }
-    }
-
-    // 4. 从当前表格数据中移除
-    const index = tableData.value.findIndex(item => item.orderId === row.orderId)
-    if (index > -1) {
-      tableData.value.splice(index, 1)
-      pagination.total--
-    }
-
-    // 5. 更新分页
-    if (tableData.value.length === 0 && pagination.current > 1) {
-      pagination.current--
-      loadOrders()
-    }
-
-    ElMessage.success(`工单"${row.orderNo}"归档成功`)
-    console.log('归档记录:', archiveRecord)
-    console.log('维修人员统计:', repairerStats.value)
-  }).catch(() => {
-    // 用户取消
-  })
-}
 
 // 重新派工
 const handleReassign = (row) => {
@@ -1778,32 +1679,103 @@ const handleReassign = (row) => {
 }
 
 // 查看维修统计
-const handleViewStats = () => {
-  if (Object.keys(repairerStats.value).length === 0) {
-    ElMessage.warning('暂无统计数据，请先归档一些维修工单')
-    return
-  }
-  statsDialogVisible.value = true
-}
 
 // 查看归档记录
-const handleViewArchives = () => {
-  if (archivedOrders.value.length === 0) {
-    ElMessage.warning('暂无归档记录')
-    return
+const handleViewArchives = async () => {
+  try {
+    const params = {
+      pageNum: 1,
+      pageSize: 1000 // 获取所有归档记录
+    }
+    const response = await getArchivedRepairOrders(params)
+    if (response.code === 200) {
+      const result = response.data
+      if (result && result.records && result.records.length > 0) {
+        archivedOrders.value = result.records
+        archiveDialogVisible.value = true
+      } else {
+        ElMessage.warning('暂无归档记录')
+      }
+    } else {
+      ElMessage.error(response.msg || '获取归档记录失败')
+    }
+  } catch (error) {
+    console.error('获取归档记录失败:', error)
+    ElMessage.error('获取归档记录失败')
   }
-  archiveDialogVisible.value = true
 }
 
 // 查看归档详情
 const handleViewArchiveDetail = (row) => {
+  // 构建HTML格式的详情内容
+  const detailsHtml = `
+    <div style="font-family: 'Microsoft YaHei', Arial, sans-serif; line-height: 1.8; color: #333;">
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center;">
+        <h3 style="margin: 0; font-size: 18px;">📋 维修工单详情</h3>
+      </div>
+
+      <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #007bff;">
+        <h4 style="color: #007bff; margin: 0 0 15px 0; font-size: 16px;">🔧 基本信息</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px;">
+          <div><strong>工单编号：</strong>${row.orderNo}</div>
+          <div><strong>报修人：</strong>${row.userName || row.realName}</div>
+          <div><strong>联系电话：</strong>${row.phone}</div>
+          <div><strong>房屋地址：</strong>${row.houseNo}</div>
+        </div>
+      </div>
+
+      <div style="background: #fff3cd; padding: 20px; border-radius: 8px; border-left: 4px solid #ffc107; margin-top: 15px;">
+        <h4 style="color: #856404; margin: 0 0 15px 0; font-size: 16px;">🔨 维修信息</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px;">
+          <div><strong>维修类型：</strong>${row.repairType || '未分类'}</div>
+          <div><strong>维修人员：</strong>${row.workerName || '未分配'}</div>
+          <div><strong>故障描述：</strong>${row.faultDescription || '无描述'}</div>
+          <div><strong>维修费用：</strong><span style="color: #e74c3c; font-weight: bold;">￥${row.repairCost || '0'}</span></div>
+          <div><strong>使用零件：</strong>${row.partsReplaced || '无'}</div>
+          <div><strong>维修内容：</strong>${row.repairContent || '无记录'}</div>
+        </div>
+      </div>
+
+      <div style="background: #d4edda; padding: 20px; border-radius: 8px; border-left: 4px solid #28a745; margin-top: 15px;">
+        <h4 style="color: #155724; margin: 0 0 15px 0; font-size: 16px;">✅ 完成信息</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px;">
+          <div><strong>开始时间：</strong>${row.assignTime ? formatDateTime(row.assignTime) : '未记录'}</div>
+          <div><strong>完成时间：</strong>${row.finishTime ? formatDateTime(row.finishTime) : '未记录'}</div>
+          <div><strong>归档时间：</strong>${row.updateTime ? formatDateTime(row.updateTime) : '未记录'}</div>
+          <div><strong>归档人员：</strong>${row.updateBy || '未知'}</div>
+        </div>
+      </div>
+
+      <div style="background: #e2e3e5; padding: 20px; border-radius: 8px; border-left: 4px solid #6c757d; margin-top: 15px;">
+        <h4 style="color: #383d41; margin: 0 0 15px 0; font-size: 16px;">⭐ 评价信息</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px;">
+          <div><strong>服务评分：</strong>${row.serviceRating ? getStarDisplay(row.serviceRating) : '未评分'}</div>
+          <div><strong>响应速度：</strong>${row.responseRating ? getStarDisplay(row.responseRating) : '未评分'}</div>
+          <div><strong>专业程度：</strong>${row.professionalRating ? getStarDisplay(row.professionalRating) : '未评分'}</div>
+          <div><strong>总体评分：</strong>${row.overallRating ? getStarDisplay(row.overallRating) : '未评分'}</div>
+          <div colspan="2" style="grid-column: 1 / -1;"><strong>评价意见：</strong>${row.comment || '无评价意见'}</div>
+        </div>
+      </div>
+    </div>
+  `
+
   ElMessageBox.alert(
-    `工单编号：${row.orderNo}\n报修人：${row.reporter}\n维修人员：${row.repairerName}\n归档时间：${formatDateTime(row.archiveTime)}\n归档人：${row.archiveBy}\n评分：${row.rating || '未评分'}\n归档原因：${row.archiveReason}`,
+    detailsHtml,
     '归档详情',
     {
-      confirmButtonText: '确定'
+      dangerouslyUseHTMLString: true,
+      customClass: 'archive-detail-dialog',
+      confirmButtonText: '确定',
+      confirmButtonClass: 'el-button--primary'
     }
   )
+}
+
+// 星级显示辅助函数
+const getStarDisplay = (rating) => {
+  const fullStars = '⭐'.repeat(rating)
+  const emptyStars = '☆'.repeat(5 - rating)
+  return `<span style="color: #ffc107;">${fullStars}</span><span style="color: #ddd;">${emptyStars}</span> (${rating}/5)`
 }
 
 // 物业经理最终处理（完成处理）
@@ -1861,34 +1833,7 @@ const handleFinalProcess = (row) => {
 }
 
 // 导出统计数据
-const handleExportStats = () => {
-  const data = Object.entries(repairerStats.value).map(([name, stats]) => ({
-    维修人员: name,
-    总工单数: stats.totalOrders,
-    完成工单数: stats.completedOrders,
-    归档数量: stats.archiveCount,
-    平均评分: stats.avgRating,
-    完成率: `${((stats.completedOrders / stats.totalOrders) * 100).toFixed(1)}%`
-  }))
 
-  console.log('导出统计数据:', data)
-  ElMessage.success('统计数据导出成功（查看控制台）')
-}
-
-// 导出归档数据
-const handleExportArchives = () => {
-  const data = archivedOrders.value.map(archive => ({
-    工单编号: archive.orderNo,
-    报修人: archive.reporter,
-    维修人员: archive.repairerName,
-    评分: archive.rating || '未评分',
-    归档时间: formatDateTime(archive.archiveTime),
-    归档人: archive.archiveBy
-  }))
-
-  console.log('导出归档数据:', data)
-  ElMessage.success('归档数据导出成功（查看控制台）')
-}
 
 // 接单
 const handleAcceptTask = (row) => {
@@ -2080,18 +2025,19 @@ const setStatusFromRoute = () => {
     console.log('当前路径:', path)
 
     // 精确匹配路径，避免 includes() 造成的冲突
+    // 根据字典状态值：1-待派工，2-待接单，3-进行中，4-待验收，5-已完成，6-已归档
     if (path === '/work/pending' || path.endsWith('/work/pending')) {
-      searchForm.orderStatus = 1 // 待接单
-      console.log('设置筛选: 待接单 (status=1)')
+      searchForm.orderStatus = 2 // 待接单
+      console.log('设置筛选: 待接单 (status=2)')
     } else if (path === '/work/processing' || path.endsWith('/work/processing')) {
-      searchForm.orderStatus = 2 // 进行中
-      console.log('设置筛选: 进行中 (status=2)')
+      searchForm.orderStatus = 3 // 进行中
+      console.log('设置筛选: 进行中 (status=3)')
     } else if (path === '/work/pending-accept' || path.endsWith('/work/pending-accept')) {
-      searchForm.orderStatus = 3 // 待验收
-      console.log('设置筛选: 待验收 (status=3)')
+      searchForm.orderStatus = 4 // 待验收
+      console.log('设置筛选: 待验收 (status=4)')
     } else if (path === '/work/completed' || path.endsWith('/work/completed')) {
-      searchForm.orderStatus = 4 // 已完成
-      console.log('设置筛选: 已完成 (status=4)')
+      searchForm.orderStatus = 5 // 已完成
+      console.log('设置筛选: 已完成 (status=5)')
     } else {
       searchForm.orderStatus = null // 其他情况显示全部
       console.log('设置筛选: 显示全部')
@@ -2104,6 +2050,7 @@ const setStatusFromRoute = () => {
 // 初始化
 onMounted(() => {
   setStatusFromRoute() // 根据当前路径设置状态
+  loadOrderStatusOptions() // 加载工单状态选项
   loadRepairTypeOptions()  // 先加载字典数据
   loadRepairers()          // 加载维修人员列表
   loadOrders()

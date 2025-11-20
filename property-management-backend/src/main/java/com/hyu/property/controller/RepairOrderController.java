@@ -534,6 +534,42 @@ public class RepairOrderController {
     }
 
     /**
+     * 系统管理员归档维修工单
+     */
+    @PutMapping("/archive/{id}")
+    @PreAuthorize("@ss.hasPermi('property:repair:archive')")
+    public AjaxResult archive(@NotNull(message = "维修工单ID不能为空") @PathVariable Long id) {
+        log.info("系统管理员归档维修工单, id: {}", id);
+        return toAjax(repairOrderService.archiveOrder(id));
+    }
+
+    /**
+     * 批量归档维修工单
+     */
+    @PutMapping("/archive/batch")
+    @PreAuthorize("@ss.hasPermi('property:repair:archive')")
+    public AjaxResult batchArchive(@RequestBody Long[] ids) {
+        log.info("系统管理员批量归档维修工单, ids: {}", ids);
+        return toAjax(repairOrderService.batchArchiveOrders(java.util.Arrays.asList(ids)));
+    }
+
+    /**
+     * 获取归档维修工单列表
+     */
+    @GetMapping("/archive/list")
+    @PreAuthorize("@ss.hasPermi('property:repair:list')")
+    public AjaxResult getArchivedList(@RequestParam(defaultValue = "1") Integer pageNum,
+                                     @RequestParam(defaultValue = "10") Integer pageSize,
+                                     RepairOrder repairOrder) {
+        log.info("获取归档维修工单列表, pageNum: {}, pageSize: {}, params: {}", pageNum, pageSize, repairOrder);
+        Page<RepairOrder> page = new Page<>(pageNum, pageSize);
+        // 只查询已归档的工单（状态6）
+        repairOrder.setOrderStatus(6);
+        Page<RepairOrder> result = repairOrderService.selectRepairOrderPage(page, repairOrder);
+        return AjaxResult.success(result);
+    }
+
+    /**
      * 返回AjaxResult
      */
     private AjaxResult toAjax(Boolean result) {

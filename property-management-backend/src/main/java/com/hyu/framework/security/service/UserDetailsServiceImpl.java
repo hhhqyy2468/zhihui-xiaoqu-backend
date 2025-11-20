@@ -122,6 +122,18 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                         permissions.add("property:feetype:edit");
                         permissions.add("property:feetype:remove");
                         permissions.add("property:feetype:query");
+
+                        // 添加维修管理权限
+                        permissions.add("property:repair:list");
+                        permissions.add("property:repair:view");
+                        permissions.add("property:repair:add");
+                        permissions.add("property:repair:edit");
+                        permissions.add("property:repair:delete");
+                        permissions.add("property:repair:assign");
+                        permissions.add("property:repair:accept");
+                        permissions.add("property:repair:handle");
+                        permissions.add("property:repair:rate");
+                        permissions.add("property:repair:archive"); // 归档权限
                         break;
 
                     case 2: // 物业管理员
@@ -152,6 +164,18 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                         permissions.add("property:feetype:edit");
                         permissions.add("property:feetype:remove");
                         permissions.add("property:feetype:query");
+
+                        // 添加维修管理权限
+                        permissions.add("property:repair:list");
+                        permissions.add("property:repair:view");
+                        permissions.add("property:repair:add");
+                        permissions.add("property:repair:edit");
+                        permissions.add("property:repair:delete");
+                        permissions.add("property:repair:assign");
+                        permissions.add("property:repair:accept");
+                        permissions.add("property:repair:handle");
+                        permissions.add("property:repair:rate");
+                        permissions.add("property:repair:archive"); // 归档权限
                         break;
 
                     case 3: // 业主

@@ -97,4 +97,20 @@ public interface IRepairOrderService extends IService<RepairOrder> {
      * @return 结果
      */
     boolean rateOrder(Long id, Map<String, Object> params);
+
+    /**
+     * 系统管理员归档维修工单
+     *
+     * @param id 维修工单ID
+     * @return 结果
+     */
+    boolean archiveOrder(Long id);
+
+    /**
+     * 批量归档维修工单
+     *
+     * @param ids 维修工单ID列表
+     * @return 结果
+     */
+    boolean batchArchiveOrders(List<Long> ids);
 }

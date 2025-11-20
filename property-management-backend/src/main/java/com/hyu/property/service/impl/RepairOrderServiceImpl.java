@@ -249,7 +249,7 @@ public class RepairOrderServiceImpl extends ServiceImpl<RepairOrderMapper, Repai
     @Override
     public boolean assignOrder(Long id, Map<String, Object> params) {
         RepairOrder repairOrder = getById(id);
-        if (repairOrder == null || repairOrder.getOrderStatus() != 0) {
+        if (repairOrder == null || repairOrder.getOrderStatus() != 1) {
             log.warn("维修工单状态不正确，无法派工: {}", id);
             return false;
         }
@@ -274,7 +274,7 @@ public class RepairOrderServiceImpl extends ServiceImpl<RepairOrderMapper, Repai
             repairOrder.setRequiredFinishTime(LocalDateTime.parse(expectedCompleteTime, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
             repairOrder.setRepairCost(repairCost);
             repairOrder.setAssignTime(LocalDateTime.now());
-            repairOrder.setOrderStatus(1); // 状态改为已派工
+            repairOrder.setOrderStatus(2); // 状态改为待接单
             repairOrder.setUpdateBy(SecurityUtils.getUsername());
 
             return updateById(repairOrder);
@@ -290,12 +290,12 @@ public class RepairOrderServiceImpl extends ServiceImpl<RepairOrderMapper, Repai
     @Override
     public boolean acceptOrder(Long id) {
         RepairOrder repairOrder = getById(id);
-        if (repairOrder == null || repairOrder.getOrderStatus() != 1) {
+        if (repairOrder == null || repairOrder.getOrderStatus() != 2) {
             log.warn("维修工单状态不正确，无法接单: {}", id);
             return false;
         }
 
-        repairOrder.setOrderStatus(2); // 状态改为进行中
+        repairOrder.setOrderStatus(3); // 状态改为进行中
         repairOrder.setUpdateBy(SecurityUtils.getUsername());
         return updateById(repairOrder);
     }
@@ -306,7 +306,7 @@ public class RepairOrderServiceImpl extends ServiceImpl<RepairOrderMapper, Repai
     @Override
     public boolean completeOrder(Long id, Map<String, Object> params) {
         RepairOrder repairOrder = getById(id);
-        if (repairOrder == null || repairOrder.getOrderStatus() != 2) {
+        if (repairOrder == null || repairOrder.getOrderStatus() != 3) {
             log.warn("维修工单状态不正确，无法完成维修: {}", id);
             return false;
         }
@@ -343,7 +343,7 @@ public class RepairOrderServiceImpl extends ServiceImpl<RepairOrderMapper, Repai
     @Override
     public boolean inspectOrder(Long id, Map<String, Object> params) {
         RepairOrder repairOrder = getById(id);
-        if (repairOrder == null || repairOrder.getOrderStatus() != 3) {
+        if (repairOrder == null || repairOrder.getOrderStatus() != 4) {
             log.warn("维修工单状态不正确，无法验收: {}", id);
             return false;
         }
@@ -389,10 +389,70 @@ public class RepairOrderServiceImpl extends ServiceImpl<RepairOrderMapper, Repai
         repairOrder.setOverallRating(Integer.valueOf(params.get("overallRating").toString()));
         repairOrder.setComment((String) params.get("comment"));
         repairOrder.setRatingTime(LocalDateTime.now());
-        repairOrder.setOrderStatus(5); // 状态改为已归档
+        repairOrder.setOrderStatus(5); // 状态改为已完成
         repairOrder.setUpdateBy(SecurityUtils.getUsername());
 
         return updateById(repairOrder);
+    }
+
+    /**
+     * 系统管理员归档维修工单
+     */
+    @Override
+    public boolean archiveOrder(Long id) {
+        RepairOrder repairOrder = getById(id);
+        if (repairOrder == null) {
+            log.warn("维修工单不存在，无法归档: {}", id);
+            return false;
+        }
+
+        // 只有已完成的工单才能归档（状态5）
+        if (repairOrder.getOrderStatus() != 5) {
+            log.warn("只有已完成的维修工单才能归档，当前状态: {}", repairOrder.getOrderStatus());
+            return false;
+        }
+
+        try {
+            repairOrder.setOrderStatus(6); // 状态改为已归档
+            repairOrder.setUpdateBy(SecurityUtils.getUsername());
+
+            return updateById(repairOrder);
+        } catch (Exception e) {
+            log.error("归档维修工单失败: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * 批量归档维修工单
+     */
+    @Override
+    public boolean batchArchiveOrders(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            log.warn("归档工单ID列表为空");
+            return false;
+        }
+
+        try {
+            int successCount = 0;
+            int failCount = 0;
+
+            for (Long id : ids) {
+                if (archiveOrder(id)) {
+                    successCount++;
+                } else {
+                    failCount++;
+                    log.warn("归档工单失败: {}", id);
+                }
+            }
+
+            log.info("批量归档完成，成功: {}, 失败: {}", successCount, failCount);
+            return failCount == 0; // 只有全部成功才返回true
+
+        } catch (Exception e) {
+            log.error("批量归档维修工单失败: {}", e.getMessage(), e);
+            return false;
+        }
     }
 
     /**

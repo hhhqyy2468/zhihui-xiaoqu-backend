@@ -270,3 +270,29 @@ export function uploadRepairImages(formData) {
     }
   })
 }
+
+// 系统管理员归档维修工单
+export function archiveRepairOrder(id) {
+  return request({
+    url: `/property/repair/archive/${id}`,
+    method: 'put'
+  })
+}
+
+// 批量归档维修工单
+export function batchArchiveRepairOrders(ids) {
+  return request({
+    url: '/property/repair/archive/batch',
+    method: 'put',
+    data: ids
+  })
+}
+
+// 获取归档维修工单列表
+export function getArchivedRepairOrders(params) {
+  return request({
+    url: '/property/repair/archive/list',
+    method: 'get',
+    params
+  })
+}
