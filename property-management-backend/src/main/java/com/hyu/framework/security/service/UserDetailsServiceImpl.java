@@ -135,13 +135,15 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                         permissions.add("property:repair:rate");
                         permissions.add("property:repair:archive"); // 归档权限
 
-                        // 添加投诉管理权限
+                        // 添加投诉管理权限（包含所有权限）
                         permissions.add("property:complaint:list");
                         permissions.add("property:complaint:add");
                         permissions.add("property:complaint:edit");
                         permissions.add("property:complaint:remove");
                         permissions.add("property:complaint:assign");
                         permissions.add("property:complaint:handle");
+                        permissions.add("property:complaint:rate");
+                        permissions.add("property:complaint:my");
                         permissions.add("property:complaint:upload");
                         break;
 
