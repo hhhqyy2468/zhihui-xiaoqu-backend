@@ -431,6 +431,25 @@
       <div style="margin-top: 20px;" v-if="currentOrder.repairContent">
         <h4>维修记录</h4>
         <p>{{ currentOrder.repairContent }}</p>
+
+        <!-- 维修后照片 -->
+        <div style="margin-top: 15px;" v-if="currentOrder.repairImageUrls">
+          <h5>维修后照片</h5>
+          <div v-if="getRepairAfterImages(currentOrder.repairImageUrls).length > 0" style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <el-image
+              v-for="(imageUrl, index) in getRepairAfterImages(currentOrder.repairImageUrls)"
+              :key="index"
+              :src="getImageUrl(imageUrl)"
+              :preview-src-list="getRepairAfterImages(currentOrder.repairImageUrls).map(url => getImageUrl(url))"
+              :initial-preview-index="index"
+              fit="cover"
+              style="width: 100px; height: 100px; border-radius: 4px;"
+              :preview-teleported="true"
+              @error="handleImageError"
+            />
+          </div>
+          <span v-else>无维修后照片</span>
+        </div>
       </div>
 
       <div style="margin-top: 20px;" v-if="currentOrder.acceptanceResult">
@@ -575,14 +594,6 @@
             v-model="repairForm.faultReason"
             type="textarea"
             placeholder="请描述实际故障原因"
-            :rows="3"
-          />
-        </el-form-item>
-        <el-form-item label="维修措施" prop="repairMeasures">
-          <el-input
-            v-model="repairForm.repairMeasures"
-            type="textarea"
-            placeholder="请描述维修措施"
             :rows="3"
           />
         </el-form-item>
@@ -823,7 +834,8 @@ import {
   deleteRepairOrder,
   assignRepairOrder,
   acceptRepairOrder,
-  completeRepairOrder,
+  completeRepairOrder as completeOrder,
+  handleRepairOrder,
   inspectRepairOrder,
   rateRepairOrder,
   reassignRepairOrder,
@@ -1087,7 +1099,6 @@ const repairForm = reactive({
   orderId: null,
   orderNo: '',
   faultReason: '',
-  repairMeasures: '',
   partsUsed: '',
   beforeImages: [],
   afterImages: []
@@ -1144,9 +1155,6 @@ const formRules = {
 const repairRules = {
   faultReason: [
     { required: true, message: '请描述实际故障原因', trigger: 'blur' }
-  ],
-  repairMeasures: [
-    { required: true, message: '请描述维修措施', trigger: 'blur' }
   ]
 }
 
@@ -1227,22 +1235,22 @@ const getUrgencyTag = (level) => {
 const getStatusName = (status) => {
   const statusMap = {
     0: '待派工',
-    1: '待接单',  // 修正：已派工改为待接单
-    2: '进行中',
-    3: '待验收',
-    4: '已完成'
+    1: '待接单',  // 已派工，等待维修员接单
+    2: '进行中',  // 维修员正在处理
+    4: '待验收',  // 维修完成，等待业主评价
+    5: '已完成'   // 评价完成，工单结束
   }
-  return statusMap[status] || '待派工'
+  return statusMap[status] || '未知状态'
 }
 
 // 获取状态标签
 const getStatusTag = (status) => {
   const tagMap = {
-    0: 'warning', // 待派工
-    1: 'primary', // 已派工
-    2: 'success', // 进行中
-    3: 'info',    // 待验收
-    4: 'success'  // 已完成
+    0: 'warning', // 待派工 - 橙色
+    1: 'primary', // 待接单 - 蓝色
+    2: 'success', // 进行中 - 绿色
+    4: 'info',    // 待验收 - 灰色（等待业主操作）
+    5: 'success'  // 已完成 - 绿色
   }
   return tagMap[status] || 'warning'
 }
@@ -1356,6 +1364,23 @@ const handleReset = () => {
   handleSearch()
 }
 
+
+// 处理维修后照片数组
+const getRepairAfterImages = (imageUrls) => {
+  if (!imageUrls) return []
+
+  // 如果是字符串，按逗号分割
+  if (typeof imageUrls === 'string') {
+    return imageUrls.split(',').filter(url => isValidImageUrl(url.trim()))
+  }
+
+  // 如果是数组，直接返回
+  if (Array.isArray(imageUrls)) {
+    return imageUrls.filter(url => isValidImageUrl(url))
+  }
+
+  return []
+}
 
 // 验证图片URL是否有效
 const isValidImageUrl = (url) => {
@@ -1867,13 +1892,15 @@ const handleExportArchives = () => {
 
 // 接单
 const handleAcceptTask = (row) => {
+  console.log('接单数据:', row)
   Object.assign(acceptForm, {
-    orderId: row.orderId,
+    orderId: row.id,           // 修复：后端返回的是 id
     orderNo: row.orderNo,
-    reporter: row.reporter,
+    reporter: row.realName,    // 修复：后端返回的是 realName
     phone: row.phone,
-    address: row.houseCode
+    address: row.houseNo       // 修复：后端返回的是 houseNo
   })
+  console.log('接单表单数据:', acceptForm)
   acceptDialogVisible.value = true
 }
 
@@ -1902,10 +1929,9 @@ const handleAcceptSubmit = async () => {
 // 维修
 const handleRepair = (row) => {
   Object.assign(repairForm, {
-    orderId: row.orderId,
+    orderId: row.id,
     orderNo: row.orderNo,
     faultReason: '',
-    repairMeasures: '',
     partsUsed: '',
     beforeImages: [],
     afterImages: []
@@ -1921,13 +1947,58 @@ const handleRepairSubmit = async () => {
     await repairFormRef.value.validate()
     repairLoading.value = true
 
-    setTimeout(() => {
+    // 上传维修前照片
+    let beforeImageUrls = []
+    if (repairForm.beforeImages && repairForm.beforeImages.length > 0) {
+      try {
+        beforeImageUrls = await uploadImages(repairForm.beforeImages)
+      } catch (error) {
+        console.error('维修前照片上传失败:', error)
+        ElMessage.error('维修前照片上传失败')
+        repairLoading.value = false
+        return
+      }
+    }
+
+    // 上传维修后照片
+    let afterImageUrls = []
+    if (repairForm.afterImages && repairForm.afterImages.length > 0) {
+      try {
+        afterImageUrls = await uploadImages(repairForm.afterImages)
+      } catch (error) {
+        console.error('维修后照片上传失败:', error)
+        ElMessage.error('维修后照片上传失败')
+        repairLoading.value = false
+        return
+      }
+    }
+
+    // 构建提交数据
+    const submitData = {
+      orderId: repairForm.orderId,
+      faultReason: repairForm.faultReason,
+      partsUsed: repairForm.partsUsed,
+      beforeImages: beforeImageUrls.join(','),
+      afterImages: afterImageUrls.join(',')
+    }
+
+    console.log('提交维修数据:', submitData)
+
+    // 调用维修完成API - 维修师傅使用handleRepairOrder
+    const response = await handleRepairOrder(repairForm.orderId, submitData)
+    console.log('维修完成响应:', response)
+
+    if (response.code === 200) {
       ElMessage.success('维修记录提交成功')
       repairDialogVisible.value = false
       loadOrders()
-      repairLoading.value = false
-    }, 1000)
+    } else {
+      ElMessage.error(response.msg || '维修记录提交失败')
+    }
   } catch (error) {
+    console.error('维修记录提交失败:', error)
+    ElMessage.error('维修记录提交失败')
+  } finally {
     repairLoading.value = false
   }
 }
@@ -1935,7 +2006,7 @@ const handleRepairSubmit = async () => {
 // 评价
 const handleRate = (row) => {
   Object.assign(rateForm, {
-    orderId: row.orderId,
+    orderId: row.id,
     orderNo: row.orderNo,
     serviceRating: 5,
     responseRating: 5,
@@ -1954,13 +2025,31 @@ const handleRateSubmit = async () => {
     await rateFormRef.value.validate()
     rateLoading.value = true
 
-    setTimeout(() => {
+    const submitData = {
+      serviceRating: rateForm.serviceRating,
+      responseRating: rateForm.responseRating,
+      professionalRating: rateForm.professionalRating,
+      overallRating: rateForm.overallRating,
+      comment: rateForm.comment
+    }
+
+    console.log('提交评价数据:', submitData)
+
+    // 调用评价API
+    const response = await rateRepairOrder(rateForm.orderId, submitData)
+    console.log('评价响应:', response)
+
+    if (response.code === 200) {
       ElMessage.success('评价提交成功')
       rateDialogVisible.value = false
       loadOrders()
-      rateLoading.value = false
-    }, 1000)
+    } else {
+      ElMessage.error(response.msg || '评价提交失败')
+    }
   } catch (error) {
+    console.error('评价提交失败:', error)
+    ElMessage.error('评价提交失败')
+  } finally {
     rateLoading.value = false
   }
 }

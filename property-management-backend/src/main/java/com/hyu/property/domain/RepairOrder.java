@@ -204,6 +204,42 @@ public class RepairOrder implements Serializable {
     private LocalDateTime acceptanceTime;
 
     /**
+     * 服务评分 1-5星
+     */
+    @TableField("service_rating")
+    private Integer serviceRating;
+
+    /**
+     * 响应速度评分 1-5星
+     */
+    @TableField("response_rating")
+    private Integer responseRating;
+
+    /**
+     * 专业程度评分 1-5星
+     */
+    @TableField("professional_rating")
+    private Integer professionalRating;
+
+    /**
+     * 总体评分 1-5星
+     */
+    @TableField("overall_rating")
+    private Integer overallRating;
+
+    /**
+     * 业主评价意见
+     */
+    @TableField("comment")
+    private String comment;
+
+    /**
+     * 评价时间
+     */
+    @TableField("rating_time")
+    private LocalDateTime ratingTime;
+
+    /**
      * 返工次数
      */
     @TableField("rework_count")

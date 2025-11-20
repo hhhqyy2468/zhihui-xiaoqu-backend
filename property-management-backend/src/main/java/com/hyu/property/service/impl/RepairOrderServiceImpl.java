@@ -312,12 +312,26 @@ public class RepairOrderServiceImpl extends ServiceImpl<RepairOrderMapper, Repai
         }
 
         // 更新维修信息
-        repairOrder.setActualFault((String) params.get("actualFault"));
-        repairOrder.setRepairContent((String) params.get("repairContent"));
-        repairOrder.setRepairCost(new BigDecimal(params.get("repairCost").toString()));
-        repairOrder.setPartsReplaced((String) params.get("partsReplaced"));
+        repairOrder.setActualFault((String) params.get("faultReason")); // 前端发送的是 faultReason
+        repairOrder.setRepairContent((String) params.get("faultReason")); // 使用故障原因作为维修内容
+        repairOrder.setPartsReplaced((String) params.get("partsUsed")); // 前端发送的是 partsUsed
+
+        // 处理维修费用 - 只有维修师傅提供了费用才更新，否则保持派工时设定的费用
+        if (params.get("repairCost") != null && StringUtils.isNotEmpty(params.get("repairCost").toString())) {
+            String repairCostStr = params.get("repairCost").toString();
+            BigDecimal repairCost = new BigDecimal(repairCostStr);
+            repairOrder.setRepairCost(repairCost);
+        }
+        // 如果没有提供费用，保持原有的repairCost不变
+
+        // 保存维修后图片信息（如果有）
+        String afterImages = (String) params.get("afterImages");
+        if (StringUtils.isNotEmpty(afterImages)) {
+            repairOrder.setRepairImageUrls(afterImages);
+        }
+
         repairOrder.setFinishTime(LocalDateTime.now());
-        repairOrder.setOrderStatus(3); // 状态改为待验收
+        repairOrder.setOrderStatus(4); // 状态改为待验收
         repairOrder.setUpdateBy(SecurityUtils.getUsername());
 
         return updateById(repairOrder);
@@ -353,6 +367,30 @@ public class RepairOrderServiceImpl extends ServiceImpl<RepairOrderMapper, Repai
                 log.info("维修验收通过，已生成账单: 工单ID={}, 账单ID={}", id, billId);
             }
         }
+
+        return updateById(repairOrder);
+    }
+
+    /**
+     * 业主评价维修工单
+     */
+    @Override
+    public boolean rateOrder(Long id, Map<String, Object> params) {
+        RepairOrder repairOrder = getById(id);
+        if (repairOrder == null || repairOrder.getOrderStatus() != 4) {
+            log.warn("维修工单状态不正确，无法评价: {}", id);
+            return false;
+        }
+
+        // 更新评价信息
+        repairOrder.setServiceRating(Integer.valueOf(params.get("serviceRating").toString()));
+        repairOrder.setResponseRating(Integer.valueOf(params.get("responseRating").toString()));
+        repairOrder.setProfessionalRating(Integer.valueOf(params.get("professionalRating").toString()));
+        repairOrder.setOverallRating(Integer.valueOf(params.get("overallRating").toString()));
+        repairOrder.setComment((String) params.get("comment"));
+        repairOrder.setRatingTime(LocalDateTime.now());
+        repairOrder.setOrderStatus(5); // 状态改为已归档
+        repairOrder.setUpdateBy(SecurityUtils.getUsername());
 
         return updateById(repairOrder);
     }

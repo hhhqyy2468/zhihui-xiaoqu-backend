@@ -86,6 +86,15 @@ export function completeRepairOrder(id, data) {
   })
 }
 
+// 维修师傅提交维修记录
+export function handleRepairOrder(id, data) {
+  return request({
+    url: `/property/repair/handle/${id}`,
+    method: 'put',
+    data
+  })
+}
+
 // 验收维修
 export function inspectRepairOrder(id, data) {
   return request({

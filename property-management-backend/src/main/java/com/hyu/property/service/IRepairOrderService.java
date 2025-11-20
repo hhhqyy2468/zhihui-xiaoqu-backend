@@ -88,4 +88,13 @@ public interface IRepairOrderService extends IService<RepairOrder> {
      * @return 结果
      */
     boolean inspectOrder(Long id, Map<String, Object> params);
+
+    /**
+     * 业主评价维修工单
+     *
+     * @param id 维修工单ID
+     * @param params 评价参数
+     * @return 结果
+     */
+    boolean rateOrder(Long id, Map<String, Object> params);
 }

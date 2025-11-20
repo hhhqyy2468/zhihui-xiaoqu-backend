@@ -57,7 +57,8 @@
       "Bash(ls:*)",
       "Bash(.mvnw.cmd spring-boot:run:*)",
       "Bash(git fetch:*)",
-      "Bash(git cherry-pick:*)"
+      "Bash(git cherry-pick:*)",
+      "Bash(redis-cli:*)"
     ],
     "deny": [],
     "ask": []

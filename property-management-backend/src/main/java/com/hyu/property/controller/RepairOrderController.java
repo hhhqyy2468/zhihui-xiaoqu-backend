@@ -278,6 +278,17 @@ public class RepairOrderController {
     }
 
     /**
+     * 维修师傅提交维修记录
+     */
+    @PutMapping("/handle/{id}")
+    @PreAuthorize("@ss.hasPermi('property:repair:handle')")
+    public AjaxResult handle(@NotNull(message = "维修工单ID不能为空") @PathVariable Long id,
+                            @RequestBody Map<String, Object> params) {
+        log.info("维修师傅提交维修记录, id: {}, params: {}", id, params);
+        return toAjax(repairOrderService.completeOrder(id, params));
+    }
+
+    /**
      * 验收维修
      */
     @PutMapping("/inspect/{id}")
@@ -509,6 +520,17 @@ public class RepairOrderController {
             log.error("检查图片文件失败: {}", filename, e);
             return AjaxResult.error("检查图片文件失败");
         }
+    }
+
+    /**
+     * 业主评价维修工单
+     */
+    @PutMapping("/rate/{id}")
+    @PreAuthorize("@ss.hasPermi('property:repair:rate')")
+    public AjaxResult rate(@NotNull(message = "维修工单ID不能为空") @PathVariable Long id,
+                           @RequestBody Map<String, Object> params) {
+        log.info("业主评价维修工单, id: {}, params: {}", id, params);
+        return toAjax(repairOrderService.rateOrder(id, params));
     }
 
     /**

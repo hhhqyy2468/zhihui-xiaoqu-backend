@@ -165,6 +165,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                         permissions.add("property:complaint:rate");
                         permissions.add("property:repair:add");
                         permissions.add("property:repair:accept");
+                        permissions.add("property:repair:rate");
                         permissions.add("property:notice:view");
                         permissions.add("portal:view");
                         permissions.add("portal:dashboard:view");
