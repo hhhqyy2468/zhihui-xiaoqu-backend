@@ -404,6 +404,6 @@ public class ComplaintServiceImpl extends ServiceImpl<ComplaintMapper, Complaint
 
     @Override
     public List<Map<String, Object>> getAvailableHandlers() {
-        return complaintMapper.selectAvailableHandlers();
+        return baseMapper.selectAvailableHandlers();
     }
 }
