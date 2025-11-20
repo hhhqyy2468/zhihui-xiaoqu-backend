@@ -144,7 +144,7 @@
               详情
             </el-button>
             <el-button
-              v-if="row.complaintStatus === 0"
+              v-if="row.complaintStatus === 1 && currentUserRole === 2"
               link
               type="warning"
               @click="handleAssign(row)"
@@ -152,7 +152,7 @@
               分配
             </el-button>
             <el-button
-              v-if="row.complaintStatus === 1"
+              v-if="row.complaintStatus === 2 && currentUserRole === 2"
               link
               type="success"
               @click="handleProcess(row)"
@@ -160,7 +160,7 @@
               处理
             </el-button>
             <el-button
-              v-if="row.complaintStatus === 2"
+              v-if="row.complaintStatus === 3 && currentUserRole === 3"
               link
               type="info"
               @click="handleRate(row)"

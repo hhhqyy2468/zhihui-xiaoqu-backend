@@ -142,8 +142,6 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                         permissions.add("property:complaint:remove");
                         permissions.add("property:complaint:assign");
                         permissions.add("property:complaint:handle");
-                        permissions.add("property:complaint:rate");
-                        permissions.add("property:complaint:my");
                         permissions.add("property:complaint:upload");
                         break;
 
@@ -206,7 +204,9 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                         permissions.add("property:wallet:recharge");
                         permissions.add("property:transaction:list");
                         permissions.add("property:complaint:add");
+                        permissions.add("property:complaint:my");
                         permissions.add("property:complaint:rate");
+                        permissions.add("property:complaint:upload");
                         permissions.add("property:repair:add");
                         permissions.add("property:repair:accept");
                         permissions.add("property:repair:rate");
