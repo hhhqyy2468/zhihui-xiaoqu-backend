@@ -759,11 +759,25 @@ const loadDictData = async () => {
 const loadComplaints = async () => {
   loading.value = true
   try {
+    // 处理参数，确保字段名匹配后端API
     const params = {
       pageNum: pagination.current,
       pageSize: pagination.pageSize,
-      ...searchForm
+      complaintNo: searchForm.complaintNo || undefined,
+      userName: searchForm.userName || undefined,
+      houseNo: searchForm.houseNo || undefined,
+      complaintType: searchForm.complaintType || undefined,
+      complaintStatus: searchForm.complaintStatus || undefined,
+      urgencyLevel: searchForm.urgencyLevel || undefined,
+      phone: searchForm.phone || undefined
     }
+
+    // 移除空值参数
+    Object.keys(params).forEach(key => {
+      if (params[key] === '' || params[key] === null || params[key] === undefined) {
+        delete params[key]
+      }
+    })
 
     let response
     if (currentUserRole.value === 3) {

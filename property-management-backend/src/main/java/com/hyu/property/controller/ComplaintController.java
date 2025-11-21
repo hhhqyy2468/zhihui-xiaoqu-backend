@@ -230,13 +230,26 @@ public class ComplaintController {
     @PreAuthorize("@ss.hasPermi('property:complaint:my')")
     public AjaxResult getMyComplaints(@RequestParam(defaultValue = "1") Integer pageNum,
                                      @RequestParam(defaultValue = "10") Integer pageSize,
-                                     @RequestParam(required = false) Integer complaintStatus) {
-        log.info("获取我的投诉列表, pageNum: {}, pageSize: {}, complaintStatus: {}", pageNum, pageSize, complaintStatus);
+                                     @RequestParam(required = false) String complaintNo,
+                                     @RequestParam(required = false) String userName,
+                                     @RequestParam(required = false) String houseNo,
+                                     @RequestParam(required = false) String complaintType,
+                                     @RequestParam(required = false) Integer complaintStatus,
+                                     @RequestParam(required = false) Integer urgencyLevel,
+                                     @RequestParam(required = false) String phone) {
+        log.info("获取我的投诉列表, pageNum: {}, pageSize: {}, complaintNo: {}, userName: {}, houseNo: {}, complaintType: {}, complaintStatus: {}, urgencyLevel: {}, phone: {}",
+                 pageNum, pageSize, complaintNo, userName, houseNo, complaintType, complaintStatus, urgencyLevel, phone);
 
         Page<Complaint> page = new Page<>(pageNum, pageSize);
         Complaint complaint = new Complaint();
         complaint.setUserId(SecurityUtils.getUserId());
+        complaint.setComplaintNo(complaintNo);
+        complaint.setUserName(userName);
+        complaint.setHouseNo(houseNo);
+        complaint.setComplaintType(complaintType);
         complaint.setComplaintStatus(complaintStatus);
+        complaint.setUrgencyLevel(urgencyLevel);
+        complaint.setPhone(phone);
 
         Page<Complaint> result = complaintService.selectComplaintPage(page, complaint);
 
