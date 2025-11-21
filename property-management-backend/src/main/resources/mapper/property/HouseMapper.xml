@@ -84,4 +84,13 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         ORDER BY h.create_time DESC
     </select>
 
+    <!-- 根据房间编号查询房屋ID -->
+    <select id="selectHouseIdByHouseNo" parameterType="String" resultType="java.lang.Long">
+        select id
+        from house
+        where house_no = #{houseNo}
+          and deleted = 0
+        limit 1
+    </select>
+
 </mapper>

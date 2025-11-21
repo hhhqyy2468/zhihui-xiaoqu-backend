@@ -115,7 +115,7 @@ public class ComplaintController {
      * 查询投诉详情
      */
     @GetMapping("/{id}")
-    @PreAuthorize("@ss.hasPermi('property:complaint:list')")
+    @PreAuthorize("@ss.hasPermi('property:complaint:query')")
     public AjaxResult getInfo(@NotNull(message = "投诉ID不能为空") @PathVariable Long id) {
         log.info("查询投诉详情, id: {}", id);
         Complaint complaint = complaintService.selectComplaintById(id);
@@ -183,9 +183,9 @@ public class ComplaintController {
         log.info("投诉派单, id: {}, params: {}", id, params);
 
         Long handlerId = Long.valueOf(params.get("handlerId").toString());
-        String handlerName = params.get("handlerName").toString();
+        String remark = params.get("remark") != null ? params.get("remark").toString() : null;
 
-        return toAjax(complaintService.assignComplaint(id, handlerId, handlerName));
+        return toAjax(complaintService.assignComplaint(id, handlerId, remark));
     }
 
     /**

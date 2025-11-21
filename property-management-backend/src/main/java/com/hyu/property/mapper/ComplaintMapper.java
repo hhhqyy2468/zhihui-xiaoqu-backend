@@ -22,6 +22,6 @@ public interface ComplaintMapper extends BaseMapper<Complaint> {
      *
      * @return 处理人列表
      */
-    @Select("SELECT user_id as value, CONCAT(real_name, '-', username) as label FROM sys_user WHERE user_type = 2 AND status = 1")
+    @Select("SELECT id as value, CONCAT(real_name, '-', username) as label FROM sys_user WHERE user_type = 2 AND status = 1")
     List<Map<String, Object>> selectAvailableHandlers();
 }

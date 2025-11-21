@@ -3,12 +3,15 @@ package com.hyu.property.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.hyu.common.utils.SecurityUtils;
 import com.hyu.common.utils.StringUtils;
 import com.hyu.property.domain.Complaint;
 import com.hyu.property.mapper.ComplaintMapper;
+import com.hyu.property.mapper.HouseMapper;
 import com.hyu.property.service.IComplaintService;
+import com.hyu.system.domain.SysUser;
+import com.hyu.system.mapper.SysUserMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -27,6 +30,12 @@ import java.util.Random;
 @Slf4j
 @Service
 public class ComplaintServiceImpl extends ServiceImpl<ComplaintMapper, Complaint> implements IComplaintService {
+
+    @Autowired
+    private HouseMapper houseMapper;
+
+    @Autowired
+    private SysUserMapper sysUserMapper;
 
     /**
      * 分页查询投诉列表
@@ -72,7 +81,12 @@ public class ComplaintServiceImpl extends ServiceImpl<ComplaintMapper, Complaint
         // 按创建时间倒序排序
         queryWrapper.orderByDesc("create_time");
 
-        return page(page, queryWrapper);
+        Page<Complaint> resultPage = page(page, queryWrapper);
+
+        // 设置字典值对应的名称和格式化用户信息
+        resultPage.getRecords().forEach(this::setDictionaryNames);
+
+        return resultPage;
     }
 
     /**
@@ -168,6 +182,39 @@ public class ComplaintServiceImpl extends ServiceImpl<ComplaintMapper, Complaint
             complaint.setComplaintNo(generateComplaintNo());
         }
 
+        // 根据房间编号获取房屋ID
+        if (StringUtils.isNotEmpty(complaint.getHouseNo())) {
+            Long houseId = houseMapper.selectHouseIdByHouseNo(complaint.getHouseNo());
+            if (houseId != null) {
+                complaint.setHouseId(houseId);
+                log.info("根据房间编号 {} 找到房屋ID: {}", complaint.getHouseNo(), houseId);
+            } else {
+                log.warn("未找到房间编号 {} 对应的房屋ID", complaint.getHouseNo());
+            }
+        }
+
+        // 格式化投诉人信息为"真实姓名(用户名)"格式
+        if (complaint.getUserId() != null) {
+            try {
+                SysUser user = sysUserMapper.selectById(complaint.getUserId());
+                if (user != null) {
+                    String realName = user.getRealName();
+                    String userName = user.getUsername();
+                    if (StringUtils.isNotEmpty(realName) && StringUtils.isNotEmpty(userName)) {
+                        // 格式：真实姓名(用户名)
+                        complaint.setUserName(realName + "(" + userName + ")");
+                    } else if (StringUtils.isNotEmpty(realName)) {
+                        complaint.setUserName(realName);
+                    } else {
+                        complaint.setUserName(userName);
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("查询用户信息失败: {}", e.getMessage());
+                // 保持原有的userName值
+            }
+        }
+
         return save(complaint) ? 1 : 0;
     }
 
@@ -260,8 +307,11 @@ public class ComplaintServiceImpl extends ServiceImpl<ComplaintMapper, Complaint
 
         // 设置评价信息
         complaint.setRating((Integer) params.get("rating"));
-        complaint.setRatingContent((String) params.get("ratingContent"));
+        complaint.setRatingContent((String) params.get("comment")); // 使用comment字段
         complaint.setRatingTime(LocalDateTime.now());
+
+        // 评价完成后将状态设为已关闭
+        complaint.setComplaintStatus(4);
         complaint.setUpdateTime(LocalDateTime.now());
 
         return updateById(complaint) ? 1 : 0;
@@ -292,14 +342,30 @@ public class ComplaintServiceImpl extends ServiceImpl<ComplaintMapper, Complaint
      *
      * @param id 投诉ID
      * @param handlerId 处理人ID
-     * @param handlerName 处理人姓名
+
      * @return 结果
      */
     @Override
-    public int assignComplaint(Long id, Long handlerId, String handlerName) {
+    public int assignComplaint(Long id, Long handlerId, String remark) {
         Complaint complaint = getById(id);
         if (complaint == null || complaint.getDeleted() == 1) {
             return 0;
+        }
+
+        // 根据handlerId查询处理人姓名
+        String handlerName = null;
+        if (handlerId != null) {
+            try {
+                SysUser handler = sysUserMapper.selectById(handlerId);
+                if (handler != null) {
+                    handlerName = handler.getRealName();
+                    log.info("查询到处理人信息: ID={}, 姓名={}", handlerId, handlerName);
+                } else {
+                    log.warn("未找到处理人信息, ID={}", handlerId);
+                }
+            } catch (Exception e) {
+                log.error("查询处理人信息失败: {}", e.getMessage());
+            }
         }
 
         complaint.setHandlerId(handlerId);
@@ -386,6 +452,28 @@ public class ComplaintServiceImpl extends ServiceImpl<ComplaintMapper, Complaint
     private void setDictionaryNames(Complaint complaint) {
         if (complaint == null) {
             return;
+        }
+
+        // 如果userName为空，则尝试格式化用户信息
+        if (StringUtils.isEmpty(complaint.getUserName()) && complaint.getUserId() != null) {
+            try {
+                SysUser user = sysUserMapper.selectById(complaint.getUserId());
+                if (user != null) {
+                    String realName = user.getRealName();
+                    String userName = user.getUsername();
+                    if (StringUtils.isNotEmpty(realName) && StringUtils.isNotEmpty(userName)) {
+                        // 格式：真实姓名(用户名)
+                        complaint.setUserName(realName + "(" + userName + ")");
+                    } else if (StringUtils.isNotEmpty(realName)) {
+                        complaint.setUserName(realName);
+                    } else {
+                        complaint.setUserName(userName);
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("查询用户信息失败: {}", e.getMessage());
+                // 保持原有值
+            }
         }
 
         // 设置紧急程度名称

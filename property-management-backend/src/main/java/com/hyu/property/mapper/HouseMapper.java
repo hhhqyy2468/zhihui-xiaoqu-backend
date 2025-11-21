@@ -41,4 +41,12 @@ public interface HouseMapper extends BaseMapper<House> {
      */
     List<HouseVO> selectHouseVOPage(@Param("house") House house);
 
+    /**
+     * 根据房间编号查询房屋ID
+     *
+     * @param houseNo 房间编号
+     * @return 房屋ID
+     */
+    Long selectHouseIdByHouseNo(@Param("houseNo") String houseNo);
+
 }

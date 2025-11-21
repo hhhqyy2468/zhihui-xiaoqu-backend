@@ -197,13 +197,25 @@
         label-width="100px"
       >
         <el-form-item label="投诉人" prop="complainant">
-          <el-input v-model="form.complainant" placeholder="请输入投诉人姓名" />
+          <el-input
+            v-model="form.complainant"
+            placeholder="请输入投诉人姓名"
+            :readonly="currentUserRole === 3 && !isEdit"
+          />
         </el-form-item>
         <el-form-item label="联系电话" prop="phone">
-          <el-input v-model="form.phone" placeholder="请输入联系电话" />
+          <el-input
+            v-model="form.phone"
+            placeholder="请输入联系电话"
+            :readonly="currentUserRole === 3 && !isEdit"
+          />
         </el-form-item>
-        <el-form-item label="房间编号" prop="houseCode">
-          <el-input v-model="form.houseCode" placeholder="请输入房间编号" />
+        <el-form-item label="房间编号" prop="houseNo">
+          <el-input
+            v-model="form.houseNo"
+            placeholder="请输入房间编号"
+            :readonly="currentUserRole === 3 && !isEdit"
+          />
         </el-form-item>
         <el-form-item label="投诉类型" prop="complaintType">
           <el-select v-model="form.complaintType" placeholder="请选择投诉类型" style="width: 100%">
@@ -220,7 +232,7 @@
             <el-radio
               v-for="item in urgencyLevelOptions"
               :key="item.value"
-              :label="item.value"
+              :value="item.value"
             >
               {{ item.label }}
             </el-radio>
@@ -233,22 +245,6 @@
             placeholder="请详细描述投诉内容"
             :rows="4"
           />
-        </el-form-item>
-        <el-form-item label="相关图片">
-          <el-upload
-            :file-list="fileList"
-            :action="uploadUrl"
-            :headers="uploadHeaders"
-            list-type="picture-card"
-            :before-upload="beforeUpload"
-            :on-success="handleUploadSuccess"
-            :on-remove="handleRemove"
-            :on-change="handleFileChange"
-            multiple
-            :limit="5"
-          >
-            <el-icon><Plus /></el-icon>
-          </el-upload>
         </el-form-item>
       </el-form>
 
@@ -271,13 +267,13 @@
           {{ currentComplaint.complaintNo }}
         </el-descriptions-item>
         <el-descriptions-item label="投诉人">
-          {{ currentComplaint.complainant }}
+          {{ currentComplaint.userName }}
         </el-descriptions-item>
         <el-descriptions-item label="联系电话">
           {{ currentComplaint.phone }}
         </el-descriptions-item>
         <el-descriptions-item label="房间编号">
-          {{ currentComplaint.houseCode }}
+          {{ currentComplaint.houseNo }}
         </el-descriptions-item>
         <el-descriptions-item label="投诉类型">
           <el-tag :type="getTypeTag(currentComplaint.complaintType)">
@@ -308,18 +304,6 @@
       <div style="margin-top: 20px;">
         <h4>投诉内容</h4>
         <p>{{ currentComplaint.complaintContent }}</p>
-      </div>
-
-      <div style="margin-top: 20px;" v-if="currentComplaint.imageUrls && currentComplaint.imageUrls.length > 0">
-        <h4>相关图片</h4>
-        <el-image
-          v-for="(image, index) in getImageList(currentComplaint.imageUrls)"
-          :key="index"
-          :src="getImageUrl(image)"
-          style="width: 100px; height: 100px; margin-right: 10px;"
-          fit="cover"
-          :preview-src-list="getImageList(currentComplaint.imageUrls).map(url => getImageUrl(url))"
-        />
       </div>
 
       <div style="margin-top: 20px;" v-if="currentComplaint.handleContent">
@@ -398,19 +382,7 @@
             :rows="4"
           />
         </el-form-item>
-        <el-form-item label="处理照片">
-          <el-upload
-            v-model:file-list="processForm.handleImages"
-            action="#"
-            list-type="picture-card"
-            :auto-upload="false"
-            multiple
-            :limit="5"
-          >
-            <el-icon><Plus /></el-icon>
-          </el-upload>
-        </el-form-item>
-      </el-form>
+              </el-form>
 
       <template #footer>
         <el-button @click="processDialogVisible = false">取消</el-button>
@@ -492,6 +464,8 @@ import {
   getComplaintStatusDict,
   getAvailableHandlers
 } from '@/api/complaint'
+import { getUserInfo } from '@/api/auth'
+import { getHousesByUserId } from '@/api/userHouse'
 
 // 响应式数据
 const formRef = ref()
@@ -509,8 +483,8 @@ const processDialogVisible = ref(false)
 const rateDialogVisible = ref(false)
 const isEdit = ref(false)
 
-// 用户角色判断
-const currentUserRole = computed(() => {
+// 从JWT token获取用户信息
+const getCurrentUserInfo = () => {
   const token = localStorage.getItem('token')
   if (token) {
     try {
@@ -522,13 +496,101 @@ const currentUserRole = computed(() => {
           payload += '='
         }
         const decoded = JSON.parse(atob(payload))
-        return decoded.userType || 1
+        console.log('JWT Token解码结果:', decoded) // 调试信息
+
+        // 处理realName编码问题
+        let realName = decoded.realName || ''
+        if (realName) {
+          try {
+            // 尝试解码包含\x转义字符的字符串
+            if (realName.includes('\\x')) {
+              realName = realName.replace(/\\x([0-9A-Fa-f]{2})/g, (match, hex) => {
+                return String.fromCharCode(parseInt(hex, 16))
+              })
+            }
+            // 如果仍然不是正常字符，才使用用户名
+            if (!/^[\u4e00-\u9fa5a-zA-Z0-9\s]+$/.test(realName)) {
+              console.warn('realName解码后仍有问题，使用username')
+              realName = decoded.username
+            }
+          } catch (e) {
+            console.warn('realName解码失败，使用username:', e)
+            realName = decoded.username
+          }
+        } else {
+          realName = decoded.username
+        }
+
+        return {
+          userType: decoded.userType || 1,
+          userId: decoded.userId || decoded.sub,
+          username: decoded.username,
+          realName: realName,
+          phone: '', // 需要从API获取
+          houseCode: '' // 需要从API获取
+        }
       }
     } catch (error) {
       console.error('解析Token失败:', error)
     }
   }
-  return 1
+  return { userType: 1, userId: null, username: '', realName: '', phone: '', houseCode: '' }
+}
+
+// 获取完整用户信息的函数
+let fullUserInfoCache = null
+const getFullUserInfo = async () => {
+  if (fullUserInfoCache) {
+    return fullUserInfoCache
+  }
+
+  const basicInfo = getCurrentUserInfo()
+  if (basicInfo.userId) {
+    try {
+      // 获取用户基本信息
+      const response = await getUserInfo()
+      let userInfo = response.data || {}
+      let houseCode = ''
+
+      console.log('API返回的用户详细信息:', userInfo) // 调试信息
+
+      // 尝试获取用户的房间信息
+      try {
+        console.log('正在获取用户房产信息，userId:', basicInfo.userId)
+        const houseResponse = await getHousesByUserId(basicInfo.userId)
+        console.log('房产API响应:', houseResponse)
+
+        if (houseResponse.code === 200 && houseResponse.data && houseResponse.data.length > 0) {
+          // 取第一个房产的房间编号
+          const firstHouse = houseResponse.data[0]
+          console.log('房产原始数据:', firstHouse)
+          houseCode = firstHouse.houseNo || firstHouse.roomNumber || firstHouse.houseCode || ''
+          console.log('解析出的房间编号:', houseCode)
+        } else {
+          console.log('该用户没有关联的房产信息，响应:', houseResponse)
+        }
+      } catch (houseError) {
+        console.warn('获取用户房间信息失败:', houseError)
+      }
+
+      fullUserInfoCache = {
+        ...basicInfo,
+        realName: userInfo.realName || basicInfo.realName, // 优先使用API中的realName
+        phone: userInfo.phone || '',
+        houseCode: houseCode
+      }
+      console.log('完整用户信息:', fullUserInfoCache)
+      return fullUserInfoCache
+    } catch (error) {
+      console.error('获取用户详细信息失败:', error)
+    }
+  }
+  return basicInfo
+}
+
+// 用户角色判断
+const currentUserRole = computed(() => {
+  return getCurrentUserInfo().userType
 })
 
 // 获取页面标题
@@ -576,13 +638,6 @@ const pagination = reactive({
 const complaintTypeOptions = ref([])
 const complaintStatusOptions = ref([])
 
-// 文件上传
-const fileList = ref([])
-const uploadUrl = `${import.meta.env.VITE_APP_BASE_API}/property/complaint/upload`
-const uploadHeaders = {
-  Authorization: 'Bearer ' + localStorage.getItem('token')
-}
-
 const handlerOptions = ref([])
 
 const urgencyLevelOptions = ref([
@@ -594,12 +649,12 @@ const urgencyLevelOptions = ref([
 const form = reactive({
   id: null,
   complaintNo: '',
-  houseNo: '',
+  complainant: '',
+  phone: '',
+  houseNo: '', // 统一使用houseNo字段
   complaintType: '',
   urgencyLevel: 1,
-  phone: '',
-  complaintContent: '',
-  imageUrls: ''
+  complaintContent: ''
 })
 
 // 分配表单
@@ -616,8 +671,7 @@ const processForm = reactive({
   complaintId: null,
   complaintNo: '',
   complainant: '',
-  handleContent: '',
-  handleImages: []
+  handleContent: ''
 })
 
 // 评价表单
@@ -642,16 +696,14 @@ const formRules = {
     { required: true, message: '投诉类型不能为空', trigger: 'change' }
   ],
   complaintContent: [
-    { required: true, message: '投诉内容不能为空', trigger: 'blur' },
-    { min: 10, max: 500, message: '投诉内容长度在10到500个字符', trigger: 'blur' }
+    { required: true, message: '投诉内容不能为空', trigger: 'blur' }
   ]
 }
 
 // 处理表单规则
 const processRules = {
   handleContent: [
-    { required: true, message: '请输入处理措施', trigger: 'blur' },
-    { min: 10, max: 500, message: '处理措施长度在10到500个字符', trigger: 'blur' }
+    { required: true, message: '请输入处理措施', trigger: 'blur' }
   ]
 }
 
@@ -674,11 +726,20 @@ const dialogTitle = computed(() => isEdit.value ? '编辑投诉' : '新增投诉
 // 加载字典数据
 const loadDictData = async () => {
   try {
-    const [typeRes, statusRes, handlersRes] = await Promise.all([
+    // 基础字典数据请求
+    const baseRequests = [
       getComplaintTypeDict(),
-      getComplaintStatusDict(),
-      getAvailableHandlers()
-    ])
+      getComplaintStatusDict()
+    ]
+
+    // 只有管理员和物业管理员才获取处理人列表
+    if (currentUserRole.value === 1 || currentUserRole.value === 2) {
+      baseRequests.push(getAvailableHandlers())
+    }
+
+    const results = await Promise.all(baseRequests)
+
+    const [typeRes, statusRes, handlersRes] = results
 
     if (typeRes.code === 200) {
       complaintTypeOptions.value = typeRes.data || []
@@ -686,7 +747,7 @@ const loadDictData = async () => {
     if (statusRes.code === 200) {
       complaintStatusOptions.value = statusRes.data || []
     }
-    if (handlersRes.code === 200) {
+    if (handlersRes && handlersRes.code === 200) {
       handlerOptions.value = handlersRes.data || []
     }
   } catch (error) {
@@ -746,8 +807,8 @@ const handleReset = () => {
 }
 
 // 新增投诉
-const handleAdd = () => {
-  resetForm()
+const handleAdd = async () => {
+  await resetForm()
   dialogVisible.value = true
 }
 
@@ -770,9 +831,9 @@ const handleViewDetail = async (row) => {
 // 分配处理人
 const handleAssign = (row) => {
   Object.assign(assignForm, {
-    complaintId: row.complaintId,
+    complaintId: row.id, // 使用正确的字段名
     complaintNo: row.complaintNo,
-    complainant: row.complainant,
+    complainant: row.userName || row.complainant, // 使用userName字段
     handlerId: '',
     remark: ''
   })
@@ -780,29 +841,36 @@ const handleAssign = (row) => {
 }
 
 // 提交分配
-const handleAssignSubmit = () => {
+const handleAssignSubmit = async () => {
   if (!assignForm.handlerId) {
     ElMessage.warning('请选择处理人')
     return
   }
 
   assignLoading.value = true
-  setTimeout(() => {
+  try {
+    await assignComplaint(assignForm.complaintId, {
+      handlerId: assignForm.handlerId,
+      remark: assignForm.remark
+    })
     ElMessage.success('分配成功')
     assignDialogVisible.value = false
     loadComplaints()
+  } catch (error) {
+    console.error('分配失败:', error)
+    ElMessage.error('分配失败')
+  } finally {
     assignLoading.value = false
-  }, 1000)
+  }
 }
 
 // 处理投诉
 const handleProcess = (row) => {
   Object.assign(processForm, {
-    complaintId: row.complaintId,
+    complaintId: row.id, // 使用正确的字段名
     complaintNo: row.complaintNo,
-    complainant: row.complainant,
-    handleContent: '',
-    handleImages: []
+    complainant: row.userName || row.complainant, // 使用userName字段
+    handleContent: ''
   })
   processDialogVisible.value = true
 }
@@ -810,7 +878,7 @@ const handleProcess = (row) => {
 // 评价投诉
 const handleRate = (row) => {
   Object.assign(rateForm, {
-    complaintId: row.complaintId,
+    complaintId: row.id, // 使用正确的字段名
     complaintNo: row.complaintNo,
     handleContent: row.handleContent || '暂无处理结果',
     rating: 5,
@@ -828,14 +896,17 @@ const handleProcessSubmit = async () => {
     await processFormRef.value.validate()
     processLoading.value = true
 
-    // 模拟API请求
-    setTimeout(() => {
-      ElMessage.success('处理完成')
-      processDialogVisible.value = false
-      loadComplaints()
-      processLoading.value = false
-    }, 1000)
+    await handleComplaint(processForm.complaintId, {
+      handleContent: processForm.handleContent
+    })
+
+    ElMessage.success('处理完成')
+    processDialogVisible.value = false
+    loadComplaints()
   } catch (error) {
+    console.error('处理投诉失败:', error)
+    ElMessage.error('处理投诉失败')
+  } finally {
     processLoading.value = false
   }
 }
@@ -848,14 +919,19 @@ const handleRateSubmit = async () => {
     await rateFormRef.value.validate()
     rateLoading.value = true
 
-    // 模拟API请求
-    setTimeout(() => {
-      ElMessage.success('评价提交成功')
-      rateDialogVisible.value = false
-      loadComplaints()
-      rateLoading.value = false
-    }, 1000)
+    await rateComplaint(rateForm.complaintId, {
+      rating: rateForm.rating,
+      satisfaction: rateForm.satisfaction,
+      comment: rateForm.comment
+    })
+
+    ElMessage.success('评价提交成功')
+    rateDialogVisible.value = false
+    loadComplaints()
   } catch (error) {
+    console.error('评价提交失败:', error)
+    ElMessage.error('评价提交失败')
+  } finally {
     rateLoading.value = false
   }
 }
@@ -871,15 +947,7 @@ const handleSubmit = async () => {
     await formRef.value.validate()
     submitLoading.value = true
 
-    // 处理图片URL
-    const imageUrls = fileList.value.map(file => {
-      if (file.response) {
-        return file.response
-      }
-      return file.url
-    }).join(',')
-
-    const formData = { ...form, imageUrls }
+    const formData = { ...form }
     const response = await createComplaint(formData)
 
     if (response.code === 200) {
@@ -921,8 +989,8 @@ const handleDelete = async (row) => {
 }
 
 // 重置表单
-const resetForm = () => {
-  Object.assign(form, {
+const resetForm = async () => {
+  const baseForm = {
     id: null,
     complaintNo: '',
     houseNo: '',
@@ -930,40 +998,20 @@ const resetForm = () => {
     urgencyLevel: 1,
     phone: '',
     complaintContent: '',
-    imageUrls: ''
-  })
-  fileList.value = []
+    complainant: ''
+  }
+
+  // 如果是业主，自动填充用户信息
+  if (currentUserRole.value === 3) {
+    const userInfo = await getFullUserInfo()
+    console.log('当前用户信息:', userInfo) // 调试信息
+    baseForm.complainant = userInfo.realName || userInfo.username
+    baseForm.phone = userInfo.phone
+    baseForm.houseNo = userInfo.houseCode
+  }
+
+  Object.assign(form, baseForm)
   formRef.value?.resetFields()
-}
-
-// 文件上传相关
-const beforeUpload = (file) => {
-  const isValidType = ['image/jpeg', 'image/png', 'image/gif'].includes(file.type)
-  const isLt5M = file.size / 1024 / 1024 < 5
-
-  if (!isValidType) {
-    ElMessage.error('只能上传JPG/PNG/GIF格式的图片!')
-  }
-  if (!isLt5M) {
-    ElMessage.error('图片大小不能超过5MB!')
-  }
-  return isValidType && isLt5M
-}
-
-const handleUploadSuccess = (response) => {
-  if (response.code === 200) {
-    ElMessage.success('图片上传成功')
-  } else {
-    ElMessage.error(response.msg || '图片上传失败')
-  }
-}
-
-const handleRemove = (file, fileList) => {
-  console.log('移除文件:', file, fileList)
-}
-
-const handleFileChange = (file, fileList) => {
-  console.log('文件变化:', file, fileList)
 }
 
 // 工具函数
@@ -980,7 +1028,15 @@ const getTypeTag = (type) => {
 }
 
 const getTypeName = (type) => {
-  return getComplaintTypeName(type)
+  const typeMap = {
+    'sanitation': '环境卫生',
+    'noise': '噪音扰民',
+    'facility_damage': '设施损坏',
+    'service_attitude': '服务态度',
+    'safety_hazard': '安全隐患',
+    'other': '其他问题'
+  }
+  return typeMap[type] || type
 }
 
 const getUrgencyTag = (urgency) => {
@@ -1019,18 +1075,6 @@ const getComplaintTypeName = (type) => {
 const formatDateTime = (dateTime) => {
   if (!dateTime) return ''
   return new Date(dateTime).toLocaleString('zh-CN')
-}
-
-const getImageList = (imageUrls) => {
-  if (!imageUrls) return []
-  if (Array.isArray(imageUrls)) return imageUrls
-  return imageUrls.split(',').filter(url => url.trim())
-}
-
-const getImageUrl = (url) => {
-  if (!url) return ''
-  if (url.startsWith('http')) return url
-  return `${import.meta.env.VITE_APP_BASE_API}${url}`
 }
 
 // 分页处理

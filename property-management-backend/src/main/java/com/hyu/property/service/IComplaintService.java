@@ -111,10 +111,10 @@ public interface IComplaintService extends IService<Complaint> {
      *
      * @param id 投诉ID
      * @param handlerId 处理人ID
-     * @param handlerName 处理人姓名
+     * @param remark 备注信息
      * @return 结果
      */
-    int assignComplaint(Long id, Long handlerId, String handlerName);
+    int assignComplaint(Long id, Long handlerId, String remark);
 
     /**
      * 生成投诉单号

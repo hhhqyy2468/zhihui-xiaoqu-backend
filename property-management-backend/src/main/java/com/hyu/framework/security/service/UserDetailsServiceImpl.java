@@ -137,6 +137,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
                         // 添加投诉管理权限（包含所有权限）
                         permissions.add("property:complaint:list");
+                        permissions.add("property:complaint:query");
                         permissions.add("property:complaint:add");
                         permissions.add("property:complaint:edit");
                         permissions.add("property:complaint:remove");
@@ -190,6 +191,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
                         // 添加投诉管理权限
                         permissions.add("property:complaint:list");
+                        permissions.add("property:complaint:query");
                         permissions.add("property:complaint:add");
                         permissions.add("property:complaint:edit");
                         permissions.add("property:complaint:remove");
@@ -206,6 +208,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                         permissions.add("property:wallet:recharge");
                         permissions.add("property:transaction:list");
                         permissions.add("property:complaint:add");
+                        permissions.add("property:complaint:query");
                         permissions.add("property:complaint:my");
                         permissions.add("property:complaint:rate");
                         permissions.add("property:complaint:upload");
