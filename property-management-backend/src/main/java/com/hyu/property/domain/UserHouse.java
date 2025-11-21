@@ -153,4 +153,16 @@ public class UserHouse implements Serializable {
      */
     @TableField(exist = false)
     private Integer houseStatus;
+
+    /**
+     * 楼栋ID（关联查询用）
+     */
+    @TableField(exist = false)
+    private Long buildingId;
+
+    /**
+     * 单元ID（关联查询用）
+     */
+    @TableField(exist = false)
+    private Long unitId;
 }

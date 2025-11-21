@@ -21,6 +21,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="houseNo" column="house_no" />
         <result property="buildingName" column="building_name" />
         <result property="unitName" column="unit_name" />
+        <!-- 添加ID字段用于前端匹配 -->
+        <result property="buildingId" column="building_id" />
+        <result property="unitId" column="unit_id" />
         <!-- 房产详细信息 -->
         <result property="roomNumber" column="room_number" />
         <result property="floor" column="floor" />
@@ -34,8 +37,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         select uh.id, uh.user_id, uh.house_id, uh.relation_type, uh.start_date, uh.end_date, uh.is_current, uh.remark, uh.create_by, uh.create_time, uh.update_by, uh.update_time,
                u.real_name as user_name,
                h.house_no, h.room_number, h.floor, h.house_type, h.building_area, h.usable_area, h.house_status,
-               b.building_name,
-               un.unit_name
+               b.building_name, b.id as building_id,
+               un.unit_name, un.id as unit_id
         from user_house uh
         left join sys_user u on uh.user_id = u.id
         left join house h on uh.house_id = h.id

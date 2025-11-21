@@ -154,6 +154,7 @@
               查看
             </el-button>
             <el-button
+              v-if="currentUser.userType === 1 || currentUser.userType === 2"
               link
               type="warning"
               @click="handleEdit(row)"
@@ -161,7 +162,7 @@
               编辑
             </el-button>
             <el-button
-              v-if="row.noticeStatus === 1"
+              v-if="(currentUser.userType === 1 || currentUser.userType === 2) && row.noticeStatus === 1"
               link
               type="info"
               @click="handleWithdraw(row)"
@@ -169,6 +170,7 @@
               撤回
             </el-button>
             <el-button
+              v-if="currentUser.userType === 1 || currentUser.userType === 2"
               link
               type="danger"
               @click="handleDelete(row)"
@@ -437,12 +439,25 @@ import {
   getBuildingList,
   getUnitList
 } from '@/api/notice'
+import { getUserInfo } from '@/api/auth'
+import { getHousesByUserId } from '@/api/userHouse'
 
 // 响应式数据
 const loading = ref(false)
 const dialogVisible = ref(false)
 const detailVisible = ref(false)
 const dialogTitle = ref('发布公告')
+
+// 当前用户信息
+const currentUser = ref({
+  userType: null,
+  userId: null,
+  username: '',
+  realName: ''
+})
+
+// 用户房产信息（用于业主过滤公告）
+const userHouses = ref([])
 
 // 表单数据
 const formRef = ref()
@@ -796,7 +811,16 @@ const loadNotices = async () => {
     if (response.code === 200 && response.data) {
       console.log('原始数据记录:', response.data.rows)
       console.log('数据总数:', response.data.total)
-      noticeList.value = response.data.rows || []
+
+      let allNotices = response.data.rows || []
+
+      // 如果是业主，需要根据发布范围过滤公告
+      if (currentUser.value.userType === 3 && userHouses.value.length > 0) {
+        allNotices = filterNoticesByUserHouses(allNotices)
+        console.log('过滤后的公告数量:', allNotices.length)
+      }
+
+      noticeList.value = allNotices
       total.value = response.data.total || 0
       console.log('设置后的noticeList:', noticeList.value)
       console.log('noticeList长度:', noticeList.value.length)
@@ -1176,10 +1200,215 @@ const loadUnitsForBuildings = async (buildingIds) => {
   }
 }
 
+// 获取当前用户信息
+const getCurrentUser = () => {
+  // 从存储中获取用户信息，优先尝试从多个可能的key中获取
+  const userInfoStr = localStorage.getItem('userInfo') ||
+                      sessionStorage.getItem('userInfo') ||
+                      localStorage.getItem('user')
+
+  if (userInfoStr) {
+    try {
+      const userInfo = JSON.parse(userInfoStr)
+      currentUser.value = {
+        userType: userInfo.userType || userInfo.user_type || 1,
+        userId: userInfo.userId || userInfo.user_id || userInfo.id,
+        username: userInfo.username || userInfo.userName,
+        realName: userInfo.realName || userInfo.real_name || userInfo.name
+      }
+      console.log('从storage获取用户信息成功:', currentUser.value)
+      return
+    } catch (error) {
+      console.error('解析storage用户信息失败:', error)
+    }
+  }
+
+  // 尝试从JWT token解析
+  const token = localStorage.getItem('token')
+  if (token) {
+    try {
+      // 尝试解析JWT payload
+      const parts = token.split('.')
+      if (parts.length === 3) {
+        // 处理可能缺少padding的情况
+        let payload = parts[1]
+        while (payload.length % 4) {
+          payload += '='
+        }
+        const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'))
+        const payloadObj = JSON.parse(decoded)
+        currentUser.value = {
+          userType: payloadObj.userType || payloadObj.user_type || 1,
+          userId: payloadObj.userId || payloadObj.user_id || payloadObj.sub,
+          username: payloadObj.sub || payloadObj.username,
+          realName: payloadObj.realName || payloadObj.real_name || payloadObj.name
+        }
+        console.log('从JWT获取用户信息成功:', currentUser.value)
+        return
+      }
+    } catch (error) {
+      console.error('解析JWT用户信息失败:', error)
+    }
+  }
+
+  // 默认设置为系统管理员（最安全的默认值）
+  currentUser.value = { userType: 1 }
+  console.log('使用默认用户信息:', currentUser.value)
+}
+
+// 获取用户房产信息（主要用于业主）
+const loadUserHouses = async () => {
+  if (currentUser.value.userType === 3 && currentUser.value.userId) {
+    try {
+      const response = await getHousesByUserId(currentUser.value.userId)
+      console.log('用户房产信息响应:', response)
+      if (response.code === 200 && response.data) {
+        userHouses.value = Array.isArray(response.data) ? response.data : response.data.records || []
+        console.log('用户房产列表:', userHouses.value)
+
+        // 输出每个房产的详细信息，用于调试
+        userHouses.value.forEach((house, index) => {
+          console.log(`房产 ${index + 1}:`, {
+            id: house.id,
+            buildingId: house.buildingId,
+            buildingIdStr: house.building_id,
+            unitId: house.unitId,
+            unitIdStr: house.unit_id,
+            houseNo: house.houseNo,
+            houseNoStr: house.house_no
+          })
+        })
+      }
+    } catch (error) {
+      console.error('获取用户房产信息失败:', error)
+    }
+  }
+}
+
+// 根据用户房产过滤公告
+const filterNoticesByUserHouses = (notices) => {
+  console.log('=== 开始过滤公告 ===')
+  console.log('当前用户类型:', currentUser.value.userType)
+  console.log('用户房产数量:', userHouses.value.length)
+  console.log('原始公告数量:', notices.length)
+
+  return notices.filter(notice => {
+    console.log('\n--- 过滤公告 ---')
+    console.log('公告标题:', notice.noticeTitle)
+    console.log('公告发布范围(publishScope):', notice.publishScope)
+    console.log('目标楼栋IDs:', notice.targetBuildingIds)
+    console.log('目标单元IDs:', notice.targetUnitIds)
+
+    // 如果是全局公告，所有人都可见
+    if (notice.publishScope === 1) {
+      console.log('✓ 全局公告，显示')
+      return true
+    }
+
+    // 如果是指定范围，检查是否与用户房产匹配
+    if (notice.publishScope === 2) {
+      const isMatch = checkNoticeMatchesUserHouses(notice)
+      console.log('指定范围公告匹配结果:', isMatch ? '✓ 显示' : '✗ 隐藏')
+      return isMatch
+    }
+
+    console.log('未知发布范围，默认显示')
+    return true // 默认显示
+  })
+}
+
+// 检查公告是否匹配用户的房产
+const checkNoticeMatchesUserHouses = (notice) => {
+  console.log('=== 检查公告匹配用户房产 ===')
+  console.log('公告信息:', {
+    title: notice.noticeTitle,
+    publishScope: notice.publishScope,
+    targetBuildingIds: notice.targetBuildingIds,
+    targetUnitIds: notice.targetUnitIds
+  })
+
+  console.log('用户房产详细信息:', userHouses.value.map(house => ({
+    id: house.id,
+    buildingId: house.buildingId,
+    buildingIdStr: house.buildingIdStr,
+    buildingName: house.buildingName,
+    unitId: house.unitId,
+    unitIdStr: house.unitIdStr,
+    unitName: house.unitName,
+    houseNo: house.houseNo,
+    houseCode: house.houseCode,
+    fullObject: house
+  })))
+
+  // 获取用户的楼栋ID和单元ID列表
+  const userBuildingIds = userHouses.value.map(house => {
+    const buildingId = house.buildingId
+    console.log('提取楼栋ID:', buildingId, '房屋:', house.houseNo, '楼栋名称:', house.buildingName)
+    return parseInt(buildingId)
+  }).filter(id => !isNaN(id))
+
+  const userUnitIds = userHouses.value.map(house => {
+    const unitId = house.unitId
+    console.log('提取单元ID:', unitId, '房屋:', house.houseNo, '单元名称:', house.unitName)
+    return parseInt(unitId)
+  }).filter(id => !isNaN(id))
+
+  console.log('用户楼栋ID列表:', userBuildingIds)
+  console.log('用户单元ID列表:', userUnitIds)
+
+  // 如果公告有目标楼栋限制，检查是否匹配
+  if (notice.targetBuildingIds && notice.targetBuildingIds.toString().trim()) {
+    const noticeBuildingIds = Array.isArray(notice.targetBuildingIds)
+      ? notice.targetBuildingIds.map(id => parseInt(id)).filter(id => !isNaN(id))
+      : notice.targetBuildingIds.toString().split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id))
+
+    console.log('公告目标楼栋ID列表:', noticeBuildingIds)
+
+    const hasMatchingBuilding = noticeBuildingIds.some(buildingId =>
+      userBuildingIds.includes(buildingId)
+    )
+
+    console.log('楼栋匹配结果:', hasMatchingBuilding)
+
+    if (!hasMatchingBuilding) {
+      console.log('楼栋不匹配，返回false')
+      return false
+    }
+
+    // 如果公告还有目标单元限制，进一步检查
+    if (notice.targetUnitIds && notice.targetUnitIds.toString().trim()) {
+      const noticeUnitIds = Array.isArray(notice.targetUnitIds)
+        ? notice.targetUnitIds.map(id => parseInt(id)).filter(id => !isNaN(id))
+        : notice.targetUnitIds.toString().split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id))
+
+      console.log('公告目标单元ID列表:', noticeUnitIds)
+
+      const hasMatchingUnit = noticeUnitIds.some(unitId =>
+        userUnitIds.includes(unitId)
+      )
+
+      console.log('单元匹配结果:', hasMatchingUnit)
+
+      if (!hasMatchingUnit) {
+        console.log('单元不匹配，返回false')
+        return false
+      }
+    }
+
+    console.log('匹配成功，返回true')
+    return true
+  }
+
+  console.log('公告没有目标限制，返回true')
+  return true
+}
+
 // 初始化
 onMounted(() => {
-  loadNotices()
+  getCurrentUser()
   loadBuildings()
+  loadNotices()
+  loadUserHouses() // 加载用户房产信息
 })
 </script>
 

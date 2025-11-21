@@ -146,6 +146,14 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                         permissions.add("property:complaint:rate");
                         permissions.add("property:complaint:my");
                         permissions.add("property:complaint:upload");
+
+                        // 添加公告管理权限（包含所有权限）
+                        permissions.add("property:notice:list");
+                        permissions.add("property:notice:add");
+                        permissions.add("property:notice:edit");
+                        permissions.add("property:notice:remove");
+                        permissions.add("property:notice:publish");
+                        permissions.add("property:notice:view");
                         break;
 
                     case 2: // 物业管理员
@@ -198,6 +206,13 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                         permissions.add("property:complaint:assign");
                         permissions.add("property:complaint:handle");
                         permissions.add("property:complaint:upload");
+
+                        // 添加公告管理权限
+                        permissions.add("property:notice:list");
+                        permissions.add("property:notice:add");
+                        permissions.add("property:notice:edit");
+                        permissions.add("property:notice:remove");
+                        permissions.add("property:notice:publish");
                         break;
 
                     case 3: // 业主
@@ -216,6 +231,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                         permissions.add("property:repair:accept");
                         permissions.add("property:repair:rate");
                         permissions.add("property:notice:view");
+                        permissions.add("property:notice:list");
                         permissions.add("portal:view");
                         permissions.add("portal:dashboard:view");
                         break;
@@ -225,6 +241,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                         permissions.add("property:repair:handle");
                         permissions.add("property:repair:accept");
                         permissions.add("property:notice:view");
+                        permissions.add("property:notice:list");
                         break;
                 }
             }
