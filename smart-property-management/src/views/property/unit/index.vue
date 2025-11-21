@@ -214,7 +214,6 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="propertyOwner" label="产权人" width="120" />
         <el-table-column prop="createTime" label="创建时间" width="180">
           <template #default="{ row }">
             {{ formatDateTime(row.createTime) }}
@@ -240,7 +239,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus, Delete, Download } from '@element-plus/icons-vue'
-import { listUnits, getUnit, addUnit, updateUnit, deleteUnits, getUnitsByBuilding } from '@/api/unit'
+import { listUnits, getUnit, addUnit, updateUnit, deleteUnits, getUnitsByBuilding, getUnitHouses } from '@/api/unit'
 
 // 响应式数据
 const formRef = ref()
@@ -315,8 +314,7 @@ const dialogTitle = computed(() => isEdit.value ? '编辑单元' : '新增单元
 const houseStatusOptions = [
   { label: '空置', value: 1 },
   { label: '已售', value: 2 },
-  { label: '已租', value: 3 },
-  { label: '自住', value: 4 }
+  { label: '已租', value: 3 }
 ]
 
 // 格式化日期时间
@@ -336,8 +334,7 @@ const getHouseStatusTag = (status) => {
   const tagMap = {
     1: 'info',    // 空置
     2: 'success', // 已售
-    3: 'warning', // 已租
-    4: 'primary'  // 自住
+    3: 'warning'  // 已租
   }
   return tagMap[status] || 'info'
 }
@@ -420,8 +417,7 @@ const generateMockData = () => {
 const generateMockHouseData = (unitId) => {
   const houses = []
   const houseLayouts = ['一室一厅', '两室一厅', '三室两厅', '四室两厅']
-  const houseStatuses = [1, 2, 3, 4]
-  const ownerNames = ['张三', '李四', '王五', '赵六', '钱七', '孙八']
+  const houseStatuses = [1, 2, 3]  // 只使用有效的状态：1-空置，2-已售，3-已租
 
   // 为指定单元生成部分房产数据
   for (let i = 1; i <= 10; i++) {
@@ -440,7 +436,6 @@ const generateMockHouseData = (unitId) => {
       buildingArea: buildingArea,
       usableArea: usableArea,
       houseStatus: houseStatus,
-      propertyOwner: houseStatus > 1 ? ownerNames[Math.floor(Math.random() * ownerNames.length)] : '',
       createTime: new Date('2024-01-01 10:00:00').toISOString()
     })
   }
@@ -576,9 +571,19 @@ const handleBatchDelete = async () => {
 }
 
 // 查看房产
-const handleViewHouses = (row) => {
-  houseData.value = generateMockHouseData(row.id)
-  houseDialogVisible.value = true
+const handleViewHouses = async (row) => {
+  try {
+    const response = await getUnitHouses(row.id)
+    if (response.code === 200) {
+      houseData.value = response.data || []
+      houseDialogVisible.value = true
+    } else {
+      ElMessage.error(response.msg || '获取房产列表失败')
+    }
+  } catch (error) {
+    console.error('获取房产列表失败:', error)
+    ElMessage.error('网络错误，请稍后重试')
+  }
 }
 
 // 查看房产详情

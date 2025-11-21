@@ -58,3 +58,11 @@ export function getUnitsByBuilding(buildingId) {
     method: 'get'
   })
 }
+
+// 获取单元下的房产列表
+export function getUnitHouses(unitId) {
+  return request({
+    url: `/property/unit/${unitId}/houses`,
+    method: 'get'
+  })
+}

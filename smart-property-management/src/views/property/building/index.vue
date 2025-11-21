@@ -531,14 +531,41 @@ const handleBatchDelete = async () => {
 }
 
 // 查看单元
-const handleViewUnits = (row) => {
-  unitData.value = generateMockUnitData(row.id)
-  unitDialogVisible.value = true
+const handleViewUnits = async (row) => {
+  try {
+    const response = await buildingApi.getBuildingUnits(row.id)
+    if (response.code === 200) {
+      unitData.value = response.data || []
+      unitDialogVisible.value = true
+    } else {
+      ElMessage.error(response.msg || '获取单元列表失败')
+    }
+  } catch (error) {
+    console.error('获取单元列表失败:', error)
+    ElMessage.error('网络错误，请稍后重试')
+  }
 }
 
 // 查看房产
-const handleViewHouses = (row) => {
-  ElMessage.info(`查看单元${row.unitName}的房产信息`)
+const handleViewHouses = async (row) => {
+  try {
+    const response = await buildingApi.getUnitHouses(row.id)
+    if (response.code === 200) {
+      const houses = response.data || []
+      ElMessage.success(`单元${row.unitName}共有${houses.length}套房产`)
+
+      // 如果有房产数据，可以显示更多信息
+      if (houses.length > 0) {
+        console.log(`单元${row.unitName}的房产列表:`, houses)
+        // 这里可以添加一个显示房产详情的对话框
+      }
+    } else {
+      ElMessage.error(response.msg || '获取房产列表失败')
+    }
+  } catch (error) {
+    console.error('获取房产列表失败:', error)
+    ElMessage.error('网络错误，请稍后重试')
+  }
 }
 
 // 导出

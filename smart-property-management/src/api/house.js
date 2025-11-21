@@ -95,3 +95,20 @@ export function removeHouseByUsername(data) {
     data
   })
 }
+
+// 获取楼栋列表
+export function getBuildingOptions() {
+  return request({
+    url: '/property/building/list',
+    method: 'get',
+    params: { pageSize: 1000 } // 获取所有楼栋
+  })
+}
+
+// 根据楼栋获取单元列表
+export function getUnitOptions(buildingId) {
+  return request({
+    url: `/property/unit/by-building/${buildingId}`,
+    method: 'get'
+  })
+}

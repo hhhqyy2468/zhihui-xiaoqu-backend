@@ -50,3 +50,19 @@ export function deleteBuildings(buildingIds) {
     method: 'delete'
   })
 }
+
+// 获取楼栋下的单元列表
+export function getBuildingUnits(buildingId) {
+  return request({
+    url: `/property/unit/by-building/${buildingId}`,
+    method: 'get'
+  })
+}
+
+// 获取单元下的房产列表
+export function getUnitHouses(unitId) {
+  return request({
+    url: `/property/unit/${unitId}/houses`,
+    method: 'get'
+  })
+}

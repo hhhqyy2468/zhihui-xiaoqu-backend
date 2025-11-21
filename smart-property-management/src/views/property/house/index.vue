@@ -123,12 +123,12 @@
         <el-table-column prop="houseType" label="户型" width="100" />
         <el-table-column prop="buildingArea" label="建筑面积" width="120">
           <template #default="{ row }">
-            {{ row.buildingArea }}m²
+            {{ formatArea(row.buildingArea) }}m²
           </template>
         </el-table-column>
         <el-table-column prop="usableArea" label="使用面积" width="120">
           <template #default="{ row }">
-            {{ row.usableArea }}m²
+            {{ formatArea(row.usableArea) }}m²
           </template>
         </el-table-column>
         <el-table-column prop="houseStatus" label="房产状态" width="100">
@@ -366,7 +366,7 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus, Delete, Download } from '@element-plus/icons-vue'
-import { listHouses, getHouse, addHouse, updateHouse, deleteHouses, assignHouseByUsername } from '@/api/house'
+import { listHouses, getHouse, addHouse, updateHouse, deleteHouses, assignHouseByUsername, getBuildingOptions, getUnitOptions } from '@/api/house'
 
 // 响应式数据
 const formRef = ref()
@@ -401,13 +401,7 @@ const pagination = reactive({
 })
 
 // 选项数据
-const buildingOptions = ref([
-  { label: '1号楼', value: 1 },
-  { label: '2号楼', value: 2 },
-  { label: '3号楼', value: 3 },
-  { label: '4号楼', value: 4 }
-])
-
+const buildingOptions = ref([])
 const unitOptions = ref([])
 
 const houseStatusOptions = [
@@ -498,6 +492,15 @@ const formatDateTime = (dateTime) => {
   return new Date(dateTime).toLocaleString('zh-CN')
 }
 
+// 格式化面积显示
+const formatArea = (area) => {
+  if (!area && area !== 0) return '-'
+  // 确保显示两位小数，但去掉不必要的末尾0
+  const num = Number(area)
+  if (isNaN(num)) return '-'
+  return num.toFixed(2).replace(/\.?0+$/, '')
+}
+
 // 获取房产状态名称
 const getHouseStatusName = (status) => {
   const option = houseStatusOptions.find(item => item.value === status)
@@ -534,32 +537,55 @@ const getResidentTypeTag = (type) => {
   return tagMap[type] || 'info'
 }
 
+// 加载楼栋选项数据
+const loadBuildingOptions = async () => {
+  try {
+    const response = await getBuildingOptions()
+    if (response.code === 200) {
+      buildingOptions.value = response.data.rows.map(building => ({
+        label: building.buildingName,
+        value: building.id
+      }))
+    } else {
+      ElMessage.error('获取楼栋列表失败')
+    }
+  } catch (error) {
+    console.error('加载楼栋选项失败:', error)
+  }
+}
+
+// 加载单元选项数据
+const loadUnitOptions = async (buildingId) => {
+  if (!buildingId) {
+    unitOptions.value = []
+    return
+  }
+
+  try {
+    const response = await getUnitOptions(buildingId)
+    if (response.code === 200) {
+      unitOptions.value = response.data.map(unit => ({
+        label: unit.unitName,
+        value: unit.id
+      }))
+    } else {
+      ElMessage.error('获取单元列表失败')
+    }
+  } catch (error) {
+    console.error('加载单元选项失败:', error)
+  }
+}
+
 // 楼栋变化处理
 const handleBuildingChange = (buildingId) => {
   searchForm.unitId = ''
-  unitOptions.value = getMockUnitOptions(buildingId)
+  loadUnitOptions(buildingId)
 }
 
 // 表单中楼栋变化处理
 const handleFormBuildingChange = (buildingId) => {
   form.unitId = ''
-  unitOptions.value = getMockUnitOptions(buildingId)
-}
-
-// 获取模拟单元选项
-const getMockUnitOptions = (buildingId) => {
-  const units = [
-    { label: '1单元', value: 1, buildingId: 1 },
-    { label: '2单元', value: 2, buildingId: 1 },
-    { label: '3单元', value: 3, buildingId: 1 },
-    { label: '1单元', value: 4, buildingId: 2 },
-    { label: '2单元', value: 5, buildingId: 2 },
-    { label: '3单元', value: 6, buildingId: 2 },
-    { label: '4单元', value: 7, buildingId: 2 },
-    { label: '1单元', value: 8, buildingId: 3 },
-    { label: '2单元', value: 9, buildingId: 3 }
-  ]
-  return units.filter(unit => unit.buildingId === buildingId)
+  loadUnitOptions(buildingId)
 }
 
 // 生成模拟数据
@@ -671,11 +697,11 @@ const handleAdd = () => {
 }
 
 // 编辑
-const handleEdit = (row) => {
+const handleEdit = async (row) => {
   isEdit.value = true
   Object.assign(form, row)
   // 设置单元选项
-  unitOptions.value = getMockUnitOptions(row.buildingId)
+  await loadUnitOptions(row.buildingId)
   dialogVisible.value = true
 }
 
@@ -885,6 +911,7 @@ const handleSelectionChange = (selection) => {
 
 // 初始化
 onMounted(() => {
+  loadBuildingOptions()
   loadHouses()
 })
 </script>
