@@ -337,11 +337,8 @@
         <el-descriptions-item label="联系电话">
           {{ currentResident.ownerPhone || '暂无' }}
         </el-descriptions-item>
-        <el-descriptions-item label="身份证号">
-          {{ currentResident.ownerIdCard || '暂无' }}
-        </el-descriptions-item>
         <el-descriptions-item label="入住时间">
-          {{ currentResident.checkInTime || '暂无' }}
+          {{ formatDateTime(currentResident.checkInTime) }}
         </el-descriptions-item>
         <el-descriptions-item label="住户类型">
           <el-tag :type="getResidentTypeTag(currentResident.residentType)">
@@ -788,8 +785,7 @@ const handleViewResident = async (row) => {
         currentResident.value = {
           propertyOwner: row.propertyOwner || '暂无',
           ownerPhone: '暂无',
-          ownerIdCard: '暂无',
-          checkInTime: '暂无',
+          checkInTime: null,
           residentType: row.propertyOwnerId ? 1 : 0, // 有产权人就是业主，否则租户
           residentStatus: row.houseStatus > 1 ? 1 : 0
         }
@@ -799,8 +795,7 @@ const handleViewResident = async (row) => {
       currentResident.value = {
         propertyOwner: row.propertyOwner || '暂无',
         ownerPhone: '暂无',
-        ownerIdCard: '暂无',
-        checkInTime: '暂无',
+        checkInTime: null,
         residentType: row.propertyOwnerId ? 1 : 0,
         residentStatus: row.houseStatus > 1 ? 1 : 0
       }
@@ -811,8 +806,7 @@ const handleViewResident = async (row) => {
     currentResident.value = {
       propertyOwner: row.propertyOwner || '暂无',
       ownerPhone: '暂无',
-      ownerIdCard: '暂无',
-      checkInTime: '暂无',
+      checkInTime: null,
       residentType: row.propertyOwnerId ? 1 : 0,
       residentStatus: row.houseStatus > 1 ? 1 : 0
     }

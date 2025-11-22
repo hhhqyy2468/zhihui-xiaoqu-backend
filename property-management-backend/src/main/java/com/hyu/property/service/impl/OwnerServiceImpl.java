@@ -18,6 +18,7 @@ import com.hyu.property.service.IHouseService;
 import com.hyu.property.service.IUnitService;
 import com.hyu.property.service.IUserHouseService;
 import com.hyu.system.domain.SysUser;
+
 import com.hyu.system.mapper.SysUserMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -27,6 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -93,6 +95,17 @@ public class OwnerServiceImpl extends ServiceImpl<OwnerMapper, Owner> implements
             // 添加房产信息
             List<OwnerVO.HouseInfo> houseList = getUserHouseInfo(user.getUserId());
             ownerVO.setHouseList(houseList);
+
+            // 设置入住时间 - 从当前居住的房产中获取
+            if (houseList != null && !houseList.isEmpty()) {
+                for (OwnerVO.HouseInfo houseInfo : houseList) {
+                    if (houseInfo.getIsCurrent() != null && houseInfo.getIsCurrent() && houseInfo.getStartDate() != null) {
+                        ownerVO.setCheckInTime(formatDate(houseInfo.getStartDate()));
+                        break;
+                    }
+                }
+            }
+
             ownerVOList.add(ownerVO);
         }
         ownerVOPage.setRecords(ownerVOList);
@@ -124,6 +137,17 @@ public class OwnerServiceImpl extends ServiceImpl<OwnerMapper, Owner> implements
             // 添加房产信息
             List<OwnerVO.HouseInfo> houseList = getUserHouseInfo(user.getUserId());
             ownerVO.setHouseList(houseList);
+
+            // 设置入住时间 - 从当前居住的房产中获取
+            if (houseList != null && !houseList.isEmpty()) {
+                for (OwnerVO.HouseInfo houseInfo : houseList) {
+                    if (houseInfo.getIsCurrent() != null && houseInfo.getIsCurrent() && houseInfo.getStartDate() != null) {
+                        ownerVO.setCheckInTime(formatDate(houseInfo.getStartDate()));
+                        break;
+                    }
+                }
+            }
+
             ownerVOList.add(ownerVO);
         }
         return ownerVOList;
@@ -158,6 +182,17 @@ public class OwnerServiceImpl extends ServiceImpl<OwnerMapper, Owner> implements
         // 添加房产信息
         List<OwnerVO.HouseInfo> houseList = getUserHouseInfo(user.getUserId());
         ownerVO.setHouseList(houseList);
+
+        // 设置入住时间 - 从当前居住的房产中获取
+        if (houseList != null && !houseList.isEmpty()) {
+            for (OwnerVO.HouseInfo houseInfo : houseList) {
+                if (houseInfo.getIsCurrent() != null && houseInfo.getIsCurrent() && houseInfo.getStartDate() != null) {
+                    ownerVO.setCheckInTime(formatDate(houseInfo.getStartDate()));
+                    break;
+                }
+            }
+        }
+
         return ownerVO;
     }
 
@@ -488,5 +523,16 @@ public class OwnerServiceImpl extends ServiceImpl<OwnerMapper, Owner> implements
         }
 
         return houseList;
+    }
+
+    /**
+     * 格式化日期
+     */
+    private String formatDate(Date date) {
+        if (date == null) {
+            return null;
+        }
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        return sdf.format(date);
     }
 }

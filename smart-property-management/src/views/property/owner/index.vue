@@ -130,7 +130,7 @@
             <span v-else class="no-house">暂无房产</span>
           </template>
         </el-table-column>
-          <el-table-column prop="createTime" label="登记时间" width="180">
+        <el-table-column prop="createTime" label="登记时间" width="180">
           <template #default="{ row }">
             {{ formatDateTime(row.createTime) }}
           </template>
@@ -301,7 +301,6 @@
           <el-descriptions-item label="业主姓名">{{ ownerDetail.realName }}</el-descriptions-item>
           <el-descriptions-item label="性别">{{ ownerDetail.gender === 1 ? '男' : '女' }}</el-descriptions-item>
           <el-descriptions-item label="手机号码">{{ ownerDetail.phone }}</el-descriptions-item>
-          <el-descriptions-item label="身份证号">{{ ownerDetail.idCard }}</el-descriptions-item>
           <el-descriptions-item label="电子邮箱">{{ ownerDetail.email }}</el-descriptions-item>
           <el-descriptions-item label="住户状态">
             <el-tag :type="ownerDetail.residentStatus === 1 ? 'success' : 'info'">
@@ -314,24 +313,50 @@
             </el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="创建时间">{{ formatDateTime(ownerDetail.createTime) }}</el-descriptions-item>
-          <el-descriptions-item label="备注">{{ ownerDetail.remark || '无' }}</el-descriptions-item>
         </el-descriptions>
 
         <div class="detail-section" v-if="ownerDetail.houseList && ownerDetail.houseList.length > 0">
           <h4>相关房产</h4>
           <el-table :data="ownerDetail.houseList" size="small">
-            <el-table-column prop="buildingName" label="楼栋" width="100" />
+            <el-table-column prop="buildingName" label="楼栋" width="120" />
             <el-table-column prop="unitName" label="单元" width="100" />
             <el-table-column prop="houseNo" label="房号" width="120" />
-            <el-table-column prop="houseType" label="户型" width="100" />
-            <el-table-column prop="buildingArea" label="建筑面积" width="120">
+            <el-table-column prop="houseType" label="户型" width="150" />
+            <el-table-column prop="buildingAreaNum" label="建筑面积(m²)" width="120">
               <template #default="{ row }">
-                {{ row.buildingArea }}m²
+                {{ row.buildingAreaNum || '-' }}
               </template>
             </el-table-column>
-            <el-table-column prop="relationType" label="关系" width="100">
+            <el-table-column prop="usableArea" label="使用面积(m²)" width="120">
               <template #default="{ row }">
-                {{ row.relationType === 1 ? '业主' : '租户' }}
+                {{ row.usableArea || '-' }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="relationType" label="房产关系" width="100">
+              <template #default="{ row }">
+                <el-tag :type="row.relationTypeNum === 1 ? 'success' : 'warning'" size="small">
+                  {{ row.relationTypeNum === 1 ? '业主' : '租户' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="isCurrent" label="当前居住" width="100">
+              <template #default="{ row }">
+                <el-tag :type="row.isCurrent ? 'success' : 'info'" size="small">
+                  {{ row.isCurrent ? '是' : '否' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="startDate" label="入住时间" width="120">
+              <template #default="{ row }">
+                <span v-if="row.startDate && row.isCurrent">
+                  {{ formatDateTime(row.startDate) }}
+                </span>
+                <span v-else-if="!row.isCurrent">
+                  -
+                </span>
+                <span v-else>
+                  未设置
+                </span>
               </template>
             </el-table-column>
           </el-table>
@@ -411,6 +436,19 @@
                 <el-tag :type="row.isCurrent ? 'success' : 'info'" size="small">
                   {{ row.isCurrent ? '是' : '否' }}
                 </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="startDate" label="入住时间" width="120">
+              <template #default="{ row }">
+                <span v-if="row.startDate && row.isCurrent">
+                  {{ formatDateTime(row.startDate) }}
+                </span>
+                <span v-else-if="!row.isCurrent">
+                  -
+                </span>
+                <span v-else>
+                  未设置
+                </span>
               </template>
             </el-table-column>
             <el-table-column label="操作" width="120" fixed="right">

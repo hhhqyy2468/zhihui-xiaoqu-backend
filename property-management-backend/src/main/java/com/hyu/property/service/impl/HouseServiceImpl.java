@@ -21,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -202,10 +204,24 @@ public class HouseServiceImpl extends ServiceImpl<HouseMapper, House> implements
             Date start = null;
             Date end = null;
             if (StringUtils.isNotEmpty(startDate)) {
-                start = Date.from(LocalDate.parse(startDate).atStartOfDay(ZoneId.systemDefault()).toInstant());
+                try {
+                    // 尝试解析 ISO 8601 格式的日期时间
+                    Instant instant = Instant.parse(startDate);
+                    start = Date.from(instant);
+                } catch (Exception e) {
+                    // 如果失败，尝试解析简单的日期格式
+                    start = Date.from(LocalDate.parse(startDate).atStartOfDay(ZoneId.systemDefault()).toInstant());
+                }
             }
             if (StringUtils.isNotEmpty(endDate)) {
-                end = Date.from(LocalDate.parse(endDate).atStartOfDay(ZoneId.systemDefault()).toInstant());
+                try {
+                    // 尝试解析 ISO 8601 格式的日期时间
+                    Instant instant = Instant.parse(endDate);
+                    end = Date.from(instant);
+                } catch (Exception e) {
+                    // 如果失败，尝试解析简单的日期格式
+                    end = Date.from(LocalDate.parse(endDate).atStartOfDay(ZoneId.systemDefault()).toInstant());
+                }
             }
 
             // 如果设置为当前居住，先取消该用户的其他当前居住状态
