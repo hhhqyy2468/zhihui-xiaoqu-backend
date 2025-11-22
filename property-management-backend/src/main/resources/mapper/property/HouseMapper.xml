@@ -12,7 +12,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="floor" column="floor"/>
         <result property="roomNumber" column="room_number"/>
         <result property="houseType" column="house_type"/>
-        <result property="buildingAreaNum" column="building_area"/>
+        <result property="buildingAreaNum" column="buildingAreaNum"/>
         <result property="usableArea" column="usable_area"/>
         <result property="houseStatus" column="house_status"/>
         <result property="buildingName" column="building_name"/>

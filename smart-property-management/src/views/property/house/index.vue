@@ -121,9 +121,9 @@
         <el-table-column prop="roomNumber" label="门牌号" width="100" sortable />
         <el-table-column prop="floor" label="楼层" width="80" />
         <el-table-column prop="houseType" label="户型" width="100" />
-        <el-table-column prop="buildingArea" label="建筑面积" width="120">
+        <el-table-column prop="buildingAreaNum" label="建筑面积" width="120">
           <template #default="{ row }">
-            {{ formatArea(row.buildingArea) }}m²
+            {{ formatArea(row.buildingAreaNum) }}m²
           </template>
         </el-table-column>
         <el-table-column prop="usableArea" label="使用面积" width="120">

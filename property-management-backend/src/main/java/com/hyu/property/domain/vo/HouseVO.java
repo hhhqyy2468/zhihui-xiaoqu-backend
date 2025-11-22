@@ -3,6 +3,7 @@ package com.hyu.property.domain.vo;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 
 /**
  * 房产视图对象 HouseVO
@@ -36,10 +37,10 @@ public class HouseVO implements Serializable {
     private String houseType;
 
     /** 建筑面积 */
-    private Double buildingAreaNum;
+    private BigDecimal buildingAreaNum;
 
     /** 使用面积 */
-    private Double usableArea;
+    private BigDecimal usableArea;
 
     /** 房产状态：1-空置 2-已售 */
     private Integer houseStatus;
