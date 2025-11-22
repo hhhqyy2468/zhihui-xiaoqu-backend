@@ -5,7 +5,6 @@ import com.hyu.common.core.domain.AjaxResult;
 import com.hyu.common.core.domain.PageResult;
 import com.hyu.common.utils.SecurityUtils;
 import com.hyu.common.utils.StringUtils;
-import com.hyu.common.utils.excel.ExcelExportUtil;
 import com.hyu.property.domain.vo.OwnerVO;
 import com.hyu.property.service.IOwnerService;
 import lombok.extern.slf4j.Slf4j;
@@ -14,10 +13,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
-import java.io.IOException;
 import java.util.*;
 
 /**
@@ -149,104 +146,7 @@ public class OwnerController {
         return AjaxResult.success(ownerService.getOwnersByHouseId(houseId));
     }
 
-    /**
-     * 导出业主数据
-     */
-    @GetMapping("/export")
-    @PreAuthorize("@ss.hasPermi('property:owner:export')")
-    public void exportOwners(HttpServletResponse response,
-                             @RequestParam(required = false) String username,
-                             @RequestParam(required = false) String realName,
-                             @RequestParam(required = false) String phone,
-                             @RequestParam(required = false) Integer residentStatus,
-                             @RequestParam(required = false) String beginTime,
-                             @RequestParam(required = false) String endTime) throws IOException {
-        log.info("导出业主数据, username: {}, realName: {}, phone: {}, residentStatus: {}",
-                username, realName, phone, residentStatus);
-
-        // 构建查询条件
-        OwnerVO owner = new OwnerVO();
-        owner.setUsername(username);
-        owner.setRealName(realName);
-        owner.setPhone(phone);
-        owner.setResidentStatus(residentStatus);
-        owner.setBeginTime(beginTime);
-        owner.setEndTime(endTime);
-
-        // 获取所有符合条件的业主数据
-        Page<OwnerVO> page = new Page<>(1, Integer.MAX_VALUE);
-        Page<OwnerVO> result = ownerService.selectOwnerPage(page, owner);
-        List<OwnerVO> owners = result.getRecords();
-
-        // 构建表头
-        List<String> headers = Arrays.asList(
-                "用户名", "姓名", "性别", "手机号", "邮箱", "住户状态",
-                "房产数量", "入住时间", "创建时间", "最后登录时间"
-        );
-
-        // 构建字段映射
-        Map<String, String> fieldMap = new LinkedHashMap<>();
-        fieldMap.put("用户名", "username");
-        fieldMap.put("姓名", "realName");
-        fieldMap.put("性别", "genderText");
-        fieldMap.put("手机号", "phone");
-        fieldMap.put("邮箱", "email");
-        fieldMap.put("住户状态", "residentStatusText");
-        fieldMap.put("房产数量", "houseCount");
-        fieldMap.put("入住时间", "checkInTime");
-        fieldMap.put("创建时间", "createTimeText");
-        fieldMap.put("最后登录时间", "lastLoginTimeText");
-
-        // 转换数据
-        List<Map<String, Object>> data = new ArrayList<>();
-        for (OwnerVO ownerVO : owners) {
-            Map<String, Object> row = new LinkedHashMap<>();
-            row.put("username", ownerVO.getUsername());
-            row.put("realName", ownerVO.getRealName());
-            row.put("genderText", getGenderText(ownerVO.getGender()));
-            row.put("phone", ownerVO.getPhone());
-            row.put("email", ownerVO.getEmail() != null ? ownerVO.getEmail() : "");
-            row.put("residentStatusText", getResidentStatusText(ownerVO.getResidentStatus()));
-            row.put("houseCount", ownerVO.getHouseCount());
-            row.put("checkInTime", ownerVO.getCheckInTime() != null ? ownerVO.getCheckInTime() : "");
-            row.put("createTimeText", formatDateTime(ownerVO.getCreateTime()));
-            row.put("lastLoginTimeText", formatDateTime(ownerVO.getLastLoginTime()));
-            data.add(row);
-        }
-
-        // 导出Excel
-        ExcelExportUtil.exportExcel(response, "业主数据", "业主列表", headers, data, fieldMap);
-    }
-
-    /**
-     * 获取性别文本
-     */
-    private String getGenderText(Integer gender) {
-        if (gender == null) return "";
-        return gender == 1 ? "男" : "女";
-    }
-
-    /**
-     * 获取住户状态文本
-     */
-    private String getResidentStatusText(Integer status) {
-        if (status == null) return "";
-        switch (status) {
-            case 0: return "未入住";
-            case 1: return "已入住";
-            case 2: return "已搬离";
-            default: return "未知";
-        }
-    }
-
-    /**
-     * 格式化日期时间
-     */
-    private String formatDateTime(Object dateTime) {
-        if (dateTime == null) return "";
-        return dateTime.toString();
-    }
-
+  
     /**
      * 返回AjaxResult
      */

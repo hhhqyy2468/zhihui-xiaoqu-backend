@@ -71,14 +71,7 @@
         <el-icon><Plus /></el-icon>
         新增业主
       </el-button>
-      <el-button
-        type="warning"
-        @click="handleExport"
-      >
-        <el-icon><Download /></el-icon>
-        导出业主
-      </el-button>
-      <el-button
+        <el-button
         type="danger"
         @click="handleBatchDelete"
         :disabled="!selectedOwners.length"
@@ -561,7 +554,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, Plus, Delete, Download } from '@element-plus/icons-vue'
+import { Search, Refresh, Plus, Delete } from '@element-plus/icons-vue'
 import { listOwners, getOwner, addOwner, updateOwner, deleteOwners, resetPassword, changeStatus } from '@/api/owner'
 import { removeHouseByUsername } from '@/api/house'
 
@@ -1053,39 +1046,6 @@ const handleViewBills = (row) => {
   ElMessage.info('跳转到账单管理页面')
 }
 
-// 导出业主
-const handleExport = async () => {
-  try {
-    const response = await fetch('/api/v1/property/owner/export?' + new URLSearchParams(searchForm), {
-      method: 'GET',
-      headers: {
-        'Authorization': 'Bearer ' + localStorage.getItem('token')
-      }
-    })
-
-    if (!response.ok) {
-      throw new Error('导出失败')
-    }
-
-    // 创建下载链接
-    const blob = await response.blob()
-    const url = window.URL.createObjectURL(blob)
-
-    // 创建a标签并点击下载
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `业主数据_${new Date().toISOString().slice(0, 19).replace(/[:-]/g, '')}.xlsx`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(url)
-
-    ElMessage.success('导出成功')
-  } catch (error) {
-    console.error('导出失败:', error)
-    ElMessage.error('导出失败')
-  }
-}
 
 // 提交表单
 const handleSubmit = async () => {
