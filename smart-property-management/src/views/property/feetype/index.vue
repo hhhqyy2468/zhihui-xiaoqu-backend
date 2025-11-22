@@ -88,7 +88,7 @@
         <el-table-column prop="typeCode" label="费用编码" width="120" />
         <el-table-column prop="unitPrice" label="单价" width="120" sortable>
           <template #default="{ row }">
-            <span v-if="row.typeCode === 'PARKING_FEE'" class="price-text">按车位定价</span>
+            <span v-if="row.typeCode === 'PARKING_FEE' || row.typeCode === 'parking_fee'" class="price-text">按车位定价</span>
             <span v-else class="price-text">¥{{ row.unitPrice ? row.unitPrice.toFixed(2) : '0.00' }}</span>
           </template>
         </el-table-column>
@@ -173,7 +173,7 @@
         </el-form-item>
         <el-form-item label="单价" prop="unitPrice">
           <el-input
-            v-if="form.feeCode === 'PARKING_FEE'"
+            v-if="form.feeCode === 'PARKING_FEE' || form.feeCode === 'parking_fee'"
             value="按车位定价"
             disabled
             style="width: 100%"
@@ -308,9 +308,9 @@ const formRules = computed(() => ({
   ],
   feeCode: isEdit.value ? [] : [
     { required: true, message: '请输入费用编码', trigger: 'blur' },
-    { pattern: /^[A-Z_][A-Z0-9_]*$/, message: '费用编码只能包含大写字母、数字和下划线', trigger: 'blur' }
+    { pattern: /^[A-Za-z_][A-Za-z0-9_]*$/, message: '费用编码只能包含字母、数字和下划线', trigger: 'blur' }
   ],
-  unitPrice: form.feeCode === 'PARKING_FEE' ? [] : [
+  unitPrice: (form.feeCode === 'PARKING_FEE' || form.feeCode === 'parking_fee') ? [] : [
     { required: true, message: '请输入单价', trigger: 'blur' },
     { type: 'number', min: 0, message: '单价必须大于等于0', trigger: 'blur' }
   ],
@@ -541,7 +541,7 @@ const handleEdit = (row) => {
     feeTypeId: row.id, // 后端的 id 映射到前端的 feeTypeId
     feeName: row.typeName, // 后端的 typeName 映射到前端的 feeName
     feeCode: row.typeCode, // 后端的 typeCode 映射到前端的 feeCode
-    unitPrice: row.typeCode === 'PARKING_FEE' ? null : row.unitPrice, // 停车费不显示单价
+    unitPrice: (row.typeCode === 'PARKING_FEE' || row.typeCode === 'parking_fee') ? null : row.unitPrice, // 停车费不显示单价
     unitType: row.billingUnit, // 后端的 billingUnit 映射到前端的 unitType
     billingCycle: row.billingCycle,
     description: row.description,
@@ -637,7 +637,7 @@ const handleSubmit = async () => {
       id: form.feeTypeId, // 后端期望 id 字段
       typeName: form.feeName, // 后端期望 typeName 字段
       typeCode: form.feeCode, // 后端期望 typeCode 字段
-      unitPrice: form.feeCode === 'PARKING_FEE' ? null : form.unitPrice, // 停车费不设单价
+      unitPrice: (form.feeCode === 'PARKING_FEE' || form.feeCode === 'parking_fee') ? null : form.unitPrice, // 停车费不设单价
       billingUnit: form.unitType, // 后端期望 billingUnit 字段
       billingCycle: form.billingCycle,
       description: form.description,
