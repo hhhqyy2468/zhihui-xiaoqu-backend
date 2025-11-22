@@ -91,14 +91,6 @@ public class HouseServiceImpl extends ServiceImpl<HouseMapper, House> implements
             // 使用自定义查询获取包含产权人信息的房产数据
             List<HouseVO> houseVOList = baseMapper.selectHouseVOPage(house);
 
-            // 调试：检查数据是否正确映射
-            if (houseVOList != null && !houseVOList.isEmpty()) {
-                HouseVO firstHouse = houseVOList.get(0);
-                log.info("First house data - ID: {}, HouseNo: {}, BuildingAreaNum: {}, UsableArea: {}",
-                        firstHouse.getId(), firstHouse.getHouseNo(),
-                        firstHouse.getBuildingAreaNum(), firstHouse.getUsableArea());
-            }
-
             // 手动实现分页逻辑
             int total = houseVOList.size();
             int pageSize = (int) page.getSize();
