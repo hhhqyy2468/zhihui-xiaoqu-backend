@@ -109,4 +109,15 @@ public interface IBillService extends IService<Bill> {
      * @return 更新数量
      */
     int updateOverdueBills();
+
+    /**
+     * 检查指定用户、房产、费用类型和计费周期的账单是否已存在
+     *
+     * @param userId 用户ID
+     * @param houseId 房产ID
+     * @param feeTypeId 费用类型ID
+     * @param billingPeriod 计费周期
+     * @return 是否存在
+     */
+    boolean existsBill(Long userId, Long houseId, Long feeTypeId, String billingPeriod);
 }

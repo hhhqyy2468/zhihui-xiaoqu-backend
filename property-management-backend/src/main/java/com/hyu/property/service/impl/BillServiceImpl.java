@@ -39,7 +39,7 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill> implements IB
     public Page<Bill> selectBillPage(Page<Bill> page, Bill bill) {
         LambdaQueryWrapper<Bill> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.like(StringUtils.isNotEmpty(bill.getBillNo()), Bill::getBillNo, bill.getBillNo())
-                   .eq(bill.getOwnerId() != null, Bill::getOwnerId, bill.getOwnerId())
+                   .eq(bill.getUserId() != null, Bill::getUserId, bill.getUserId())
                    .eq(bill.getFeeTypeId() != null, Bill::getFeeTypeId, bill.getFeeTypeId())
                    .eq(bill.getBillStatus() != null, Bill::getBillStatus, bill.getBillStatus())
                    .like(StringUtils.isNotEmpty(bill.getBillPeriod()), Bill::getBillPeriod, bill.getBillPeriod())
@@ -57,7 +57,7 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill> implements IB
     public List<Bill> selectBillList(Bill bill) {
         LambdaQueryWrapper<Bill> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.like(StringUtils.isNotEmpty(bill.getBillNo()), Bill::getBillNo, bill.getBillNo())
-                   .eq(bill.getOwnerId() != null, Bill::getOwnerId, bill.getOwnerId())
+                   .eq(bill.getUserId() != null, Bill::getUserId, bill.getUserId())
                    .eq(bill.getFeeTypeId() != null, Bill::getFeeTypeId, bill.getFeeTypeId())
                    .eq(bill.getBillStatus() != null, Bill::getBillStatus, bill.getBillStatus())
                    .like(StringUtils.isNotEmpty(bill.getBillPeriod()), Bill::getBillPeriod, bill.getBillPeriod())
@@ -154,7 +154,7 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill> implements IB
             for (Map<String, Object> house : houseList) {
                 Bill bill = new Bill();
                 bill.setBillNo(generateBillNo());
-                bill.setOwnerId((Long) house.get("owner_id"));
+                bill.setUserId((Long) house.get("owner_id"));
                 bill.setFeeTypeId(feeTypeId);
                 bill.setHouseId((Long) house.get("house_id"));
                 bill.setBillPeriod(billPeriod);
@@ -210,7 +210,7 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill> implements IB
                     result.put("msg", "账单不存在：" + billId);
                     return result;
                 }
-                if (!bill.getOwnerId().equals(ownerId)) {
+                if (!bill.getUserId().equals(ownerId)) {
                     result.put("code", 500);
                     result.put("msg", "账单不属于当前业主：" + billId);
                     return result;
@@ -293,6 +293,37 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill> implements IB
     @Override
     public int updateOverdueBills() {
         return billMapper.updateOverdueBills();
+    }
+
+    /**
+     * 检查指定用户、房产、费用类型和计费周期的账单是否已存在
+     *
+     * @param userId 用户ID
+     * @param houseId 房产ID
+     * @param feeTypeId 费用类型ID
+     * @param billingPeriod 计费周期
+     * @return 是否存在
+     */
+    @Override
+    public boolean existsBill(Long userId, Long houseId, Long feeTypeId, String billingPeriod) {
+        try {
+            LambdaQueryWrapper<Bill> queryWrapper = new LambdaQueryWrapper<>();
+            queryWrapper.eq(Bill::getUserId, userId)
+                       .eq(Bill::getHouseId, houseId)
+                       .eq(Bill::getFeeTypeId, feeTypeId)
+                       .eq(Bill::getBillPeriod, billingPeriod)
+                       .eq(Bill::getDeleted, 0);
+
+            long count = count(queryWrapper);
+            log.debug("检查账单是否存在 - userId: {}, houseId: {}, feeTypeId: {}, billingPeriod: {}, 存在数量: {}",
+                    userId, houseId, feeTypeId, billingPeriod, count);
+
+            return count > 0;
+        } catch (Exception e) {
+            log.error("检查账单是否存在时发生错误 - userId: {}, houseId: {}, feeTypeId: {}, billingPeriod: {}",
+                    userId, houseId, feeTypeId, billingPeriod, e);
+            return false;
+        }
     }
 
     /**

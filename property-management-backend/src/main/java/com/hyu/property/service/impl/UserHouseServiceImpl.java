@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -236,6 +237,28 @@ public class UserHouseServiceImpl extends ServiceImpl<UserHouseMapper, UserHouse
         } catch (Exception e) {
             log.error("根据条件更新用户房产关联失败, userId: {}, isCurrent: {}", userId, isCurrent, e);
             return 0;
+        }
+    }
+
+    /**
+     * 获取所有当前居住的住户
+     *
+     * @return 当前居住的住户列表
+     */
+    @Override
+    public List<UserHouse> getCurrentResidents() {
+        try {
+            QueryWrapper<UserHouse> queryWrapper = new QueryWrapper<>();
+            queryWrapper.eq("is_current", 1)  // 只查询当前居住的住户
+                       .orderByAsc("user_id", "house_id");
+
+            List<UserHouse> residents = list(queryWrapper);
+            log.debug("获取到 {} 个当前居住的住户", residents.size());
+
+            return residents;
+        } catch (Exception e) {
+            log.error("获取当前居住住户列表失败", e);
+            return new ArrayList<>();
         }
     }
 }

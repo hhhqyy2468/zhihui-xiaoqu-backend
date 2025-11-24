@@ -144,4 +144,29 @@ public class FeeTypeServiceImpl extends ServiceImpl<FeeTypeMapper, FeeType> impl
         }
         return removeById(feeTypeId);
     }
+
+    /**
+     * 获取用于账单生成的有效费用类型
+     * 排除维修费和停车费
+     *
+     * @return 有效费用类型列表
+     */
+    @Override
+    public List<FeeType> getActiveFeeTypesForBillGeneration() {
+        LambdaQueryWrapper<FeeType> queryWrapper = new LambdaQueryWrapper<>();
+        // 只查询启用状态的费用类型
+        queryWrapper.eq(FeeType::getStatus, 1)
+                   // 排除维修费 (REPAIR_FEE)
+                   .ne(FeeType::getTypeCode, "REPAIR_FEE")
+                   // 排除停车费 (PARKING_FEE 和 parking_fee)
+                   .ne(FeeType::getTypeCode, "PARKING_FEE")
+                   .ne(FeeType::getTypeCode, "parking_fee")
+                   // 按ID排序
+                   .orderByAsc(FeeType::getId);
+
+        List<FeeType> feeTypes = list(queryWrapper);
+        log.debug("获取到 {} 个用于账单生成的有效费用类型", feeTypes.size());
+
+        return feeTypes;
+    }
 }

@@ -364,4 +364,20 @@ public class HouseServiceImpl extends ServiceImpl<HouseMapper, House> implements
             throw new RuntimeException("移除房产失败: " + e.getMessage());
         }
     }
+
+    /**
+     * 根据房产ID查询房产信息
+     *
+     * @param houseId 房产ID
+     * @return 房产信息
+     */
+    @Override
+    public House selectHouseById(Long houseId) {
+        try {
+            return baseMapper.selectById(houseId);
+        } catch (Exception e) {
+            log.error("根据房产ID查询房产信息失败, houseId: {}", houseId, e);
+            return null;
+        }
+    }
 }

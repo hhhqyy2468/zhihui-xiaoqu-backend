@@ -84,4 +84,12 @@ public interface IFeeTypeService extends IService<FeeType> {
      * @return 结果
      */
     boolean deleteFeeTypeById(Long feeTypeId);
+
+    /**
+     * 获取用于账单生成的有效费用类型
+     * 排除维修费和停车费
+     *
+     * @return 有效费用类型列表
+     */
+    List<FeeType> getActiveFeeTypesForBillGeneration();
 }

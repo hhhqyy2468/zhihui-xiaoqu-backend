@@ -129,4 +129,11 @@ public interface IUserHouseService {
      * @return 结果
      */
     int updateUserHouseByCondition(UserHouse userHouse, Long userId, Boolean isCurrent);
+
+    /**
+     * 获取所有当前居住的住户
+     *
+     * @return 当前居住的住户列表
+     */
+    List<UserHouse> getCurrentResidents();
 }

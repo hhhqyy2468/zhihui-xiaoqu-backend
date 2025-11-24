@@ -39,7 +39,7 @@ public class PortalServiceImpl implements IPortalService {
     public List<Object> getMyBillList(Integer billStatus, String billPeriod, Integer pageNum, Integer pageSize) {
         Long currentUserId = SecurityUtils.getUserId();
         Bill queryBill = new Bill();
-        queryBill.setOwnerId(currentUserId);
+        queryBill.setUserId(currentUserId);
         queryBill.setBillStatus(billStatus);
         queryBill.setBillPeriod(billPeriod);
 
@@ -350,7 +350,7 @@ public class PortalServiceImpl implements IPortalService {
 
             // 获取待缴费账单数量
             Bill queryBill = new Bill();
-            queryBill.setOwnerId(currentUserId);
+            queryBill.setUserId(currentUserId);
             queryBill.setBillStatus(1); // 待缴费
             List<Object> pendingBills = new ArrayList<>(billService.selectBillList(queryBill));
             stats.put("pendingBillsCount", pendingBills.size());
@@ -393,7 +393,7 @@ public class PortalServiceImpl implements IPortalService {
 
             // 待缴费账单
             Bill billQuery = new Bill();
-            billQuery.setOwnerId(currentUserId);
+            billQuery.setUserId(currentUserId);
             billQuery.setBillStatus(1);
             List<Object> pendingBills = new ArrayList<>(billService.selectBillList(billQuery));
 

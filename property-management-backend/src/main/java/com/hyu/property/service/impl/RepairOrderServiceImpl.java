@@ -467,7 +467,7 @@ public class RepairOrderServiceImpl extends ServiceImpl<RepairOrderMapper, Repai
             bill.setBillNo(billNo);
 
             // 设置账单信息
-            bill.setOwnerId(repairOrder.getUserId());
+            bill.setUserId(repairOrder.getUserId());
             bill.setHouseId(repairOrder.getHouseId());
             bill.setFeeTypeId(12L); // 维修费用类型ID
             bill.setBillPeriod(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM")));
