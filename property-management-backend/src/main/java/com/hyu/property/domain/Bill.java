@@ -94,12 +94,7 @@ public class Bill implements Serializable {
     @TableField("billing_period")
     private String billPeriod;
 
-    /**
-     * 计费周期
-     */
-    @TableField("billing_cycle")
-    private String billingCycle;
-
+    
     /**
      * 应缴金额
      */
@@ -133,24 +128,7 @@ public class Bill implements Serializable {
     @TableField("due_date")
     private Date dueDate;
 
-    /**
-     * 缴费日期
-     */
-    @TableField("paid_date")
-    private Date paidDate;
-
-    /**
-     * 缴费日期
-     */
-    @TableField("pay_time")
-    private Date payTime;
-
-    /**
-     * 收据编号
-     */
-    @TableField("receipt_no")
-    private String receiptNo;
-
+  
     /**
      * 备注
      */

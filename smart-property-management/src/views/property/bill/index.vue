@@ -114,11 +114,15 @@
         <el-icon><Delete /></el-icon>
         批量删除
       </el-button>
-      <el-button @click="handleExport">
+      <el-button
+        type="success"
+        :disabled="selectedRows.length === 0"
+        @click="handleBatchExport"
+      >
         <el-icon><Download /></el-icon>
-        导出
+        批量导出
       </el-button>
-    </div>
+      </div>
 
     <!-- 账单表格 -->
     <div class="table-section">
@@ -390,6 +394,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus, Delete, Download, Promotion } from '@element-plus/icons-vue'
+import * as billApi from '@/api/bill'
 
 // 响应式数据
 const formRef = ref()
@@ -592,15 +597,24 @@ const generateMockData = () => {
 // 加载账单数据
 const loadBills = () => {
   loading.value = true
-  setTimeout(() => {
-    const mockData = generateMockData()
-    tableData.value = mockData.slice(
-      (pagination.current - 1) * pagination.pageSize,
-      pagination.current * pagination.pageSize
-    )
-    pagination.total = mockData.length
+  const params = {
+    page: pagination.current,
+    size: pagination.pageSize,
+    ...searchForm
+  }
+  billApi.getBillList(params).then(response => {
+    if (response.code === 200) {
+      tableData.value = response.data.records || []
+      pagination.total = response.data.total || 0
+    } else {
+      ElMessage.error(response.msg || '获取账单列表失败')
+    }
+  }).catch(error => {
+    console.error('获取账单列表失败:', error)
+    ElMessage.error('获取账单列表失败')
+  }).finally(() => {
     loading.value = false
-  }, 500)
+  })
 }
 
 // 搜索
@@ -657,8 +671,17 @@ const handleDelete = (row) => {
       type: 'warning'
     }
   ).then(() => {
-    ElMessage.success('删除成功')
-    loadBills()
+    billApi.deleteBills([row.billId]).then(response => {
+      if (response.code === 200) {
+        ElMessage.success('删除成功')
+        loadBills()
+      } else {
+        ElMessage.error(response.msg || '删除失败')
+      }
+    }).catch(error => {
+      console.error('删除账单失败:', error)
+      ElMessage.error('删除失败')
+    })
   }).catch(() => {
     // 用户取消操作
   })
@@ -680,8 +703,19 @@ const handleBatchDelete = () => {
       type: 'warning'
     }
   ).then(() => {
-    ElMessage.success('批量删除成功')
-    loadBills()
+    const billIds = selectedRows.value.map(row => row.billId)
+    billApi.deleteBills(billIds).then(response => {
+      if (response.code === 200) {
+        ElMessage.success('批量删除成功')
+        selectedRows.value = []
+        loadBills()
+      } else {
+        ElMessage.error(response.msg || '批量删除失败')
+      }
+    }).catch(error => {
+      console.error('批量删除失败:', error)
+      ElMessage.error('批量删除失败')
+    })
   })
 }
 
@@ -709,12 +743,29 @@ const handleGenerateSubmit = () => {
   }
 
   generateLoading.value = true
-  setTimeout(() => {
-    ElMessage.success('批量生成账单成功')
-    generateDialogVisible.value = false
-    loadBills()
+  const data = {
+    feeTypeId: generateForm.feeTypeId,
+    billPeriod: generateForm.billPeriod,
+    dueDate: new Date(), // 设置截止日期为当前日期+1个月
+    buildingIds: generateForm.generateRange === 2 ? generateForm.targetIds : null,
+    unitIds: generateForm.generateRange === 3 ? generateForm.targetIds : null,
+    houseIds: generateForm.generateRange === 4 ? generateForm.targetIds : null
+  }
+
+  billApi.generateBills(data).then(response => {
+    if (response.code === 200) {
+      ElMessage.success(`成功生成${response.data}个账单`)
+      generateDialogVisible.value = false
+      loadBills()
+    } else {
+      ElMessage.error(response.msg || '生成账单失败')
+    }
+  }).catch(error => {
+    console.error('生成账单失败:', error)
+    ElMessage.error('生成账单失败')
+  }).finally(() => {
     generateLoading.value = false
-  }, 2000)
+  })
 }
 
 // 缴费
@@ -732,12 +783,53 @@ const handlePay = (row) => {
 // 提交缴费
 const handlePaySubmit = () => {
   payLoading.value = true
-  setTimeout(() => {
-    ElMessage.success('缴费成功')
-    payDialogVisible.value = false
-    loadBills()
+  const data = {
+    billIds: [payForm.billId],
+    ownerId: payForm.ownerId || 1 // 假设ownerId，实际应该从用户信息中获取
+  }
+
+  billApi.payBills(data).then(response => {
+    if (response.code === 200) {
+      ElMessage.success('缴费成功')
+      payDialogVisible.value = false
+      loadBills()
+    } else {
+      ElMessage.error(response.msg || '缴费失败')
+    }
+  }).catch(error => {
+    console.error('缴费失败:', error)
+    ElMessage.error('缴费失败')
+  }).finally(() => {
     payLoading.value = false
-  }, 1000)
+  })
+}
+
+// 批量导出
+const handleBatchExport = () => {
+  if (selectedRows.value.length === 0) {
+    ElMessage.warning('请选择要导出的账单')
+    return
+  }
+
+  const billIds = selectedRows.value.map(row => row.billId)
+  const data = { billIds }
+
+  billApi.batchExportBills(data).then(response => {
+    // 创建下载链接
+    const blob = new Blob([response], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `批量账单导出_${new Date().toLocaleDateString()}.xlsx`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    ElMessage.success('批量导出成功')
+  }).catch(error => {
+    console.error('批量导出失败:', error)
+    ElMessage.error('批量导出失败')
+  })
 }
 
 // 查看详情
@@ -745,10 +837,6 @@ const handleViewDetail = (row) => {
   ElMessage.info(`查看账单${row.billNo}的详细信息`)
 }
 
-// 导出
-const handleExport = () => {
-  ElMessage.success('导出成功')
-}
 
 // 提交表单
 const handleSubmit = () => {

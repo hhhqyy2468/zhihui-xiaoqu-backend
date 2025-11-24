@@ -210,8 +210,7 @@ public class BillGenerationTask {
         bill.setFeeTypeId(feeType.getId());
         bill.setFeeTypeName(feeType.getTypeName()); // 设置费用名称
         bill.setBillPeriod(billingPeriod);
-        bill.setBillingCycle("月"); // 设置计费周期为月
-        bill.setAmount(amount);
+                bill.setAmount(amount);
         bill.setPaidAmount(BigDecimal.ZERO); // 已缴金额初始化为0
         bill.setDiscountAmount(BigDecimal.ZERO); // 折扣金额初始化为0
         bill.setBillStatus(1); // 1-待缴费

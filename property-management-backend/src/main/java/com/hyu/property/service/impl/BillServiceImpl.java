@@ -158,8 +158,7 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill> implements IB
                 bill.setFeeTypeId(feeTypeId);
                 bill.setHouseId((Long) house.get("house_id"));
                 bill.setBillPeriod(billPeriod);
-                bill.setBillingCycle(billingCycle);
-                bill.setAmount(unitPrice);
+                                bill.setAmount(unitPrice);
                 bill.setDueDate(dueDate);
                 bill.setBillStatus(1); // 未缴费
                 bill.setCreateTime(new Date());
@@ -238,8 +237,7 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill> implements IB
             // 更新账单状态
             for (Bill bill : bills) {
                 bill.setBillStatus(2); // 已缴费
-                bill.setPayTime(new Date());
-                bill.setReceiptNo(generateReceiptNo());
+                bill.setPaidTime(new Date());
                 billMapper.updateBill(bill);
 
                 // 添加交易记录
@@ -334,6 +332,34 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill> implements IB
         String date = sdf.format(new Date());
         long timestamp = System.currentTimeMillis();
         return "BIL" + date + timestamp;
+    }
+
+    /**
+     * 根据账单ID列表查询账单
+     *
+     * @param billIds 账单ID数组
+     * @return 账单列表
+     */
+    @Override
+    public List<Bill> selectBillByIds(Long[] billIds) {
+        if (billIds == null || billIds.length == 0) {
+            return new ArrayList<>();
+        }
+
+        try {
+            LambdaQueryWrapper<Bill> queryWrapper = new LambdaQueryWrapper<>();
+            queryWrapper.in(Bill::getBillId, Arrays.asList(billIds))
+                       .eq(Bill::getDeleted, 0)
+                       .orderByDesc(Bill::getCreateTime);
+
+            List<Bill> billList = list(queryWrapper);
+            log.debug("根据账单ID列表查询到{}条账单记录", billList.size());
+            return billList;
+
+        } catch (Exception e) {
+            log.error("根据账单ID列表查询账单失败", e);
+            return new ArrayList<>();
+        }
     }
 
     /**

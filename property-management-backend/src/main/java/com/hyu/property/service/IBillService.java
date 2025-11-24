@@ -120,4 +120,12 @@ public interface IBillService extends IService<Bill> {
      * @return 是否存在
      */
     boolean existsBill(Long userId, Long houseId, Long feeTypeId, String billingPeriod);
+
+    /**
+     * 根据账单ID列表查询账单
+     *
+     * @param billIds 账单ID数组
+     * @return 账单列表
+     */
+    List<Bill> selectBillByIds(Long[] billIds);
 }
