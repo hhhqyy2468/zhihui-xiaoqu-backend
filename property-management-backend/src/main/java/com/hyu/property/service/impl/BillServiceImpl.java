@@ -37,14 +37,7 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill> implements IB
      */
     @Override
     public Page<Bill> selectBillPage(Page<Bill> page, Bill bill) {
-        LambdaQueryWrapper<Bill> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.like(StringUtils.isNotEmpty(bill.getBillNo()), Bill::getBillNo, bill.getBillNo())
-                   .eq(bill.getUserId() != null, Bill::getUserId, bill.getUserId())
-                   .eq(bill.getFeeTypeId() != null, Bill::getFeeTypeId, bill.getFeeTypeId())
-                   .eq(bill.getBillStatus() != null, Bill::getBillStatus, bill.getBillStatus())
-                   .like(StringUtils.isNotEmpty(bill.getBillPeriod()), Bill::getBillPeriod, bill.getBillPeriod())
-                   .orderByDesc(Bill::getCreateTime);
-        return page(page, queryWrapper);
+        return billMapper.selectBillPage(page, bill);
     }
 
     /**
@@ -225,13 +218,11 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill> implements IB
 
             // 检查钱包余额
             BigDecimal balance = billMapper.selectWalletBalance(ownerId);
-            if (balance.compareTo(totalAmount) < 0) {
+            if (balance == null || balance.compareTo(totalAmount) < 0) {
                 result.put("code", 500);
                 result.put("msg", "钱包余额不足");
                 return result;
             }
-
-            // 扣减钱包余额
             billMapper.updateWalletBalance(ownerId, balance.subtract(totalAmount));
 
             // 更新账单状态
@@ -240,7 +231,7 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill> implements IB
                 bill.setPaidTime(new Date());
                 billMapper.updateBill(bill);
 
-                // 添加交易记录
+              // 插入缴费交易记录
                 billMapper.insertPaymentTransaction(ownerId, bill.getBillId(), bill.getAmount(),
                     "缴费：" + bill.getBillNo(), generateTransactionNo());
             }

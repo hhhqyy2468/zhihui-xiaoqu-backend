@@ -135,7 +135,7 @@
         <el-table-column prop="billNo" label="账单编号" width="160" sortable />
         <el-table-column prop="ownerName" label="业主姓名" width="120" />
         <el-table-column prop="houseCode" label="房间编号" width="140" />
-        <el-table-column prop="feeName" label="费用类型" width="120" />
+        <el-table-column prop="feeTypeName" label="费用类型" width="120" />
         <el-table-column prop="billPeriod" label="账期" width="100" />
         <el-table-column prop="amount" label="应缴金额" width="120" sortable>
           <template #default="{ row }">
