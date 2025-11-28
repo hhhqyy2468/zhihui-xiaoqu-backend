@@ -46,7 +46,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         left join house h on b.house_id = h.id
         left join building bd on h.building_id = bd.id
         left join user_house uh on b.house_id = uh.house_id and uh.is_current = 1
-        left join sys_user u on uh.user_id = u.id
+        left join sys_user u on uh.user_id = u.id and u.status = 1 and u.deleted = 0
+        left join sys_user_role sur on u.id = sur.user_id
+        left join sys_role r on sur.role_id = r.id
         left join fee_type ft on b.fee_type_id = ft.id
     </sql>
 
@@ -54,13 +56,16 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <select id="selectBillPage" parameterType="com.hyu.property.domain.Bill" resultMap="BillResult">
         <include refid="selectBillVo"/>
         <where>
-            b.deleted = 0
+            b.deleted = 0 and (r.role_key is null or r.role_key != 'worker')
             <if test="bill.billNo != null and bill.billNo != ''"> and b.bill_no like concat('%', #{bill.billNo}, '%')</if>
             <if test="bill.userId != null"> and b.user_id = #{bill.userId}</if>
             <if test="bill.houseId != null"> and b.house_id = #{bill.houseId}</if>
             <if test="bill.feeTypeId != null"> and b.fee_type_id = #{bill.feeTypeId}</if>
             <if test="bill.billStatus != null"> and b.bill_status = #{bill.billStatus}</if>
             <if test="bill.billPeriod != null and bill.billPeriod != ''"> and b.billing_period = #{bill.billPeriod}</if>
+            <if test="bill.ownerName != null and bill.ownerName != ''"> and u.real_name like concat('%', #{bill.ownerName}, '%')</if>
+            <if test="bill.houseCode != null and bill.houseCode != ''"> and h.house_no like concat('%', #{bill.houseCode}, '%')</if>
+            <if test="bill.buildingName != null and bill.buildingName != ''"> and bd.building_name like concat('%', #{bill.buildingName}, '%')</if>
         </where>
         order by b.create_time desc
     </select>
@@ -69,13 +74,16 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <select id="selectBillList" parameterType="com.hyu.property.domain.Bill" resultMap="BillResult">
         <include refid="selectBillVo"/>
         <where>
-            b.deleted = 0
+            b.deleted = 0 and (r.role_key is null or r.role_key != 'worker')
             <if test="bill.billNo != null and bill.billNo != ''"> and b.bill_no like concat('%', #{bill.billNo}, '%')</if>
             <if test="bill.userId != null"> and b.user_id = #{bill.userId}</if>
             <if test="bill.houseId != null"> and b.house_id = #{bill.houseId}</if>
             <if test="bill.feeTypeId != null"> and b.fee_type_id = #{bill.feeTypeId}</if>
             <if test="bill.billStatus != null"> and b.bill_status = #{bill.billStatus}</if>
             <if test="bill.billPeriod != null and bill.billPeriod != ''"> and b.billing_period = #{bill.billPeriod}</if>
+            <if test="bill.ownerName != null and bill.ownerName != ''"> and u.real_name like concat('%', #{bill.ownerName}, '%')</if>
+            <if test="bill.houseCode != null and bill.houseCode != ''"> and h.house_no like concat('%', #{bill.houseCode}, '%')</if>
+            <if test="bill.buildingName != null and bill.buildingName != ''"> and bd.building_name like concat('%', #{bill.buildingName}, '%')</if>
         </where>
         order by b.create_time desc
     </select>
@@ -211,7 +219,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         select h.id, h.building_area, u.user_id
         from house h
         join user_house u on h.id = u.house_id
-        where u.is_current = 1 and h.house_status = 2
+        where u.is_current = 1 and h.house_status in (2, 3)
         <if test="buildingIds != null and buildingIds.length > 0">
             and h.building_id in
             <foreach item="buildingId" collection="buildingIds" open="(" separator="," close=")">

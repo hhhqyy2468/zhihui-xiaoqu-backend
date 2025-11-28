@@ -387,6 +387,75 @@
         </el-button>
       </template>
     </el-dialog>
+
+    <!-- 账单详情对话框 -->
+    <el-dialog
+      v-model="detailDialogVisible"
+      title="账单详情"
+      width="800px"
+      :close-on-click-modal="false"
+    >
+      <el-descriptions :column="2" border>
+        <el-descriptions-item label="账单编号" span="2">
+          <el-text type="primary">{{ detailForm.billNo }}</el-text>
+        </el-descriptions-item>
+        <el-descriptions-item label="业主姓名">
+          {{ detailForm.ownerName }}
+        </el-descriptions-item>
+        <el-descriptions-item label="业主电话">
+          {{ detailForm.ownerPhone }}
+        </el-descriptions-item>
+        <el-descriptions-item label="房间编号">
+          {{ detailForm.houseCode }}
+        </el-descriptions-item>
+        <el-descriptions-item label="费用类型">
+          {{ detailForm.feeTypeName }}
+        </el-descriptions-item>
+        <el-descriptions-item label="计费周期">
+          {{ detailForm.billPeriod }}
+        </el-descriptions-item>
+        <el-descriptions-item label="账单状态">
+          <el-tag :type="getBillStatusTag(detailForm.billStatus)">
+            {{ getBillStatusName(detailForm.billStatus) }}
+          </el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="应缴金额">
+          <span class="amount-text">¥{{ (detailForm.amount || 0).toFixed(2) }}</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="实缴金额">
+          <span class="amount-text" :class="getPaidAmountClass(detailForm.paidAmount || 0, detailForm.amount || 0)">
+            ¥{{ (detailForm.paidAmount || 0).toFixed(2) }}
+          </span>
+        </el-descriptions-item>
+        <el-descriptions-item label="折扣金额">
+          <span class="amount-text discount">¥{{ (detailForm.discountAmount || 0).toFixed(2) }}</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="缴费方式">
+          {{ detailForm.payMethod || '未缴费' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="缴费时间">
+          {{ detailForm.payTime || '未缴费' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="缴费截止时间">
+          <span :class="{ 'overdue': isOverdue(detailForm.dueDate, detailForm.billStatus) }">
+            {{ detailForm.dueDate }}
+          </span>
+        </el-descriptions-item>
+        <el-descriptions-item label="创建时间" span="2">
+          {{ formatDateTime(detailForm.createTime) }}
+        </el-descriptions-item>
+        <el-descriptions-item label="更新时间" span="2" v-if="detailForm.updateTime">
+          {{ formatDateTime(detailForm.updateTime) }}
+        </el-descriptions-item>
+        <el-descriptions-item label="备注" span="2">
+          {{ detailForm.remark || '无' }}
+        </el-descriptions-item>
+      </el-descriptions>
+
+      <template #footer>
+        <el-button @click="detailDialogVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -404,6 +473,7 @@ const generateDialogVisible = ref(false)
 const payDialogVisible = ref(false)
 const selectedRows = ref([])
 const isEdit = ref(false)
+const detailDialogVisible = ref(false)
 const generateLoading = ref(false)
 const payLoading = ref(false)
 
@@ -440,9 +510,9 @@ const feeTypeOptions = ref([
 ])
 
 const billStatusOptions = ref([
-  { label: '待缴费', value: 0 },
-  { label: '已缴费', value: 1 },
-  { label: '部分缴费', value: 2 },
+  { label: '待缴费', value: 1 },
+  { label: '已缴费', value: 2 },
+  { label: '部分缴费', value: 0 }, // 保持向后兼容
   { label: '逾期', value: 3 },
   { label: '已作废', value: 4 }
 ])
@@ -491,6 +561,26 @@ const payForm = reactive({
   paymentMethod: 'cash'
 })
 
+// 详情表单
+const detailForm = reactive({
+  billNo: '',
+  ownerName: '',
+  ownerPhone: '',
+  houseCode: '',
+  feeTypeName: '',
+  billPeriod: '',
+  amount: 0,
+  paidAmount: 0,
+  discountAmount: 0,
+  billStatus: 1,
+  payMethod: '',
+  payTime: '',
+  dueDate: '',
+  createTime: '',
+  updateTime: '',
+  remark: ''
+})
+
 // 表单规则
 const formRules = {
   ownerId: [
@@ -535,9 +625,9 @@ const getBillStatusName = (status) => {
 // 获取账单状态标签
 const getBillStatusTag = (status) => {
   const tagMap = {
-    0: 'warning', // 待缴费
-    1: 'success', // 已缴费
-    2: 'info',    // 部分缴费
+    1: 'warning', // 待缴费
+    2: 'success', // 已缴费
+    0: 'info',    // 部分缴费（保持向后兼容）
     3: 'danger',  // 逾期
     4: 'info'     // 已作废
   }
@@ -553,7 +643,8 @@ const getPaidAmountClass = (paidAmount, amount) => {
 
 // 判断是否逾期
 const isOverdue = (dueDate, status) => {
-  if (status === 1) return false // 已缴费不算逾期
+  if (status === 2) return false // 已缴费不算逾期
+  if (!dueDate) return false // 没有截止时间不算逾期
   return new Date(dueDate) < new Date()
 }
 
@@ -834,8 +925,30 @@ const handleBatchExport = () => {
 
 // 查看详情
 const handleViewDetail = (row) => {
-  ElMessage.info(`查看账单${row.billNo}的详细信息`)
+  // 精确映射详情表单数据
+  detailForm.id = row.id || ''
+  detailForm.billNo = row.billNo || ''
+  detailForm.ownerName = row.ownerName || ''
+  detailForm.ownerPhone = row.ownerPhone || ''
+  detailForm.houseCode = row.houseCode || ''
+  detailForm.feeTypeName = row.feeTypeName || ''
+  detailForm.billPeriod = row.billPeriod || ''
+  detailForm.amount = row.amount || 0
+  detailForm.paidAmount = row.paidAmount || 0
+  detailForm.discountAmount = row.discountAmount || 0
+  detailForm.billStatus = row.billStatus || 1
+  detailForm.payMethod = row.payMethod || ''
+  detailForm.payTime = row.payTime || ''
+  detailForm.dueDate = row.dueDate || ''
+  detailForm.createTime = row.createTime || ''
+  detailForm.updateTime = row.updateTime || ''
+  detailForm.remark = row.remark || ''
+
+  // 打开详情对话框
+  detailDialogVisible.value = true
 }
+
+
 
 
 // 提交表单
@@ -919,6 +1032,11 @@ onMounted(() => {
 
   &.paid-none {
     color: #f56c6c;
+  }
+
+  &.discount {
+    color: #909399;
+    text-decoration: line-through;
   }
 }
 

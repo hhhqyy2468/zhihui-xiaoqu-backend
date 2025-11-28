@@ -171,10 +171,16 @@ public class BillGenerationTask {
 
         // 根据计费单位确定计算基数
         if (billingUnit.contains("平方米")) {
-            // 按面积计费，使用建筑面积
-            area = house.getBuildingArea();
-            log.debug("费用类型 {} 按建筑面积计费，面积：{} ㎡，单价：{}",
-                    feeType.getTypeCode(), area, unitPrice);
+            // 按面积计费，优先使用使用面积，如果为空则使用建筑面积
+            if (house.getUsableArea() != null && house.getUsableArea().compareTo(BigDecimal.ZERO) > 0) {
+                area = house.getUsableArea();
+                log.debug("费用类型 {} 按使用面积计费，面积：{} ㎡，单价：{}",
+                        feeType.getTypeCode(), area, unitPrice);
+            } else {
+                area = house.getBuildingArea();
+                log.debug("费用类型 {} 按建筑面积计费，面积：{} ㎡，单价：{}",
+                        feeType.getTypeCode(), area, unitPrice);
+            }
         } else if (billingUnit.equals("元/月")) {
             // 固定月费
             area = BigDecimal.ONE;
@@ -225,7 +231,7 @@ public class BillGenerationTask {
 
     /**
      * 检查是否应该为用户生成账单
-     * 只有当入住时间在计费周期开始之前或当天时才生成账单
+     * 只要用户在计费周期内入住就应该生成账单（按比例计算）
      *
      * @param userHouse 用户房产关联
      * @param billingPeriod 计费周期（yyyy-MM格式）
@@ -234,17 +240,18 @@ public class BillGenerationTask {
      */
     private boolean shouldGenerateBillForUser(UserHouse userHouse, String billingPeriod, LocalDate currentDate) {
         try {
-            // 解析计费周期，获取该月的第一天
+            // 解析计费周期
             YearMonth billYearMonth = YearMonth.parse(billingPeriod);
             LocalDate firstDayOfBillingPeriod = billYearMonth.atDay(1);
+            LocalDate lastDayOfBillingPeriod = billYearMonth.atEndOfMonth();
 
             // 获取用户的入住时间
             LocalDate checkInDate = userHouse.getStartDate().toInstant()
                 .atZone(java.time.ZoneId.systemDefault())
                 .toLocalDate();
 
-            // 如果入住时间在该月的第一天或之前，则应该生成账单
-            return checkInDate != null && !checkInDate.isAfter(firstDayOfBillingPeriod);
+            // 如果用户在计费周期结束前入住，就应该生成账单（按比例计算）
+            return checkInDate != null && !checkInDate.isAfter(lastDayOfBillingPeriod);
 
         } catch (Exception e) {
             log.error("检查用户ID {} 的入住时间时发生错误：{}", userHouse.getUserId(), e.getMessage(), e);
