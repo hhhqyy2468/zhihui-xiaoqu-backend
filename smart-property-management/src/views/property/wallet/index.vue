@@ -49,6 +49,10 @@
             <el-icon><Refresh /></el-icon>
             重置
           </el-button>
+          <el-button type="success" @click="handleRefresh" :loading="loading">
+            <el-icon><Refresh /></el-icon>
+            刷新状态
+          </el-button>
         </el-form-item>
       </el-form>
     </div>
@@ -380,7 +384,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, CreditCard } from '@element-plus/icons-vue'
 import { listWallet, virtualRecharge, batchRecharge, adminRecharge, freezeWallet, unfreezeWallet } from '@/api/wallet'
@@ -573,21 +577,27 @@ const loadWallets = async () => {
       status: searchForm.walletStatus !== '' && searchForm.walletStatus !== undefined ? searchForm.walletStatus : undefined
     }
 
+    console.log('调用钱包列表API，参数:', params)
     const response = await listWallet(params)
     if (response.code === 200) {
-      tableData.value = response.data.rows.map(wallet => ({
-        id: wallet.id,
-        userId: wallet.userId, // 添加userId字段
-        ownerName: wallet.userName || `用户${wallet.userId}`,
-        phone: maskPhone(wallet.userPhone) || '暂无',
-        walletNo: `WAL${wallet.userId.toString().padStart(6, '0')}`,
-        currentBalance: wallet.balance,
-        totalRecharge: wallet.totalRecharge,
-        totalConsume: wallet.totalConsume,
-        walletStatus: wallet.status,
-        createTime: wallet.createTime,
-        payPasswordStatus: wallet.payPassword ? '已设置' : '未设置'
-      }))
+      console.log('管理员钱包API返回数据:', response.data.rows) // 调试信息
+      tableData.value = response.data.rows.map(wallet => {
+        const payPasswordStatus = wallet.payPassword ? '已设置' : '未设置'
+      console.log(`用户${wallet.userId} (${wallet.userName}) 的支付密码状态:`, payPasswordStatus, '原始值:', wallet.payPassword) // 调试信息
+        return {
+          id: wallet.id,
+          userId: wallet.userId, // 添加userId字段
+          ownerName: wallet.userName || `用户${wallet.userId}`,
+          phone: maskPhone(wallet.userPhone) || '暂无',
+          walletNo: `WAL${wallet.userId.toString().padStart(6, '0')}`,
+          currentBalance: wallet.balance,
+          totalRecharge: wallet.totalRecharge,
+          totalConsume: wallet.totalConsume,
+          walletStatus: wallet.status,
+          createTime: wallet.createTime,
+          hasPassword: wallet.payPassword ? 1 : 0
+        }
+      })
       pagination.total = response.data.total
     } else {
       ElMessage.error(response.msg || '查询失败')
@@ -614,6 +624,12 @@ const handleReset = () => {
     walletStatus: ''
   })
   handleSearch()
+}
+
+// 刷新状态
+const handleRefresh = () => {
+  console.log('手动刷新钱包数据...')
+  loadWallets()
 }
 
 // 选择变化
@@ -797,8 +813,24 @@ const handleCurrentChange = (val) => {
 }
 
 // 初始化
+// 定时刷新器
+let refreshTimer = null
+
 onMounted(() => {
   loadWallets()
+  // 每30秒自动刷新一次数据，以同步支付密码状态
+  refreshTimer = setInterval(() => {
+    console.log('自动刷新钱包数据...')
+    loadWallets()
+  }, 30000)
+})
+
+onUnmounted(() => {
+  // 组件卸载时清除定时器
+  if (refreshTimer) {
+    clearInterval(refreshTimer)
+    refreshTimer = null
+  }
 })
 </script>
 

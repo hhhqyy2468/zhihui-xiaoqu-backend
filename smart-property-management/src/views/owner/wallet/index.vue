@@ -452,6 +452,8 @@ const loadWalletInfo = async () => {
     const response = await getWalletByUserId(userId)
     if (response.code === 200 && response.data) {
       const wallet = response.data
+      console.log('业主钱包API返回数据:', wallet) // 调试信息
+      console.log('业主支付密码状态:', !!wallet.payPassword) // 调试信息
       walletInfo.value = {
         ...wallet,
         walletNo: `WAL${wallet.userId?.toString().padStart(6, '0')}`,
