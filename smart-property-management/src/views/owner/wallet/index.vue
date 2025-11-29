@@ -209,7 +209,7 @@
           />
           <div class="form-tip">单次充值金额不超过10000元</div>
         </el-form-item>
-        <el-form-item label="支付密码" prop="payPassword">
+        <el-form-item v-if="walletInfo.hasPassword" label="支付密码" prop="payPassword">
           <el-input
             v-model="rechargeForm.payPassword"
             type="password"
@@ -218,12 +218,23 @@
             show-password
           />
           </el-form-item>
+        <el-form-item v-else>
+          <div class="password-warning">
+            <el-icon><WarningFilled /></el-icon>
+            <span>您还未设置支付密码，请先设置支付密码后再进行充值操作</span>
+          </div>
+        </el-form-item>
       </el-form>
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="rechargeDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="handleRecharge" :loading="rechargeLoading" :disabled="rechargeButtonDisabled">
-            确认充值
+          <el-button
+            type="primary"
+            @click="handleRecharge"
+            :loading="rechargeLoading"
+            :disabled="rechargeButtonDisabled"
+          >
+            {{ walletInfo.hasPassword ? '确认充值' : '请先设置支付密码' }}
           </el-button>
         </span>
       </template>
@@ -309,7 +320,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  Wallet, Plus, Minus, CreditCard, Lock, Key, Search
+  Wallet, Plus, Minus, CreditCard, Lock, Key, Search, WarningFilled
 } from '@element-plus/icons-vue'
 import {
   getWalletByUserId,
@@ -371,16 +382,24 @@ const changePasswordForm = reactive({
 })
 
 // 表单验证规则
-const rechargeRules = {
-  amount: [
-    { required: true, message: '请输入充值金额', trigger: 'blur' },
-    { type: 'number', min: 0.01, max: 10000, message: '充值金额在0.01-10000元之间', trigger: 'blur' }
-  ],
-  payPassword: [
-    { required: true, message: '请输入支付密码', trigger: 'blur' },
-    { pattern: /^\d{6}$/, message: '支付密码必须为6位数字', trigger: 'blur' }
-  ]
-}
+const rechargeRules = computed(() => {
+  const rules = {
+    amount: [
+      { required: true, message: '请输入充值金额', trigger: 'blur' },
+      { type: 'number', min: 0.01, max: 10000, message: '充值金额在0.01-10000元之间', trigger: 'blur' }
+    ]
+  }
+
+  // 只有设置了支付密码才需要验证支付密码
+  if (walletInfo.value.hasPassword) {
+    rules.payPassword = [
+      { required: true, message: '请输入支付密码', trigger: 'blur' },
+      { pattern: /^\d{6}$/, message: '支付密码必须为6位数字', trigger: 'blur' }
+    ]
+  }
+
+  return rules
+})
 
 const setPasswordRules = {
   payPassword: [
@@ -428,6 +447,10 @@ const changePasswordRules = {
 
 // 计算属性
 const rechargeButtonDisabled = computed(() => {
+  // 如果没有设置支付密码，禁用充值按钮
+  if (!walletInfo.value.hasPassword) {
+    return true
+  }
   return !rechargeForm.amount || rechargeForm.amount <= 0 || !rechargeForm.payPassword
 })
 
@@ -453,11 +476,11 @@ const loadWalletInfo = async () => {
     if (response.code === 200 && response.data) {
       const wallet = response.data
       console.log('业主钱包API返回数据:', wallet) // 调试信息
-      console.log('业主支付密码状态:', !!wallet.payPassword) // 调试信息
+      console.log('业主支付密码状态:', wallet.passwordStatus === 1 ? '已设置' : '未设置', 'passwordStatus值:', wallet.passwordStatus) // 调试信息
       walletInfo.value = {
         ...wallet,
         walletNo: `WAL${wallet.userId?.toString().padStart(6, '0')}`,
-        hasPassword: !!wallet.payPassword
+        hasPassword: !!(wallet.passwordStatus === 1)
       }
     } else {
       ElMessage.error('获取钱包信息失败')
@@ -535,6 +558,13 @@ const showChangePasswordDialog = () => {
 
 // 处理充值
 const handleRecharge = async () => {
+  // 如果没有设置支付密码，直接引导到设置密码页面
+  if (!walletInfo.value.hasPassword) {
+    rechargeDialogVisible.value = false
+    showSetPasswordDialog()
+    return
+  }
+
   try {
     await rechargeFormRef.value.validate()
     rechargeLoading.value = true
@@ -805,6 +835,24 @@ onMounted(async () => {
   font-size: 12px;
   color: #909399;
   margin-top: 4px;
+}
+
+// 密码警告提示
+.password-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background-color: #FDF6EC;
+  border: 1px solid #FAECD8;
+  border-radius: 4px;
+  color: #E6A23C;
+  font-size: 14px;
+
+  .el-icon {
+    color: #E6A23C;
+    font-size: 16px;
+  }
 }
 
 // 响应式设计

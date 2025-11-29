@@ -7,7 +7,11 @@ import com.hyu.common.utils.SecurityUtils;
 import com.hyu.property.domain.UserHouse;
 import com.hyu.property.mapper.UserHouseMapper;
 import com.hyu.property.service.IUserHouseService;
+import com.hyu.property.service.IWalletService;
+
+import java.math.BigDecimal;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +27,9 @@ import java.util.List;
 @Slf4j
 @Service
 public class UserHouseServiceImpl extends ServiceImpl<UserHouseMapper, UserHouse> implements IUserHouseService {
+
+    @Autowired
+    private IWalletService walletService;
 
     /**
      * 查询用户房产关联
@@ -103,7 +110,24 @@ public class UserHouseServiceImpl extends ServiceImpl<UserHouseMapper, UserHouse
         userHouse.setCreateBy(SecurityUtils.getUsername());
         userHouse.setCreateTime(new Date());
         userHouse.setIsCurrent(true); // 默认为当前房产
-        return baseMapper.insert(userHouse);
+        int result = baseMapper.insert(userHouse);
+
+        // 自动为用户创建钱包记录
+        if (result > 0) {
+            try {
+                boolean walletCreated = walletService.createWallet(userHouse.getUserId(), BigDecimal.ZERO);
+                if (walletCreated) {
+                    log.info("为用户 {} 成功创建钱包记录", userHouse.getUserId());
+                } else {
+                    log.warn("为用户 {} 创建钱包记录失败，可能钱包已存在", userHouse.getUserId());
+                }
+            } catch (Exception e) {
+                log.error("为用户 {} 创建钱包记录时发生错误", userHouse.getUserId(), e);
+                // 不影响插入结果，只记录错误
+            }
+        }
+
+        return result;
     }
 
     /**

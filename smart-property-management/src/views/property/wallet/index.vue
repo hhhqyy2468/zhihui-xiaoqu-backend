@@ -101,10 +101,10 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="hasPassword" label="支付密码" width="100">
+        <el-table-column prop="passwordStatus" label="支付密码状态" width="120">
           <template #default="{ row }">
-            <el-tag :type="row.hasPassword ? 'success' : 'warning'">
-              {{ row.hasPassword ? '已设置' : '未设置' }}
+            <el-tag :type="row.passwordStatus === 1 ? 'success' : 'warning'">
+              {{ row.passwordStatus === 1 ? '已设置' : '未设置' }}
             </el-tag>
           </template>
         </el-table-column>
@@ -158,8 +158,8 @@
 
       <div class="pagination-wrapper">
         <el-pagination
-          v-model:current-page="pagination.current"
-          v-model:page-size="pagination.pageSize"
+          :current-page="pagination.current"
+          :page-size="pagination.pageSize"
           :page-sizes="[10, 20, 50, 100]"
           :total="pagination.total"
           layout="total, sizes, prev, pager, next, jumper"
@@ -209,8 +209,8 @@
               {{ currentWallet.updateTime }}
             </el-descriptions-item>
             <el-descriptions-item label="支付密码状态">
-              <el-tag :type="currentWallet.hasPassword ? 'success' : 'warning'">
-                {{ currentWallet.hasPassword ? '已设置' : '未设置' }}
+              <el-tag :type="currentWallet.passwordStatus === 1 ? 'success' : 'warning'">
+                {{ currentWallet.passwordStatus === 1 ? '已设置' : '未设置' }}
               </el-tag>
             </el-descriptions-item>
           </el-descriptions>
@@ -387,7 +387,7 @@
 import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, CreditCard } from '@element-plus/icons-vue'
-import { listWallet, virtualRecharge, batchRecharge, adminRecharge, freezeWallet, unfreezeWallet } from '@/api/wallet'
+import { listWallet, adminRecharge, batchRecharge, freezeWallet, unfreezeWallet, resetPayPassword } from '@/api/wallet'
 
 // 响应式数据
 const formRef = ref()
@@ -582,8 +582,10 @@ const loadWallets = async () => {
     if (response.code === 200) {
       console.log('管理员钱包API返回数据:', response.data.rows) // 调试信息
       tableData.value = response.data.rows.map(wallet => {
-        const payPasswordStatus = wallet.payPassword ? '已设置' : '未设置'
-      console.log(`用户${wallet.userId} (${wallet.userName}) 的支付密码状态:`, payPasswordStatus, '原始值:', wallet.payPassword) // 调试信息
+        // 使用后端返回的passwordStatus字段来判断支付密码状态：0=未设置，1=已设置
+        const hasPassword = wallet.passwordStatus || 0
+        console.log(`用户${wallet.userId} (${wallet.userName}) 的支付密码状态:`, hasPassword === 1 ? '已设置' : '未设置', 'passwordStatus值:', wallet.passwordStatus) // 调试信息
+
         return {
           id: wallet.id,
           userId: wallet.userId, // 添加userId字段
@@ -595,7 +597,7 @@ const loadWallets = async () => {
           totalConsume: wallet.totalConsume,
           walletStatus: wallet.status,
           createTime: wallet.createTime,
-          hasPassword: wallet.payPassword ? 1 : 0
+          passwordStatus: hasPassword
         }
       })
       pagination.total = response.data.total
@@ -730,15 +732,27 @@ const handleBatchRechargeSubmit = () => {
 // 重置密码
 const handleResetPassword = (row) => {
   ElMessageBox.confirm(
-    `确定要重置业主"${row.ownerName}"的支付密码吗？`,
+    `确定要重置业主"${row.ownerName}"的支付密码吗？重置后密码将恢复为默认密码：123456`,
     '提示',
     {
-      confirmButtonText: '确定',
+      confirmButtonText: '确定重置',
       cancelButtonText: '取消',
       type: 'warning'
     }
-  ).then(() => {
-    ElMessage.success('密码重置成功，新密码为：123456')
+  ).then(async () => {
+    try {
+      const response = await resetPayPassword(row.id)
+      if (response.code === 200) {
+        ElMessage.success('密码重置成功，新密码为：123456')
+        // 刷新数据以确保后端数据同步
+        loadWallets()
+      } else {
+        ElMessage.error(response.msg || '重置失败')
+      }
+    } catch (error) {
+      console.error('重置密码失败:', error)
+      ElMessage.error('重置密码失败，请重试')
+    }
   }).catch(() => {
     // 用户取消操作
   })

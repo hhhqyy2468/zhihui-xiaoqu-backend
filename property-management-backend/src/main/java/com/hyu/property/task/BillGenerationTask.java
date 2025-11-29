@@ -46,7 +46,7 @@ public class BillGenerationTask {
      * 每30秒执行一次账单生成任务（测试用）
      * 为当月新生效的住户生成账单
      */
-    @Scheduled(fixedRate = 30000)
+    @Scheduled(fixedRate = 3000000)
     public void generateMonthlyBills() {
         log.info("===== 开始执行账单生成任务（每30秒执行），执行时间：{} =====", java.time.LocalDateTime.now());
 

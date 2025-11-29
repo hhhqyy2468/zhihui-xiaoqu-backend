@@ -18,7 +18,8 @@
         <result property="updateTime" column="update_time"/>
         <result property="userName" column="user_name"/>
         <result property="userPhone" column="user_phone"/>
-    </resultMap>
+        <result property="passwordStatus" column="password_status"/>
+            </resultMap>
 
     <!-- 查询钱包列表（包含用户信息） -->
     <select id="selectWalletPage" parameterType="com.hyu.property.domain.Wallet" resultMap="WalletResult">
@@ -26,7 +27,7 @@
             w.id, w.user_id, w.balance, w.total_recharge, w.total_consume,
             w.pay_password, w.pay_password_error_count, w.pay_password_lock_time,
             w.status, w.version, w.create_time, w.update_time,
-            u.real_name as user_name, u.phone as user_phone
+            w.password_status, u.real_name as user_name, u.phone as user_phone
         from wallet w
         left join sys_user u on w.user_id = u.id
         <where>
@@ -49,7 +50,7 @@
             w.id, w.user_id, w.balance, w.total_recharge, w.total_consume,
             w.pay_password, w.pay_password_error_count, w.pay_password_lock_time,
             w.status, w.version, w.create_time, w.update_time,
-            u.real_name as user_name, u.phone as user_phone
+            w.password_status, u.real_name as user_name, u.phone as user_phone
         from wallet w
         left join sys_user u on w.user_id = u.id
         <where>

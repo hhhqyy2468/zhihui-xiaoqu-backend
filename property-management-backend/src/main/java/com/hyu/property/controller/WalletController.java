@@ -160,13 +160,37 @@ public class WalletController {
      */
     @PostMapping("/virtual-recharge")
     public AjaxResult virtualRecharge(@Valid @RequestBody WalletRechargeDTO rechargeDTO) {
-        log.info("虚拟充值, amount: {}", rechargeDTO.getAmount());
+        Long userId = getCurrentUserId();
+        log.info("用户{}进行虚拟充值, amount: {}", userId, rechargeDTO.getAmount());
+
         try {
-            boolean result = walletService.virtualRecharge(getCurrentUserId(), rechargeDTO);
-            return result ? AjaxResult.success("充值成功") : AjaxResult.error("充值失败");
-        } catch (Exception e) {
-            log.error("虚拟充值失败", e);
+            // 检查用户钱包是否已开通支付密码
+            Wallet wallet = walletService.getByUserId(userId);
+            if (wallet == null) {
+                log.warn("用户{}的钱包不存在", userId);
+                return AjaxResult.error("钱包不存在，请联系管理员开通");
+            }
+
+            if (wallet.getPayPassword() == null || wallet.getPayPassword().isEmpty()) {
+                log.warn("用户{}的支付密码未设置", userId);
+                return AjaxResult.error("请先设置支付密码后再进行充值操作");
+            }
+
+            // 执行充值
+            boolean result = walletService.virtualRecharge(userId, rechargeDTO);
+            if (result) {
+                log.info("用户{}虚拟充值成功，金额: {}", userId, rechargeDTO.getAmount());
+                return AjaxResult.success("充值成功");
+            } else {
+                log.error("用户{}虚拟充值失败", userId);
+                return AjaxResult.error("充值失败，请稍后重试");
+            }
+        } catch (RuntimeException e) {
+            log.warn("用户{}虚拟充值失败: {}", userId, e.getMessage());
             return AjaxResult.error(e.getMessage());
+        } catch (Exception e) {
+            log.error("用户{}虚拟充值系统异常", userId, e);
+            return AjaxResult.error("系统繁忙，请稍后重试");
         }
     }
 
@@ -244,6 +268,22 @@ public class WalletController {
             return result ? AjaxResult.success("解冻成功") : AjaxResult.error("解冻失败");
         } catch (Exception e) {
             log.error("解冻钱包失败", e);
+            return AjaxResult.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 重置支付密码
+     */
+    @PostMapping("/reset-password/{id}")
+    @PreAuthorize("@ss.hasPermi('property:wallet:resetPassword')")
+    public AjaxResult resetPayPassword(@PathVariable Long id) {
+        log.info("重置支付密码, id: {}", id);
+        try {
+            boolean result = walletService.resetPayPassword(id);
+            return result ? AjaxResult.success("重置成功，新密码为：123456（已清除）") : AjaxResult.error("重置失败");
+        } catch (Exception e) {
+            log.error("重置支付密码失败", e);
             return AjaxResult.error(e.getMessage());
         }
     }

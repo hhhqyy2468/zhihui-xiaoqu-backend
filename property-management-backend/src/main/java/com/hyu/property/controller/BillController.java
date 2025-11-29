@@ -245,4 +245,118 @@ public class BillController {
             return AjaxResult.error("批量打印账单失败：" + e.getMessage());
         }
     }
+
+    // ==================== 业主端API ====================
+
+    /**
+     * 获取我的账单列表
+     */
+    @GetMapping("/my/list")
+    public AjaxResult getMyBillList(@RequestParam(defaultValue = "1") Integer page,
+                                           @RequestParam(defaultValue = "10") Integer size,
+                                           @RequestParam(required = false) Long userId,
+                                           @RequestParam(required = false) String billNo,
+                                           @RequestParam(required = false) Long feeTypeId,
+                                           @RequestParam(required = false) Integer billStatus,
+                                           @RequestParam(required = false) String billPeriod) {
+        log.info("获取我的账单列表, userId: {}, page: {}, size: {}, billNo: {}, feeTypeId: {}, billStatus: {}, billPeriod: {}",
+                userId, page, size, billNo, feeTypeId, billStatus, billPeriod);
+
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<Bill> pageParam =
+                new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page, size);
+
+        // 如果未传入userId，从当前登录用户获取
+        if (userId == null) {
+            userId = getCurrentUserId();
+        }
+
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<Bill> result =
+                billService.selectMyBillPage(pageParam, userId, billNo, feeTypeId, billStatus, billPeriod);
+
+        return AjaxResult.success(result);
+    }
+
+    /**
+     * 获取我的账单详情
+     */
+    @GetMapping("/my/{billId}")
+    public AjaxResult getMyBillDetail(@PathVariable Long billId) {
+        log.info("获取我的账单详情, billId: {}", billId);
+
+        Long userId = getCurrentUserId();
+        Bill bill = billService.selectMyBillById(billId, userId);
+
+        if (bill == null) {
+            return AjaxResult.error("账单不存在或无权访问");
+        }
+
+        return AjaxResult.success(bill);
+    }
+
+    /**
+     * 在线缴费（业主端）
+     */
+    @PostMapping("/pay")
+    public AjaxResult payBill(@RequestBody Map<String, Object> params) {
+        log.info("在线缴费, params: {}", params);
+
+        try {
+            Long billId = Long.valueOf(params.get("billId").toString());
+            String paymentMethod = params.get("paymentMethod").toString();
+            String payPassword = params.get("payPassword") != null ? params.get("payPassword").toString() : null;
+
+            Long userId = getCurrentUserId();
+
+            Map<String, Object> result = billService.payBill(billId, userId, paymentMethod, payPassword);
+
+            if ((Integer) result.get("code") == 200) {
+                return AjaxResult.success(result.get("msg").toString(), result.get("data"));
+            } else {
+                return AjaxResult.error(result.get("msg").toString());
+            }
+        } catch (Exception e) {
+            log.error("在线缴费失败", e);
+            return AjaxResult.error("缴费失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 批量缴费（业主端）
+     */
+    @PostMapping("/pay/batch")
+    public AjaxResult batchPayBills(@RequestBody Map<String, Object> params) {
+        log.info("批量缴费, params: {}", params);
+
+        try {
+            Long[] billIds = (Long[]) params.get("billIds");
+            String paymentMethod = params.get("paymentMethod").toString();
+            String payPassword = params.get("payPassword") != null ? params.get("payPassword").toString() : null;
+
+            Long userId = getCurrentUserId();
+
+            Map<String, Object> result = billService.batchPayBills(billIds, userId, paymentMethod, payPassword);
+
+            if ((Integer) result.get("code") == 200) {
+                return AjaxResult.success(result.get("msg").toString(), result.get("data"));
+            } else {
+                return AjaxResult.error(result.get("msg").toString());
+            }
+        } catch (Exception e) {
+            log.error("批量缴费失败", e);
+            return AjaxResult.error("批量缴费失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取当前用户ID
+     */
+    private Long getCurrentUserId() {
+        org.springframework.security.core.Authentication authentication =
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof com.hyu.common.domain.LoginUser) {
+            com.hyu.common.domain.LoginUser loginUser = (com.hyu.common.domain.LoginUser) authentication.getPrincipal();
+            return loginUser.getUserId();
+        }
+        throw new RuntimeException("无法获取当前用户信息");
+    }
 }

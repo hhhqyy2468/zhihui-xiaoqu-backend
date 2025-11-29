@@ -133,4 +133,12 @@ public interface IWalletService extends IService<Wallet> {
      * @return 结果
      */
     boolean unfreezeWallet(Long id);
+
+    /**
+     * 重置支付密码
+     *
+     * @param id 钱包ID
+     * @return 结果
+     */
+    boolean resetPayPassword(Long id);
 }

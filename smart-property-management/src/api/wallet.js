@@ -132,3 +132,11 @@ export function unfreezeWallet(id) {
     method: 'post'
   })
 }
+
+// 重置支付密码
+export function resetPayPassword(id) {
+  return request({
+    url: '/property/wallet/reset-password/' + id,
+    method: 'post'
+  })
+}

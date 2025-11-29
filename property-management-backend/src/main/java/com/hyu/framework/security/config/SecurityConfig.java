@@ -45,7 +45,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     private JwtAuthenticationTokenFilter jwtAuthenticationTokenFilter;
 
     /**
-     * 密码编码器 - 使用明文验证
+     * 密码编码器 - 使用明文验证（系统要求：不采用任何密码加密方式）
      */
     @Bean
     public PasswordEncoder passwordEncoder() {

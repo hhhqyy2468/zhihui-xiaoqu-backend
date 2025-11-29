@@ -72,7 +72,7 @@ export function payBills(data) {
   })
 }
 
-// 更新超期账单状态
+// 更新逾期账单状态
 export function updateOverdueBills() {
   return request({
     url: '/property/bill/overdue',
@@ -104,6 +104,42 @@ export function batchExportBills(data) {
 export function batchPrintBills(data) {
   return request({
     url: '/property/bill/print/batch',
+    method: 'post',
+    data
+  })
+}
+
+// 业主端API
+// 获取我的账单列表
+export function getMyBillList(params) {
+  return request({
+    url: '/property/bill/my/list',
+    method: 'get',
+    params
+  })
+}
+
+// 获取我的账单详情
+export function getMyBillDetail(billId) {
+  return request({
+    url: `/property/bill/my/${billId}`,
+    method: 'get'
+  })
+}
+
+// 在线缴费（业主端）
+export function payBill(data) {
+  return request({
+    url: '/property/bill/pay',
+    method: 'post',
+    data
+  })
+}
+
+// 批量缴费（业主端）
+export function batchPayBills(data) {
+  return request({
+    url: '/property/bill/pay/batch',
     method: 'post',
     data
   })

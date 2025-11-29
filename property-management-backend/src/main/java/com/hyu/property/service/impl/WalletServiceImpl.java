@@ -126,9 +126,10 @@ public class WalletServiceImpl extends ServiceImpl<WalletMapper, Wallet> impleme
             throw new RuntimeException("钱包不存在");
         }
 
-        // 加密密码
-        String encodedPassword = passwordEncoder.encode(setPasswordDTO.getPayPassword());
-        wallet.setPayPassword(encodedPassword);
+        // 系统采用明文密码策略，直接存储明文
+        wallet.setPayPassword(setPasswordDTO.getPayPassword());
+        // 设置密码状态为已设置
+        wallet.setPasswordStatus(1);
         wallet.setUpdateTime(LocalDateTime.now());
 
         return updateById(wallet);
@@ -158,15 +159,16 @@ public class WalletServiceImpl extends ServiceImpl<WalletMapper, Wallet> impleme
             throw new RuntimeException("钱包不存在");
         }
 
-        // 验证原密码
+        // 验证原密码（系统采用明文密码策略）
         if (wallet.getPayPassword() != null &&
-            !passwordEncoder.matches(changePasswordDTO.getOldPassword(), wallet.getPayPassword())) {
+            !changePasswordDTO.getOldPassword().equals(wallet.getPayPassword())) {
             throw new RuntimeException("原支付密码错误");
         }
 
-        // 加密新密码
-        String encodedPassword = passwordEncoder.encode(changePasswordDTO.getNewPassword());
-        wallet.setPayPassword(encodedPassword);
+        // 系统采用明文密码策略，直接存储明文
+        wallet.setPayPassword(changePasswordDTO.getNewPassword());
+        // 设置密码状态为已设置
+        wallet.setPasswordStatus(1);
         wallet.setUpdateTime(LocalDateTime.now());
 
         return updateById(wallet);
@@ -182,8 +184,15 @@ public class WalletServiceImpl extends ServiceImpl<WalletMapper, Wallet> impleme
     @Override
     public boolean verifyPayPassword(Long userId, String payPassword) {
         Wallet wallet = getByUserId(userId);
-        if (wallet == null || StringUtils.isEmpty(wallet.getPayPassword())) {
-            return false;
+
+        // 钱包不存在时抛出异常
+        if (wallet == null) {
+            throw new RuntimeException("钱包不存在，请先创建钱包");
+        }
+
+        // 支付密码未设置时抛出异常
+        if (StringUtils.isEmpty(wallet.getPayPassword())) {
+            throw new RuntimeException("支付密码未设置，请先设置支付密码");
         }
 
         // 检查是否被锁定
@@ -192,7 +201,8 @@ public class WalletServiceImpl extends ServiceImpl<WalletMapper, Wallet> impleme
             throw new RuntimeException("支付密码已被锁定，请稍后再试");
         }
 
-        boolean isValid = passwordEncoder.matches(payPassword, wallet.getPayPassword());
+        // 系统采用明文密码策略，直接比较字符串
+        boolean isValid = payPassword.equals(wallet.getPayPassword());
 
         if (!isValid) {
             // 增加错误次数
@@ -203,9 +213,11 @@ public class WalletServiceImpl extends ServiceImpl<WalletMapper, Wallet> impleme
             if (errorCount >= 3) {
                 wallet.setPayPasswordLockTime(LocalDateTime.now().plusHours(1));
                 wallet.setPayPasswordErrorCount(0);
+                updateById(wallet);
+                throw new RuntimeException("支付密码错误次数过多，已被锁定1小时");
             }
             updateById(wallet);
-            throw new RuntimeException("支付密码错误");
+            throw new RuntimeException("支付密码错误，还剩" + (3 - errorCount) + "次尝试机会");
         } else {
             // 验证成功，清零错误次数
             if (wallet.getPayPasswordErrorCount() != null && wallet.getPayPasswordErrorCount() > 0) {
@@ -228,38 +240,33 @@ public class WalletServiceImpl extends ServiceImpl<WalletMapper, Wallet> impleme
     @Override
     @Transactional
     public boolean virtualRecharge(Long userId, WalletRechargeDTO rechargeDTO) {
+        // 先检查钱包是否存在
+        Wallet wallet = getByUserId(userId);
+        if (wallet == null) {
+            throw new RuntimeException("钱包不存在，请先开通钱包服务");
+        }
+
+        // 检查钱包状态
+        if (wallet.getStatus() == 0) {
+            throw new RuntimeException("钱包已被冻结，无法进行充值操作");
+        }
+
         // 验证支付密码
         verifyPayPassword(userId, rechargeDTO.getPayPassword());
 
-        // 获取或创建钱包
-        Wallet wallet = getByUserId(userId);
-        BigDecimal beforeBalance = wallet != null ? wallet.getBalance() : BigDecimal.ZERO;
+        BigDecimal beforeBalance = wallet.getBalance();
         BigDecimal afterBalance = beforeBalance.add(rechargeDTO.getAmount());
 
         // 检查余额上限
         if (afterBalance.compareTo(new BigDecimal("100000")) > 0) {
-            throw new RuntimeException("钱包余额不能超过100000元");
+            throw new RuntimeException("充值后余额将超过100000元上限");
         }
 
-        if (wallet == null) {
-            // 创建新钱包
-            wallet = new Wallet();
-            wallet.setUserId(userId);
-            wallet.setBalance(afterBalance);
-            wallet.setTotalRecharge(rechargeDTO.getAmount());
-            wallet.setTotalConsume(BigDecimal.ZERO);
-            wallet.setStatus(1);
-            wallet.setVersion(0);
-            wallet.setCreateTime(LocalDateTime.now());
-            wallet.setUpdateTime(LocalDateTime.now());
-            save(wallet);
-        } else {
-            // 更新现有钱包
-            wallet.setBalance(afterBalance);
-            wallet.setTotalRecharge(wallet.getTotalRecharge().add(rechargeDTO.getAmount()));
-            wallet.setUpdateTime(LocalDateTime.now());
-            updateById(wallet);
-        }
+        // 更新钱包
+        wallet.setBalance(afterBalance);
+        wallet.setTotalRecharge(wallet.getTotalRecharge().add(rechargeDTO.getAmount()));
+        wallet.setUpdateTime(LocalDateTime.now());
+        updateById(wallet);
 
         // 创建交易记录
         WalletTransaction transaction = new WalletTransaction();
@@ -491,6 +498,35 @@ public class WalletServiceImpl extends ServiceImpl<WalletMapper, Wallet> impleme
         boolean result = updateById(wallet);
         if (result) {
             log.info("解冻钱包成功, 钱包ID: {}", id);
+        }
+
+        return result;
+    }
+
+    /**
+     * 重置支付密码
+     *
+     * @param id 钱包ID
+     * @return 结果
+     */
+    @Override
+    public boolean resetPayPassword(Long id) {
+        Wallet wallet = getById(id);
+        if (wallet == null) {
+            throw new RuntimeException("钱包不存在");
+        }
+
+        // 重置支付密码为null，表示需要重新设置
+        wallet.setPayPassword(null);
+        // 设置密码状态为未设置
+        wallet.setPasswordStatus(0);
+        wallet.setPayPasswordErrorCount(0);
+        wallet.setPayPasswordLockTime(null);
+        wallet.setUpdateTime(LocalDateTime.now());
+
+        boolean result = updateById(wallet);
+        if (result) {
+            log.info("重置支付密码成功, 钱包ID: {}", id);
         }
 
         return result;

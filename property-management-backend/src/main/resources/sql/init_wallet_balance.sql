@@ -1,7 +1,7 @@
 -- 初始化业主钱包，每个业主初始余额10000元
 -- 为所有用户类型为3（业主）的用户创建钱包
 
-INSERT INTO wallet (user_id, balance, total_recharge, total_consume, status, version, create_time, update_time)
+INSERT INTO wallet (user_id, balance, total_recharge, total_consume, status, version, create_time, update_time, password_status)
 SELECT
     id as user_id,
     10000.00 as balance,
@@ -10,7 +10,8 @@ SELECT
     1 as status,
     0 as version,
     NOW() as create_time,
-    NOW() as update_time
+    NOW() as update_time,
+    0 as password_status  -- 初始状态：未设置支付密码
 FROM sys_user
 WHERE user_type = 3
 AND deleted = 0

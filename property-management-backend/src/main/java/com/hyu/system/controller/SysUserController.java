@@ -7,6 +7,7 @@ import com.hyu.common.utils.SecurityUtils;
 import com.hyu.common.utils.StringUtils;
 import com.hyu.system.domain.SysUser;
 import com.hyu.system.service.ISysUserService;
+import com.hyu.property.service.IWalletService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -27,6 +28,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.apache.poi.xssf.streaming.SXSSFSheet;
 import org.apache.poi.xssf.streaming.SXSSFRow;
+import java.math.BigDecimal;
 
 /**
  * 用户信息控制器
@@ -41,6 +43,9 @@ public class SysUserController {
 
     @Autowired
     private ISysUserService userService;
+
+    @Autowired
+    private IWalletService walletService;
 
     /**
      * 分页查询用户列表
@@ -116,7 +121,24 @@ public class SysUserController {
         }
 
         user.setCreateBy(SecurityUtils.getUsername());
-        return toAjax(userService.save(user));
+        boolean result = userService.save(user);
+
+        if (result) {
+            // 为新用户创建钱包记录
+            try {
+                boolean walletCreated = walletService.createWallet(user.getUserId(), BigDecimal.ZERO);
+                if (walletCreated) {
+                    log.info("为用户 {} 成功创建钱包记录", user.getUserId());
+                } else {
+                    log.warn("为用户 {} 创建钱包记录失败，可能钱包已存在", user.getUserId());
+                }
+            } catch (Exception e) {
+                log.error("为用户 {} 创建钱包记录时发生错误", user.getUserId(), e);
+                // 不影响用户创建结果，只记录错误
+            }
+        }
+
+        return toAjax(result);
     }
 
     /**

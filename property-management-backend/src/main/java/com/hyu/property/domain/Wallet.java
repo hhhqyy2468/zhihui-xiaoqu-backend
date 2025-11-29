@@ -105,4 +105,11 @@ public class Wallet implements Serializable {
      */
     @TableField(exist = false)
     private String userPhone;
-}
+
+    /**
+     * 支付密码状态：0-未设置，1-已设置
+     */
+    @TableField("password_status")
+    private Integer passwordStatus;
+
+    }

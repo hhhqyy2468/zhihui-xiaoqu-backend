@@ -362,4 +362,241 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill> implements IB
         long timestamp = System.currentTimeMillis();
         return "TXN" + date + timestamp;
     }
+
+    // ==================== 业主端API实现 ====================
+
+    /**
+     * 分页查询我的账单列表
+     */
+    @Override
+    public Page<Bill> selectMyBillPage(Page<Bill> page, Long userId, String billNo, Long feeTypeId, Integer billStatus, String billPeriod) {
+        try {
+            LambdaQueryWrapper<Bill> queryWrapper = new LambdaQueryWrapper<>();
+            queryWrapper.eq(Bill::getUserId, userId)
+                       .eq(Bill::getDeleted, 0)
+                       .like(StringUtils.isNotBlank(billNo), Bill::getBillNo, billNo)
+                       .eq(feeTypeId != null, Bill::getFeeTypeId, feeTypeId)
+                       .eq(billStatus != null, Bill::getBillStatus, billStatus)
+                       .eq(StringUtils.isNotBlank(billPeriod), Bill::getBillPeriod, billPeriod)
+                       .orderByDesc(Bill::getCreateTime);
+
+            Page<Bill> result = page(page, queryWrapper);
+            log.debug("查询我的账单列表，用户ID: {}, 查询到{}条记录", userId, result.getTotal());
+            return result;
+        } catch (Exception e) {
+            log.error("查询我的账单列表失败，用户ID: {}", userId, e);
+            return new Page<>();
+        }
+    }
+
+    /**
+     * 根据账单ID查询我的账单详情
+     */
+    @Override
+    public Bill selectMyBillById(Long billId, Long userId) {
+        try {
+            LambdaQueryWrapper<Bill> queryWrapper = new LambdaQueryWrapper<>();
+            queryWrapper.eq(Bill::getBillId, billId)
+                       .eq(Bill::getUserId, userId)
+                       .eq(Bill::getDeleted, 0);
+
+            Bill bill = getOne(queryWrapper);
+            if (bill == null) {
+                log.warn("未找到账单，账单ID: {}, 用户ID: {}", billId, userId);
+            }
+            return bill;
+        } catch (Exception e) {
+            log.error("查询我的账单详情失败，账单ID: {}, 用户ID: {}", billId, userId, e);
+            return null;
+        }
+    }
+
+    /**
+     * 在线缴费
+     */
+    @Override
+    public Map<String, Object> payBill(Long billId, Long userId, String paymentMethod, String payPassword) {
+        try {
+            // 查询账单
+            Bill bill = selectMyBillById(billId, userId);
+            if (bill == null) {
+                Map<String, Object> result = new HashMap<>();
+                result.put("code", 404);
+                result.put("msg", "账单不存在或无权限访问");
+                return result;
+            }
+
+            // 检查账单状态
+            if (bill.getBillStatus().equals(2)) {
+                Map<String, Object> result = new HashMap<>();
+                result.put("code", 400);
+                result.put("msg", "账单已缴费");
+                return result;
+            }
+
+            if (bill.getBillStatus().equals(4)) {
+                Map<String, Object> result = new HashMap<>();
+                result.put("code", 400);
+                result.put("msg", "账单已作废");
+                return result;
+            }
+
+            // 检查缴费方式
+            if ("wallet".equals(paymentMethod)) {
+                // 验证钱包支付密码
+                if (StringUtils.isBlank(payPassword)) {
+                    Map<String, Object> result = new HashMap<>();
+                    result.put("code", 400);
+                    result.put("msg", "请输入支付密码");
+                    return result;
+                }
+
+                // 调用钱包服务验证密码并扣款
+                // 这里需要调用WalletService的方法
+                // TODO: 实现钱包支付逻辑
+                log.info("用户{}使用钱包支付账单{}, 金额: {}", userId, billId, bill.getAmount());
+            }
+
+            // 更新账单状态
+            bill.setBillStatus(2); // 已缴费
+            bill.setPaidAmount(bill.getAmount()); // 实缴金额等于应缴金额
+            // 将支付方式字符串转换为数字
+            Integer payMethodInt = 1; // 默认现金
+            if ("bank".equals(paymentMethod)) {
+                payMethodInt = 2; // 银行转账
+            } else if ("wechat".equals(paymentMethod) || "alipay".equals(paymentMethod)) {
+                payMethodInt = 3; // 在线支付
+            } else if ("wallet".equals(paymentMethod)) {
+                payMethodInt = 4; // 钱包支付
+            }
+            bill.setPayMethod(payMethodInt);
+            bill.setPaidTime(new java.util.Date());
+            bill.setUpdateTime(new java.util.Date());
+
+            boolean result = updateById(bill);
+            if (result) {
+                log.info("账单缴费成功，账单ID: {}, 用户ID: {}, 支付方式: {}", billId, userId, paymentMethod);
+                Map<String, Object> response = new HashMap<>();
+                response.put("code", 200);
+                response.put("msg", "缴费成功");
+                response.put("data", bill);
+                return response;
+            } else {
+                Map<String, Object> response = new HashMap<>();
+                response.put("code", 500);
+                response.put("msg", "缴费失败");
+                return response;
+            }
+
+        } catch (Exception e) {
+            log.error("在线缴费失败，账单ID: {}, 用户ID: {}", billId, userId, e);
+            Map<String, Object> result = new HashMap<>();
+            result.put("code", 500);
+            result.put("msg", "系统异常，缴费失败");
+            return result;
+        }
+    }
+
+    /**
+     * 批量在线缴费
+     */
+    @Override
+    public Map<String, Object> batchPayBills(Long[] billIds, Long userId, String paymentMethod, String payPassword) {
+        try {
+            if (billIds == null || billIds.length == 0) {
+                Map<String, Object> result = new HashMap<>();
+                result.put("code", 400);
+                result.put("msg", "请选择要缴费的账单");
+                return result;
+            }
+
+            // 查询所有账单
+            List<Bill> bills = selectBillByIds(billIds);
+            List<Bill> validBills = new ArrayList<>();
+
+            // 验证账单
+            for (Bill bill : bills) {
+                if (bill.getUserId().equals(userId) && bill.getBillStatus().equals(1)) {
+                    validBills.add(bill);
+                }
+            }
+
+            if (validBills.isEmpty()) {
+                Map<String, Object> result = new HashMap<>();
+                result.put("code", 400);
+                result.put("msg", "没有可缴费的账单");
+                return result;
+            }
+
+            // 检查缴费方式
+            if ("wallet".equals(paymentMethod)) {
+                // 验证钱包支付密码
+                if (StringUtils.isBlank(payPassword)) {
+                    Map<String, Object> result = new HashMap<>();
+                    result.put("code", 400);
+                    result.put("msg", "请输入支付密码");
+                    return result;
+                }
+
+                // 计算总金额
+                BigDecimal totalAmount = validBills.stream()
+                        .map(Bill::getAmount)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                // 调用钱包服务验证密码并扣款
+                // TODO: 实现钱包支付逻辑
+                log.info("用户{}使用钱包批量支付{}个账单，总金额: {}", userId, validBills.size(), totalAmount);
+            }
+
+            // 批量更新账单状态
+            int successCount = 0;
+            for (Bill bill : validBills) {
+                bill.setBillStatus(2); // 已缴费
+                bill.setPaidAmount(bill.getAmount()); // 实缴金额等于应缴金额
+                // 将支付方式字符串转换为数字
+                Integer payMethodInt = 1; // 默认现金
+                if ("bank".equals(paymentMethod)) {
+                    payMethodInt = 2; // 银行转账
+                } else if ("wechat".equals(paymentMethod) || "alipay".equals(paymentMethod)) {
+                    payMethodInt = 3; // 在线支付
+                } else if ("wallet".equals(paymentMethod)) {
+                    payMethodInt = 4; // 钱包支付
+                }
+                bill.setPayMethod(payMethodInt);
+                bill.setPaidTime(new java.util.Date());
+                bill.setUpdateTime(new java.util.Date());
+
+                if (updateById(bill)) {
+                    successCount++;
+                }
+            }
+
+            if (successCount > 0) {
+                log.info("批量缴费完成，成功{}个，失败{}个", successCount, validBills.size() - successCount);
+                Map<String, Object> response = new HashMap<>();
+                response.put("code", 200);
+                response.put("msg", "批量缴费成功");
+
+                Map<String, Object> data = new HashMap<>();
+                data.put("totalCount", validBills.size());
+                data.put("successCount", successCount);
+                data.put("failCount", validBills.size() - successCount);
+
+                response.put("data", data);
+                return response;
+            } else {
+                Map<String, Object> response = new HashMap<>();
+                response.put("code", 500);
+                response.put("msg", "批量缴费失败");
+                return response;
+            }
+
+        } catch (Exception e) {
+            log.error("批量缴费失败，用户ID: {}", userId, e);
+            Map<String, Object> result = new HashMap<>();
+            result.put("code", 500);
+            result.put("msg", "系统异常，批量缴费失败");
+            return result;
+        }
+    }
 }
