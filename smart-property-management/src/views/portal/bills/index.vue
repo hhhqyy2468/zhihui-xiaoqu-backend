@@ -401,7 +401,7 @@ const batchPayLoading = ref(false)
 
 const tableRef = ref()
 const currentBill = ref(null)
-const payBill = ref(null)
+const selectedBill = ref(null)
 const selectedBills = ref([])
 
 // 概览数据
@@ -643,7 +643,7 @@ const handleViewDetail = async (row) => {
 
 // 缴费
 const handlePay = (row) => {
-  payBill.value = { ...row }
+  selectedBill.value = { ...row }
   payDialogVisible.value = true
 }
 
@@ -667,7 +667,7 @@ const handleSubmitPay = async () => {
 
   try {
     const response = await payBill({
-      billId: payBill.value.billId,
+      billId: selectedBill.value.billId,
       paymentMethod: payForm.paymentMethod,
       payPassword: payForm.password
     })
