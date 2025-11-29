@@ -130,7 +130,7 @@ export function getMyBillDetail(billId) {
 // 在线缴费（业主端）
 export function payBill(data) {
   return request({
-    url: '/property/bill/pay',
+    url: '/property/bill/owner/pay',
     method: 'post',
     data
   })
@@ -139,7 +139,7 @@ export function payBill(data) {
 // 批量缴费（业主端）
 export function batchPayBills(data) {
   return request({
-    url: '/property/bill/pay/batch',
+    url: '/property/bill/owner/pay/batch',
     method: 'post',
     data
   })

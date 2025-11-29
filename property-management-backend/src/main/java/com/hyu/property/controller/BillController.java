@@ -296,7 +296,7 @@ public class BillController {
     /**
      * 在线缴费（业主端）
      */
-    @PostMapping("/pay")
+    @PostMapping("/owner/pay")
     public AjaxResult payBill(@RequestBody Map<String, Object> params) {
         log.info("在线缴费, params: {}", params);
 
@@ -323,7 +323,7 @@ public class BillController {
     /**
      * 批量缴费（业主端）
      */
-    @PostMapping("/pay/batch")
+    @PostMapping("/owner/pay/batch")
     public AjaxResult batchPayBills(@RequestBody Map<String, Object> params) {
         log.info("批量缴费, params: {}", params);
 
