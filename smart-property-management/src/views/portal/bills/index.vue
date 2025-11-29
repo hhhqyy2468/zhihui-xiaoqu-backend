@@ -350,6 +350,15 @@
               <el-radio value="alipay">支付宝</el-radio>
             </el-radio-group>
           </el-form-item>
+          <el-form-item v-if="batchPayForm.paymentMethod === 'wallet'" label="支付密码">
+            <el-input
+              v-model="batchPayForm.payPassword"
+              type="password"
+              placeholder="请输入6位支付密码"
+              maxlength="6"
+              show-password
+            />
+          </el-form-item>
         </el-form>
       </div>
 
@@ -380,6 +389,7 @@ import {
   Document,
   Clock
 } from '@element-plus/icons-vue'
+import { getMyBillList, getMyBillDetail, payBill, batchPayBills } from '@/api/bill'
 
 // 响应式数据
 const loading = ref(false)
@@ -427,13 +437,29 @@ const payForm = reactive({
 
 // 批量缴费表单
 const batchPayForm = reactive({
-  paymentMethod: 'wallet'
+  paymentMethod: 'wallet',
+  payPassword: ''
 })
 
 // 计算总金额
 const totalAmount = computed(() => {
   return selectedBills.value.reduce((sum, bill) => sum + bill.amount, 0)
 })
+
+// 更新概览数据
+const updateOverviewData = () => {
+  const bills = billsData.value || []
+  const unpaidBills = bills.filter(bill => bill.billStatus === 1)
+  const paidBills = bills.filter(bill => bill.billStatus === 2)
+  const overdueBills = bills.filter(bill => bill.billStatus === 3)
+
+  overviewData.value = {
+    unpaidAmount: unpaidBills.reduce((sum, bill) => sum + bill.amount, 0),
+    paidAmount: paidBills.reduce((sum, bill) => sum + bill.amount, 0),
+    totalBills: bills.length,
+    overdueCount: overdueBills.length
+  }
+}
 
 // 获取模拟数据
 const getMockBills = () => {
@@ -537,14 +563,32 @@ const getStatusTag = (status) => {
 const fetchData = async () => {
   loading.value = true
   try {
-    // 模拟API请求
-    setTimeout(() => {
-      billsData.value = getMockBills()
-      loading.value = false
-    }, 500)
+    // 调用真实的API
+    const params = {
+      page: pagination.current,
+      size: pagination.pageSize,
+      billNo: filterForm.billNo || undefined,
+      feeTypeId: filterForm.billType || undefined,
+      billStatus: filterForm.status || undefined,
+      billPeriod: filterForm.dateRange && filterForm.dateRange.length === 2 ?
+        `${new Date(filterForm.dateRange[0]).getFullYear()}-${String(new Date(filterForm.dateRange[0]).getMonth() + 1).padStart(2, '0')}` : undefined
+    }
+
+    const response = await getMyBillList(params)
+    if (response.code === 200) {
+      billsData.value = response.data.records || []
+      pagination.total = response.data.total || 0
+
+      // 更新概览数据
+      updateOverviewData()
+    } else {
+      ElMessage.error(response.msg || '获取账单数据失败')
+    }
   } catch (error) {
+    console.error('获取账单数据失败:', error)
+    ElMessage.error('获取账单数据失败')
+  } finally {
     loading.value = false
-    ElMessage.error('获取数据失败')
   }
 }
 
@@ -582,9 +626,19 @@ const handleCurrentChange = (page) => {
 }
 
 // 查看详情
-const handleViewDetail = (row) => {
-  currentBill.value = { ...row }
-  detailDialogVisible.value = true
+const handleViewDetail = async (row) => {
+  try {
+    const response = await getMyBillDetail(row.billId)
+    if (response.code === 200) {
+      currentBill.value = response.data
+      detailDialogVisible.value = true
+    } else {
+      ElMessage.error(response.msg || '获取账单详情失败')
+    }
+  } catch (error) {
+    console.error('获取账单详情失败:', error)
+    ElMessage.error('获取账单详情失败')
+  }
 }
 
 // 缴费
@@ -612,35 +666,59 @@ const handleSubmitPay = async () => {
   payLoading.value = true
 
   try {
-    // 模拟API请求
-    setTimeout(() => {
+    const response = await payBill({
+      billId: payBill.value.billId,
+      paymentMethod: payForm.paymentMethod,
+      payPassword: payForm.password
+    })
+
+    if (response.code === 200) {
       ElMessage.success('缴费成功')
       payDialogVisible.value = false
       payLoading.value = false
-      fetchData()
-    }, 2000)
+      fetchData() // 刷新列表
+    } else {
+      ElMessage.error(response.msg || '缴费失败')
+      payLoading.value = false
+    }
   } catch (error) {
-    payLoading.value = false
+    console.error('缴费失败:', error)
     ElMessage.error('缴费失败')
+    payLoading.value = false
   }
 }
 
 // 提交批量缴费
 const handleSubmitBatchPay = async () => {
+  if (batchPayForm.paymentMethod === 'wallet' && !batchPayForm.payPassword) {
+    ElMessage.warning('请输入支付密码')
+    return
+  }
+
   batchPayLoading.value = true
 
   try {
-    // 模拟API请求
-    setTimeout(() => {
+    const billIds = selectedBills.value.map(bill => bill.billId)
+    const response = await batchPayBills({
+      billIds: billIds,
+      paymentMethod: batchPayForm.paymentMethod,
+      payPassword: batchPayForm.payPassword
+    })
+
+    if (response.code === 200) {
       ElMessage.success(`批量缴费成功，共缴费 ${selectedBills.value.length} 笔账单`)
       batchPayDialogVisible.value = false
       batchPayLoading.value = false
       selectedBills.value = []
-      fetchData()
-    }, 2000)
+      fetchData() // 刷新列表
+    } else {
+      ElMessage.error(response.msg || '批量缴费失败')
+      batchPayLoading.value = false
+    }
   } catch (error) {
-    batchPayLoading.value = false
+    console.error('批量缴费失败:', error)
     ElMessage.error('批量缴费失败')
+    batchPayLoading.value = false
   }
 }
 
