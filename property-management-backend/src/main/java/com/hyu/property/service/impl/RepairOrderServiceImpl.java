@@ -357,15 +357,24 @@ public class RepairOrderServiceImpl extends ServiceImpl<RepairOrderMapper, Repai
         repairOrder.setUpdateBy(SecurityUtils.getUsername());
 
         // 验收通过且维修费用大于0时，自动生成账单
+        log.info("开始检查维修账单生成条件: 工单ID={}, 验收结果={}, 维修费用={}",
+            id, repairOrder.getAcceptanceResult(), repairOrder.getRepairCost());
+
         if (repairOrder.getAcceptanceResult() == 1 &&
             repairOrder.getRepairCost() != null &&
             repairOrder.getRepairCost().compareTo(BigDecimal.ZERO) > 0) {
 
+            log.info("维修账单生成条件满足，开始生成账单: 工单ID={}", id);
             Long billId = generateRepairBill(repairOrder);
             if (billId != null) {
                 repairOrder.setBillId(billId);
-                log.info("维修验收通过，已生成账单: 工单ID={}, 账单ID={}", id, billId);
+                log.info("✅ 维修验收通过，已生成账单: 工单ID={}, 账单ID={}", id, billId);
+            } else {
+                log.error("❌ 维修账单生成失败: 工单ID={}, 账单ID=null", id);
             }
+        } else {
+            log.warn("⚠️ 维修账单生成条件不满足: 工单ID={}, 验收结果={}, 维修费用={}",
+                id, repairOrder.getAcceptanceResult(), repairOrder.getRepairCost());
         }
 
         return updateById(repairOrder);
@@ -460,30 +469,44 @@ public class RepairOrderServiceImpl extends ServiceImpl<RepairOrderMapper, Repai
      */
     private Long generateRepairBill(RepairOrder repairOrder) {
         try {
+            log.info("🔧 开始生成维修账单: 工单ID={}, 用户ID={}, 房产ID={}, 维修费用={}",
+                repairOrder.getId(), repairOrder.getUserId(), repairOrder.getHouseId(), repairOrder.getRepairCost());
+
             Bill bill = new Bill();
             // 生成账单编号
             String billNo = "REPAIR_" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss")) +
                           "_" + String.format("%04d", new Random().nextInt(10000));
             bill.setBillNo(billNo);
+            log.info("📝 维修账单编号生成: {}", billNo);
 
             // 设置账单信息
             bill.setUserId(repairOrder.getUserId());
             bill.setHouseId(repairOrder.getHouseId());
             bill.setFeeTypeId(1L); // 使用物业费类型ID作为维修费用（临时解决方案）
-            bill.setBillPeriod(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM")));
+            bill.setBillPeriod("维修-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM")));
             bill.setAmount(repairOrder.getRepairCost());
             bill.setBillStatus(1); // 待缴费
             // 转换LocalDateTime为Date
             bill.setDueDate(java.sql.Timestamp.valueOf(LocalDateTime.now().plusDays(7)));
             bill.setRemark("维修工单：" + repairOrder.getOrderNo());
 
+            log.info("💰 账单信息设置完成: 用户ID={}, 房产ID={}, 费用类型ID={}, 账单金额={}, 账单周期={}",
+                bill.getUserId(), bill.getHouseId(), bill.getFeeTypeId(), bill.getAmount(), bill.getBillPeriod());
+
             // 保存账单
+            log.info("💾 开始保存维修账单到数据库...");
             int result = billService.insertBill(bill);
+            log.info("📊 账单保存结果: {}", result > 0 ? "成功" : "失败");
+
             if (result > 0) {
-                return bill.getBillId();
+                Long billId = bill.getBillId();
+                log.info("✅ 维修账单生成成功: 账单ID={}, 账单编号={}", billId, billNo);
+                return billId;
+            } else {
+                log.error("❌ 维修账单生成失败: 账单保存返回结果={}", result);
             }
         } catch (Exception e) {
-            log.error("生成维修费用账单失败", e);
+            log.error("💥 生成维修费用账单异常: 工单ID={}, 错误信息={}", repairOrder.getId(), e.getMessage(), e);
         }
         return null;
     }
