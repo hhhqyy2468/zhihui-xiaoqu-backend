@@ -136,7 +136,7 @@
     <div class="action-section">
       <el-button
         type="success"
-        :disabled="selectedRows.length === 0"
+        :disabled="!canBatchPay"
         @click="handleBatchPay"
       >
         <el-icon><Money /></el-icon>
@@ -160,7 +160,11 @@
       >
         <el-table-column type="selection" width="55" />
         <el-table-column prop="billNo" label="账单编号" width="160" sortable />
-        <el-table-column prop="feeTypeName" label="费用类型" width="120" />
+        <el-table-column prop="feeTypeName" label="费用类型" width="120">
+          <template #default="{ row }">
+            {{ row.feeTypeName || row.fee_name || '未知费用类型' }}
+          </template>
+        </el-table-column>
         <el-table-column prop="billPeriod" label="账期" width="100" />
         <el-table-column prop="amount" label="应缴金额" width="120" sortable>
           <template #default="{ row }">
@@ -203,12 +207,12 @@
               详情
             </el-button>
             <el-button
-              v-if="row.billStatus !== 2"
+              v-if="canPayBill(row.billStatus)"
               link
               type="success"
               @click="handlePay(row)"
             >
-              缴费
+              {{ row.billStatus === 3 ? '补缴' : '缴费' }}
             </el-button>
           </template>
         </el-table-column>
@@ -394,7 +398,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Document, Money, Warning, Select, Search, Refresh, Download
@@ -406,6 +410,7 @@ import {
   batchPayBills,
   exportBillsToExcel
 } from '@/api/bill'
+import { getAllFeeTypes } from '@/api/feeType'
 import { useUserStore } from '@/stores/user'
 
 // 响应式数据
@@ -431,8 +436,8 @@ const getCurrentUserId = () => {
 // 搜索表单
 const searchForm = reactive({
   billNo: '',
-  feeTypeId: '',
-  billStatus: '',
+  feeTypeId: null,
+  billStatus: null,
   billPeriod: ''
 })
 
@@ -454,20 +459,11 @@ const billStats = ref({
   paidCount: 0
 })
 
-// 选项数据
-const feeTypeOptions = ref([
-  { label: '物业费', value: 1 },
-  { label: '停车费', value: 2 },
-  { label: '垃圾处理费', value: 3 },
-  { label: '电梯费', value: 4 },
-  { label: '公共照明费', value: 5 },
-  { label: '水费', value: 6 },
-  { label: '电费', value: 7 },
-  { label: '维修基金', value: 8 }
-])
+// 选项数据 - 从API动态加载
+const feeTypeOptions = ref([])
 
 const billStatusOptions = ref([
-  { label: '全部', value: '' },
+  { label: '全部', value: null },
   { label: '待缴费', value: 1 },
   { label: '已缴费', value: 2 },
   { label: '部分缴费', value: 0 },
@@ -547,6 +543,19 @@ const isOverdue = (dueDate, status) => {
   return new Date(dueDate) < new Date()
 }
 
+// 判断是否可以缴费
+const canPayBill = (status) => {
+  // 只有待缴费(1)、部分缴费(0)、逾期(3)可以缴费
+  // 已缴费(2)和已作废(4)不能缴费
+  return [0, 1, 3].includes(status)
+}
+
+// 计算属性 - 是否可以批量缴费
+const canBatchPay = computed(() => {
+  if (selectedRows.value.length === 0) return false
+  return selectedRows.value.every(row => canPayBill(row.billStatus))
+})
+
 // 获取总金额
 const getTotalAmount = () => {
   return batchPayForm.bills.reduce((total, bill) => total + bill.amount, 0)
@@ -564,8 +573,11 @@ const loadBills = async () => {
 
     console.log('调用业主账单列表API，参数:', params)
     const response = await getMyBillList(params)
+    console.log('业主账单API完整响应:', response)
     if (response.code === 200) {
       console.log('业主账单API返回数据:', response.data.records)
+      console.log('账单记录数量:', response.data.records?.length)
+      console.log('分页总数:', response.data.total)
       tableData.value = response.data.records || []
       pagination.total = response.data.total || 0
 
@@ -617,8 +629,8 @@ const handleSearch = () => {
 const handleReset = () => {
   Object.assign(searchForm, {
     billNo: '',
-    feeTypeId: '',
-    billStatus: '',
+    feeTypeId: null,
+    billStatus: null,
     billPeriod: ''
   })
   handleSearch()
@@ -785,6 +797,28 @@ const handleCurrentChange = (val) => {
   loadBills()
 }
 
+// 加载费用类型选项
+const loadFeeTypeOptions = async () => {
+  console.log('开始加载费用类型选项...')
+  try {
+    const response = await getAllFeeTypes()
+    console.log('费用类型API响应:', response)
+    if (response.code === 200 && response.data) {
+      feeTypeOptions.value = response.data.map(item => ({
+        label: item.typeName || item.type_name,
+        value: item.id || item.fee_type_id || item.feeTypeId
+      }))
+      console.log('处理后的费用类型选项:', feeTypeOptions.value)
+    } else {
+      console.error('获取费用类型失败:', response.msg)
+      ElMessage.error('获取费用类型失败')
+    }
+  } catch (error) {
+    console.error('加载费用类型失败:', error)
+    ElMessage.error('加载费用类型失败')
+  }
+}
+
 // 初始化
 onMounted(() => {
   try {
@@ -794,7 +828,8 @@ onMounted(() => {
       userStore.getUserInfo()
     }
 
-    // 加载账单数据
+    // 加载费用类型和账单数据
+    loadFeeTypeOptions()
     loadBills()
   } catch (error) {
     console.error('初始化账单页面失败:', error)

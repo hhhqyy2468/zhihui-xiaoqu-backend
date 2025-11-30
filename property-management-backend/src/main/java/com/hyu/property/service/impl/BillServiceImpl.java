@@ -371,18 +371,7 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill> implements IB
     @Override
     public Page<Bill> selectMyBillPage(Page<Bill> page, Long userId, String billNo, Long feeTypeId, Integer billStatus, String billPeriod) {
         try {
-            LambdaQueryWrapper<Bill> queryWrapper = new LambdaQueryWrapper<>();
-            queryWrapper.eq(Bill::getUserId, userId)
-                       .eq(Bill::getDeleted, 0)
-                       .like(StringUtils.isNotBlank(billNo), Bill::getBillNo, billNo)
-                       .eq(feeTypeId != null, Bill::getFeeTypeId, feeTypeId)
-                       .eq(billStatus != null, Bill::getBillStatus, billStatus)
-                       .eq(StringUtils.isNotBlank(billPeriod), Bill::getBillPeriod, billPeriod)
-                       .orderByDesc(Bill::getCreateTime);
-
-            Page<Bill> result = page(page, queryWrapper);
-            log.debug("查询我的账单列表，用户ID: {}, 查询到{}条记录", userId, result.getTotal());
-            return result;
+            return billMapper.selectMyBillPage(page, userId, billNo, feeTypeId, billStatus, billPeriod);
         } catch (Exception e) {
             log.error("查询我的账单列表失败，用户ID: {}", userId, e);
             return new Page<>();
@@ -395,16 +384,7 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill> implements IB
     @Override
     public Bill selectMyBillById(Long billId, Long userId) {
         try {
-            LambdaQueryWrapper<Bill> queryWrapper = new LambdaQueryWrapper<>();
-            queryWrapper.eq(Bill::getBillId, billId)
-                       .eq(Bill::getUserId, userId)
-                       .eq(Bill::getDeleted, 0);
-
-            Bill bill = getOne(queryWrapper);
-            if (bill == null) {
-                log.warn("未找到账单，账单ID: {}, 用户ID: {}", billId, userId);
-            }
-            return bill;
+            return billMapper.selectMyBillById(billId, userId);
         } catch (Exception e) {
             log.error("查询我的账单详情失败，账单ID: {}, 用户ID: {}", billId, userId, e);
             return null;

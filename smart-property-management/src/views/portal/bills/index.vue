@@ -64,17 +64,23 @@
         <el-form :model="filterForm" inline>
           <el-form-item label="账单状态">
             <el-select v-model="filterForm.status" placeholder="全部状态" clearable style="width: 120px">
-              <el-option label="待缴费" :value="0" />
-              <el-option label="已缴费" :value="1" />
-              <el-option label="已逾期" :value="2" />
+              <el-option label="全部" :value="null" />
+              <el-option
+                v-for="item in billStatusOptions"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
             </el-select>
           </el-form-item>
           <el-form-item label="账单类型">
             <el-select v-model="filterForm.billType" placeholder="全部类型" clearable style="width: 120px">
-              <el-option label="物业费" value="property" />
-              <el-option label="停车费" value="parking" />
-              <el-option label="水电费" value="utility" />
-              <el-option label="其他" value="other" />
+              <el-option
+                v-for="item in feeTypeOptions"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
             </el-select>
           </el-form-item>
           <el-form-item label="时间范围">
@@ -127,29 +133,29 @@
           @selection-change="handleSelectionChange"
         >
           <el-table-column type="selection" width="55" />
-          <el-table-column prop="billNo" label="账单编号" width="180" />
-          <el-table-column prop="billType" label="账单类型" width="100">
+          <el-table-column prop="billNo" label="账单编号" width="200" show-overflow-tooltip />
+          <el-table-column prop="feeName" label="账单类型" width="120" show-overflow-tooltip>
             <template #default="{ row }">
-              <el-tag :type="getBillTypeTag(row.billType)">
-                {{ getBillTypeName(row.billType) }}
+              <el-tag :type="getBillTypeTag(row.feeTypeId)">
+                {{ row.feeName || row.feeTypeName || getBillTypeName(row.feeTypeId) }}
               </el-tag>
             </template>
           </el-table-column>
           <el-table-column prop="billPeriod" label="账单周期" width="120" />
-          <el-table-column prop="amount" label="金额" width="120">
+          <el-table-column prop="amount" label="金额" width="130">
             <template #default="{ row }">
               <span class="amount-text">¥{{ row.amount.toLocaleString() }}</span>
             </template>
           </el-table-column>
-          <el-table-column prop="dueDate" label="缴费期限" width="120" />
-          <el-table-column prop="status" label="状态" width="100">
+          <el-table-column prop="dueDate" label="缴费期限" width="130" />
+          <el-table-column prop="billStatus" label="状态" width="110">
             <template #default="{ row }">
-              <el-tag :type="getStatusTag(row.status)">
-                {{ getStatusName(row.status) }}
+              <el-tag :type="getStatusTag(row.billStatus)">
+                {{ getStatusName(row.billStatus) }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="createTime" label="创建时间" width="180" />
+          <el-table-column prop="createTime" label="创建时间" width="190" show-overflow-tooltip />
           <el-table-column label="操作" width="200" fixed="right">
             <template #default="{ row }">
               <el-button
@@ -160,7 +166,7 @@
                 详情
               </el-button>
               <el-button
-                v-if="row.status === 0 || row.status === 2"
+                v-if="row.billStatus === 1 || row.billStatus === 0"
                 link
                 type="success"
                 @click="handlePay(row)"
@@ -204,8 +210,8 @@
             {{ currentBill.billNo }}
           </el-descriptions-item>
           <el-descriptions-item label="账单类型">
-            <el-tag :type="getBillTypeTag(currentBill.billType)">
-              {{ getBillTypeName(currentBill.billType) }}
+            <el-tag :type="getBillTypeTag(currentBill.feeTypeId)">
+              {{ currentBill.feeName || currentBill.feeTypeName || getBillTypeName(currentBill.feeTypeId) }}
             </el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="账单周期">
@@ -218,8 +224,8 @@
             <span class="amount-text">¥{{ currentBill.amount.toLocaleString() }}</span>
           </el-descriptions-item>
           <el-descriptions-item label="账单状态">
-            <el-tag :type="getStatusTag(currentBill.status)">
-              {{ getStatusName(currentBill.status) }}
+            <el-tag :type="getStatusTag(currentBill.billStatus)">
+              {{ getStatusName(currentBill.billStatus) }}
             </el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="创建时间" :span="2">
@@ -247,7 +253,7 @@
 
         <div class="bill-actions">
           <el-button
-            v-if="currentBill.status === 0 || currentBill.status === 2"
+            v-if="currentBill.billStatus === 1 || currentBill.billStatus === 0"
             type="primary"
             @click="handlePay(currentBill)"
           >
@@ -390,6 +396,8 @@ import {
   Clock
 } from '@element-plus/icons-vue'
 import { getMyBillList, getMyBillDetail, payBill, batchPayBills } from '@/api/bill'
+import { getAllFeeTypes } from '@/api/feeType'
+import { getDictDataByType } from '@/api/dict'
 
 // 响应式数据
 const loading = ref(false)
@@ -412,10 +420,71 @@ const overviewData = ref({
   overdueCount: 2
 })
 
+// 费用类型选项 - 从API动态加载
+const feeTypeOptions = ref([])
+// 账单状态选项 - 从字典API动态加载
+const billStatusOptions = ref([])
+
+// 加载费用类型选项
+const loadFeeTypeOptions = async () => {
+  console.log('Portal页面 - 开始加载费用类型选项...')
+  try {
+    const response = await getAllFeeTypes()
+    console.log('Portal页面 - 费用类型API响应:', response)
+    if (response.code === 200 && response.data) {
+      feeTypeOptions.value = response.data.map(item => ({
+        label: item.typeName || item.type_name || item.feeName,
+        value: item.id || item.fee_type_id || item.feeTypeId
+      }))
+      console.log('Portal页面 - 处理后的费用类型选项:', feeTypeOptions.value)
+    } else {
+      console.error('Portal页面 - 获取费用类型失败:', response.msg)
+      ElMessage.error('获取费用类型失败')
+    }
+  } catch (error) {
+    console.error('Portal页面 - 加载费用类型失败:', error)
+    ElMessage.error('加载费用类型失败')
+  }
+}
+
+// 加载账单状态字典数据
+const loadBillStatusOptions = async () => {
+  console.log('Portal页面 - 开始加载账单状态选项...')
+  try {
+    const response = await getDictDataByType('bill_status')
+    console.log('Portal页面 - 账单状态API响应:', response)
+    if (response.code === 200 && response.data) {
+      billStatusOptions.value = response.data
+        .filter(item => item.status === 1 || item.status === '1' || item.status === true)
+        .map(item => ({
+          label: item.dictLabel,
+          value: parseInt(item.dictValue)
+        }))
+      console.log('Portal页面 - 处理后的账单状态选项:', billStatusOptions.value)
+    } else {
+      console.error('Portal页面 - 获取账单状态失败:', response.msg)
+      // 使用备用数据
+      billStatusOptions.value = [
+        { label: '待缴费', value: 1 },
+        { label: '已缴费', value: 2 },
+        { label: '部分缴费', value: 0 }
+      ]
+    }
+  } catch (error) {
+    console.error('Portal页面 - 加载账单状态失败:', error)
+    // 使用备用数据
+    billStatusOptions.value = [
+      { label: '待缴费', value: 1 },
+      { label: '已缴费', value: 2 },
+      { label: '部分缴费', value: 0 }
+    ]
+  }
+}
+
 // 筛选表单
 const filterForm = reactive({
-  status: '',
-  billType: '',
+  status: null,
+  billType: null,
   dateRange: []
 })
 
@@ -541,20 +610,19 @@ const getBillTypeTag = (type) => {
 
 // 获取状态名称
 const getStatusName = (status) => {
-  const statusMap = {
-    0: '待缴费',
-    1: '已缴费',
-    2: '已逾期'
-  }
-  return statusMap[status] || '未知'
+  const statusOption = billStatusOptions.value.find(item => item.value === status)
+  return statusOption ? statusOption.label : '未知'
 }
 
 // 获取状态标签
 const getStatusTag = (status) => {
   const tagMap = {
-    0: 'warning', // 待缴费
-    1: 'success', // 已缴费
-    2: 'danger'   // 已逾期
+    0: 'warning',  // 部分缴费
+    1: 'danger',    // 待缴费
+    2: 'success',   // 已缴费
+    3: 'info',      // 已超期
+    4: 'info',      // 已作废
+    5: 'info'       // 已作废
   }
   return tagMap[status] || 'info'
 }
@@ -734,6 +802,9 @@ const handleExport = () => {
 
 // 组件挂载
 onMounted(() => {
+  // 先加载费用类型和账单状态，再加载数据
+  loadFeeTypeOptions()
+  loadBillStatusOptions()
   fetchData()
 })
 </script>

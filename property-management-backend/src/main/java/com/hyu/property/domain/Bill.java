@@ -113,11 +113,11 @@ public class Bill implements Serializable {
     private BigDecimal paidAmount;
 
     /**
-     * 账单状态 1:待缴费 2:已缴费 3:已超期
+     * 账单状态 0:部分缴费 1:待缴费 2:已缴费 3:已超期 4:已作废 5:已作废
      */
     @NotNull(message = "账单状态不能为空")
-    @Min(value = 1, message = "账单状态值无效")
-    @Max(value = 3, message = "账单状态值无效")
+    @Min(value = 0, message = "账单状态值无效")
+    @Max(value = 5, message = "账单状态值无效")
     @TableField("bill_status")
     private Integer billStatus;
 

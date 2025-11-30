@@ -271,4 +271,25 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         values (#{ownerId}, #{billId}, #{amount}, #{description}, #{transactionNo}, now())
     </insert>
 
+    <!-- ==================== 业主端API ==================== -->
+
+    <!-- 分页查询我的账单列表 -->
+    <select id="selectMyBillPage" resultMap="BillResult">
+        <include refid="selectBillVo"/>
+        <where>
+            b.deleted = 0 and b.user_id = #{userId}
+            <if test="billNo != null and billNo != ''"> and b.bill_no like concat('%', #{billNo}, '%')</if>
+            <if test="feeTypeId != null"> and b.fee_type_id = #{feeTypeId}</if>
+            <if test="billStatus != null"> and b.bill_status = #{billStatus}</if>
+            <if test="billPeriod != null and billPeriod != ''"> and b.billing_period = #{billPeriod}</if>
+        </where>
+        order by b.create_time desc
+    </select>
+
+    <!-- 根据账单ID查询我的账单详情 -->
+    <select id="selectMyBillById" resultMap="BillResult">
+        <include refid="selectBillVo"/>
+        where b.id = #{billId} and b.user_id = #{userId} and b.deleted = 0
+    </select>
+
 </mapper>
