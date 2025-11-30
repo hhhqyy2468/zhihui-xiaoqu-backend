@@ -399,6 +399,23 @@ public class RepairOrderServiceImpl extends ServiceImpl<RepairOrderMapper, Repai
         repairOrder.setComment((String) params.get("comment"));
         repairOrder.setRatingTime(LocalDateTime.now());
         repairOrder.setOrderStatus(5); // 状态改为已完成
+
+        // 业主评价时同时生成维修账单（跳过物业验收）
+        if (repairOrder.getRepairCost() != null &&
+            repairOrder.getRepairCost().compareTo(BigDecimal.ZERO) > 0 &&
+            repairOrder.getBillId() == null) { // 避免重复生成
+
+            log.info("🔧 业主评价维修工单，开始生成维修账单: 工单ID={}, 维修费用={}", id, repairOrder.getRepairCost());
+
+            Long billId = generateRepairBill(repairOrder);
+            if (billId != null) {
+                repairOrder.setBillId(billId);
+                log.info("✅ 业主评价维修工单，维修账单生成成功: 工单ID={}, 账单ID={}", id, billId);
+            } else {
+                log.error("❌ 业主评价维修工单，维修账单生成失败: 工单ID={}", id);
+            }
+        }
+
         repairOrder.setUpdateBy(SecurityUtils.getUsername());
 
         return updateById(repairOrder);
