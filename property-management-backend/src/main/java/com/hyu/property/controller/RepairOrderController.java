@@ -161,6 +161,10 @@ public class RepairOrderController {
             return AjaxResult.error("新增维修工单'" + repairOrder.getOrderNo() + "'失败，工单编号已存在");
         }
         repairOrder.setCreateBy(SecurityUtils.getUsername());
+        // 设置工单初始状态为 1-待派工
+        if (repairOrder.getOrderStatus() == null) {
+            repairOrder.setOrderStatus(1);
+        }
         return toAjax(repairOrderService.save(repairOrder));
     }
 
@@ -350,7 +354,7 @@ public class RepairOrderController {
         repairOrder.setOrderNo(orderNo);
 
         // 设置初始状态为待派工
-        repairOrder.setOrderStatus(0);
+        repairOrder.setOrderStatus(1);
 
         // 验证工单编号唯一性
         if (!repairOrderService.checkOrderNoUnique(repairOrder)) {
