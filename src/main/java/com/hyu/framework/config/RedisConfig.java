@@ -26,8 +26,19 @@ public class RedisConfig {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
 
-        // 使用GenericJackson2JsonRedisSerializer来序列化和反序列化redis的value值
-        GenericJackson2JsonRedisSerializer jackson2JsonRedisSerializer = new GenericJackson2JsonRedisSerializer();
+        // 创建Redis专用的ObjectMapper
+        ObjectMapper redisObjectMapper = new ObjectMapper();
+        redisObjectMapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
+        redisObjectMapper.activateDefaultTyping(
+            LaissezFaireSubTypeValidator.instance,
+            ObjectMapper.DefaultTyping.NON_FINAL,
+            JsonTypeInfo.As.PROPERTY
+        );
+        redisObjectMapper.registerModule(new JavaTimeModule());
+
+        // 使用自定义ObjectMapper的GenericJackson2JsonRedisSerializer
+        GenericJackson2JsonRedisSerializer jackson2JsonRedisSerializer =
+            new GenericJackson2JsonRedisSerializer(redisObjectMapper);
 
         // 使用StringRedisSerializer来序列化和反序列化redis的key值
         StringRedisSerializer stringRedisSerializer = new StringRedisSerializer();
@@ -43,19 +54,4 @@ public class RedisConfig {
         return template;
     }
 
-    /**
-     * 自定义ObjectMapper（如果需要特殊配置）
-     */
-    @Bean
-    public ObjectMapper objectMapper() {
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
-        objectMapper.activateDefaultTyping(
-            LaissezFaireSubTypeValidator.instance,
-            ObjectMapper.DefaultTyping.NON_FINAL,
-            JsonTypeInfo.As.PROPERTY
-        );
-        objectMapper.registerModule(new JavaTimeModule());
-        return objectMapper;
-    }
-}
+  }

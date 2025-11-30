@@ -20,8 +20,8 @@ public class SysDictType implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    @TableId(value = "dict_id", type = IdType.AUTO)
-    private Long dictId;
+    @TableId(value = "id", type = IdType.AUTO)
+    private Long id;
 
     /**
      * 字典名称

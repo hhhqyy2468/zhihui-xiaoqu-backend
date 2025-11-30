@@ -24,6 +24,12 @@ public class PermissionService {
         if (StringUtils.isEmpty(permission)) {
             return false;
         }
+
+        // 系统管理员拥有所有权限
+        if (SecurityUtils.isAdmin()) {
+            return true;
+        }
+
         Set<String> permissions = SecurityUtils.getLoginUser().getPermissions();
         if (StringUtils.isEmpty(permissions)) {
             return false;
@@ -85,7 +91,6 @@ public class PermissionService {
      * @return 用户是否为管理员
      */
     public boolean isAdmin() {
-        Long userId = SecurityUtils.getUserId();
-        return userId != null && 1L == userId;
+        return SecurityUtils.isAdmin();
     }
 }

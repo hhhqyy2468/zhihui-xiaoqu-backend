@@ -16,7 +16,7 @@ import java.util.Date;
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-@TableName("property_bill")
+@TableName("bill")
 public class Bill implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -24,7 +24,7 @@ public class Bill implements Serializable {
     /**
      * 账单ID
      */
-    @TableId(value = "bill_id", type = IdType.AUTO)
+    @TableId(value = "id", type = IdType.AUTO)
     private Long billId;
 
     /**
@@ -36,11 +36,11 @@ public class Bill implements Serializable {
     private String billNo;
 
     /**
-     * 业主ID
+     * 用户ID
      */
-    @NotNull(message = "业主ID不能为空")
-    @TableField("owner_id")
-    private Long ownerId;
+    @NotNull(message = "用户ID不能为空")
+    @TableField("user_id")
+    private Long userId;
 
     /**
      * 业主姓名
@@ -91,15 +91,10 @@ public class Bill implements Serializable {
      */
     @NotBlank(message = "账期不能为空")
     @Pattern(regexp = "^\\d{4}-\\d{2}$", message = "账期格式不正确，应为yyyy-MM")
-    @TableField("bill_period")
+    @TableField("billing_period")
     private String billPeriod;
 
-    /**
-     * 计费周期
-     */
-    @TableField("billing_cycle")
-    private String billingCycle;
-
+    
     /**
      * 应缴金额
      */
@@ -118,11 +113,11 @@ public class Bill implements Serializable {
     private BigDecimal paidAmount;
 
     /**
-     * 账单状态 1:待缴费 2:已缴费 3:已超期
+     * 账单状态 0:部分缴费 1:待缴费 2:已缴费 3:已超期 4:已作废 5:已作废
      */
     @NotNull(message = "账单状态不能为空")
-    @Min(value = 1, message = "账单状态值无效")
-    @Max(value = 3, message = "账单状态值无效")
+    @Min(value = 0, message = "账单状态值无效")
+    @Max(value = 5, message = "账单状态值无效")
     @TableField("bill_status")
     private Integer billStatus;
 
@@ -133,24 +128,7 @@ public class Bill implements Serializable {
     @TableField("due_date")
     private Date dueDate;
 
-    /**
-     * 缴费日期
-     */
-    @TableField("paid_date")
-    private Date paidDate;
-
-    /**
-     * 缴费日期
-     */
-    @TableField("pay_time")
-    private Date payTime;
-
-    /**
-     * 收据编号
-     */
-    @TableField("receipt_no")
-    private String receiptNo;
-
+  
     /**
      * 备注
      */
@@ -182,5 +160,36 @@ public class Bill implements Serializable {
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private Date updateTime;
 
+    /**
+     * 删除标记 0:未删除 1:已删除
+     */
+    @TableField("deleted")
+    private Integer deleted;
+
+    /**
+     * 折扣金额
+     */
+    @DecimalMin(value = "0.00", message = "折扣金额不能小于0")
+    @Digits(integer = 12, fraction = 2, message = "折扣金额格式不正确")
+    @TableField("discount_amount")
+    private BigDecimal discountAmount;
+
+    /**
+     * 支付方式 1:现金 2:银行转账 3:在线支付 4:钱包支付
+     */
+    @TableField("pay_method")
+    private Integer payMethod;
+
+    /**
+     * 缴费时间
+     */
+    @TableField("paid_time")
+    private Date paidTime;
+
+    /**
+     * 费用名称（冗余字段）
+     */
+    @TableField("fee_type_name")
+    private String feeTypeName;
 
 }

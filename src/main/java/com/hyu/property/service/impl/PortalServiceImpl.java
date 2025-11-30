@@ -3,8 +3,9 @@ package com.hyu.property.service.impl;
 import com.hyu.common.utils.SecurityUtils;
 import com.hyu.property.domain.Bill;
 import com.hyu.property.domain.Wallet;
+import com.hyu.property.domain.RepairOrder;
 import com.hyu.property.domain.dto.*;
-import com.hyu.property.domain.vo.RepairOrderVO;
+// import com.hyu.property.domain.vo.RepairOrder; // Use RepairOrder instead
 import com.hyu.property.service.*;
 import com.hyu.system.service.ISysUserService;
 import lombok.RequiredArgsConstructor;
@@ -38,7 +39,7 @@ public class PortalServiceImpl implements IPortalService {
     public List<Object> getMyBillList(Integer billStatus, String billPeriod, Integer pageNum, Integer pageSize) {
         Long currentUserId = SecurityUtils.getUserId();
         Bill queryBill = new Bill();
-        queryBill.setOwnerId(currentUserId);
+        queryBill.setUserId(currentUserId);
         queryBill.setBillStatus(billStatus);
         queryBill.setBillPeriod(billPeriod);
 
@@ -56,7 +57,8 @@ public class PortalServiceImpl implements IPortalService {
 
         try {
             // 验证支付密码
-            Wallet wallet = walletService.selectWalletByOwnerId(currentUserId);
+            Wallet wallet = walletService.getOne(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Wallet>()
+                .eq("user_id", currentUserId));
             if (wallet == null) {
                 return createErrorResult("钱包不存在");
             }
@@ -118,7 +120,8 @@ public class PortalServiceImpl implements IPortalService {
     @Override
     public Object getMyWalletInfo() {
         Long currentUserId = SecurityUtils.getUserId();
-        return walletService.selectWalletByOwnerId(currentUserId);
+        return walletService.getOne(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Wallet>()
+                .eq("user_id", currentUserId));
     }
 
     @Override
@@ -128,7 +131,8 @@ public class PortalServiceImpl implements IPortalService {
         Map<String, Object> result = new HashMap<>();
 
         try {
-            Wallet wallet = walletService.selectWalletByOwnerId(currentUserId);
+            Wallet wallet = walletService.getOne(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Wallet>()
+                .eq("user_id", currentUserId));
             if (wallet == null) {
                 return createErrorResult("钱包不存在");
             }
@@ -182,7 +186,8 @@ public class PortalServiceImpl implements IPortalService {
                 return createErrorResult("两次输入的密码不一致");
             }
 
-            Wallet wallet = walletService.selectWalletByOwnerId(currentUserId);
+            Wallet wallet = walletService.getOne(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Wallet>()
+                .eq("user_id", currentUserId));
             if (wallet == null) {
                 return createErrorResult("钱包不存在");
             }
@@ -226,7 +231,8 @@ public class PortalServiceImpl implements IPortalService {
                 return createErrorResult("新密码不能与原密码相同");
             }
 
-            Wallet wallet = walletService.selectWalletByOwnerId(currentUserId);
+            Wallet wallet = walletService.getOne(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Wallet>()
+                .eq("user_id", currentUserId));
             if (wallet == null) {
                 return createErrorResult("钱包不存在");
             }
@@ -287,16 +293,16 @@ public class PortalServiceImpl implements IPortalService {
     // ========== 我的报修 ==========
 
     @Override
-    public List<RepairOrderVO> getMyRepairList(Integer orderStatus, Integer pageNum, Integer pageSize) {
+    public List<RepairOrder> getMyRepairList(Integer orderStatus, Integer pageNum, Integer pageSize) {
         Long currentUserId = SecurityUtils.getUserId();
         // 暂时返回空列表，待实现具体逻辑
         return new ArrayList<>();
     }
 
     @Override
-    public RepairOrderVO getMyRepairDetail(Long repairId) {
+    public RepairOrder getMyRepairDetail(Long repairId) {
         Long currentUserId = SecurityUtils.getUserId();
-        RepairOrderVO repairOrder = repairOrderService.selectRepairOrderById(repairId);
+        RepairOrder repairOrder = repairOrderService.selectRepairOrderById(repairId);
 
         // 验证所有权
         if (repairOrder != null && repairOrder.getUserId().equals(currentUserId)) {
@@ -344,13 +350,14 @@ public class PortalServiceImpl implements IPortalService {
 
             // 获取待缴费账单数量
             Bill queryBill = new Bill();
-            queryBill.setOwnerId(currentUserId);
+            queryBill.setUserId(currentUserId);
             queryBill.setBillStatus(1); // 待缴费
             List<Object> pendingBills = new ArrayList<>(billService.selectBillList(queryBill));
             stats.put("pendingBillsCount", pendingBills.size());
 
             // 获取钱包信息
-            Object wallet = walletService.selectWalletByOwnerId(currentUserId);
+            Object wallet = walletService.getOne(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Wallet>()
+                .eq("user_id", currentUserId));
             if (pendingBills.size() > 0 && wallet != null) {
                 // 简化处理，模拟数据
                 stats.put("pendingBillsAmount", BigDecimal.valueOf(100));
@@ -363,7 +370,7 @@ public class PortalServiceImpl implements IPortalService {
             // stats.put("pendingComplaintsCount", complaintService.countPendingByUserId(currentUserId));
 
             // 获取进行中报修数量
-            List<RepairOrderVO> repairs = repairOrderService.selectRepairOrdersByUserId(currentUserId);
+            List<RepairOrder> repairs = repairOrderService.selectRepairOrdersByUserId(currentUserId);
             long inProgressCount = repairs.stream()
                     .filter(repair -> repair.getOrderStatus() == 3)
                     .count();
@@ -386,7 +393,7 @@ public class PortalServiceImpl implements IPortalService {
 
             // 待缴费账单
             Bill billQuery = new Bill();
-            billQuery.setOwnerId(currentUserId);
+            billQuery.setUserId(currentUserId);
             billQuery.setBillStatus(1);
             List<Object> pendingBills = new ArrayList<>(billService.selectBillList(billQuery));
 
@@ -394,7 +401,7 @@ public class PortalServiceImpl implements IPortalService {
             // int pendingComplaints = complaintService.countPendingByUserId(currentUserId);
 
             // 进行中报修
-            List<RepairOrderVO> repairs = repairOrderService.selectRepairOrdersByUserId(currentUserId);
+            List<RepairOrder> repairs = repairOrderService.selectRepairOrdersByUserId(currentUserId);
             long inProgressRepairs = repairs.stream()
                     .filter(repair -> repair.getOrderStatus() == 3)
                     .count();

@@ -48,6 +48,18 @@ public class RepairOrder implements Serializable {
     private String userName;
 
     /**
+     * 用户真实姓名（非数据库字段）
+     */
+    @TableField(exist = false)
+    private String realName;
+
+    /**
+     * 联系电话
+     */
+    @TableField("phone")
+    private String phone;
+
+    /**
      * 房产ID
      */
     @TableField("house_id")
@@ -108,6 +120,12 @@ public class RepairOrder implements Serializable {
     private String workerName;
 
     /**
+     * 维修人员电话（显示字段，不存数据库）
+     */
+    @TableField(exist = false)
+    private String workerPhone;
+
+    /**
      * 派工时间
      */
     @TableField("assign_time")
@@ -118,6 +136,12 @@ public class RepairOrder implements Serializable {
      */
     @TableField("required_finish_time")
     private LocalDateTime requiredFinishTime;
+
+    /**
+     * 关联账单ID
+     */
+    @TableField("bill_id")
+    private Long billId;
 
     /**
      * 实际故障原因
@@ -180,6 +204,42 @@ public class RepairOrder implements Serializable {
     private LocalDateTime acceptanceTime;
 
     /**
+     * 服务评分 1-5星
+     */
+    @TableField("service_rating")
+    private Integer serviceRating;
+
+    /**
+     * 响应速度评分 1-5星
+     */
+    @TableField("response_rating")
+    private Integer responseRating;
+
+    /**
+     * 专业程度评分 1-5星
+     */
+    @TableField("professional_rating")
+    private Integer professionalRating;
+
+    /**
+     * 总体评分 1-5星
+     */
+    @TableField("overall_rating")
+    private Integer overallRating;
+
+    /**
+     * 业主评价意见
+     */
+    @TableField("comment")
+    private String comment;
+
+    /**
+     * 评价时间
+     */
+    @TableField("rating_time")
+    private LocalDateTime ratingTime;
+
+    /**
      * 返工次数
      */
     @TableField("rework_count")
@@ -202,6 +262,12 @@ public class RepairOrder implements Serializable {
      */
     @TableField(value = "create_by", fill = FieldFill.INSERT)
     private String createBy;
+
+    /**
+     * 报修时间（前端显示用，映射到创建时间）
+     */
+    @TableField(exist = false)  // 不映射到数据库表
+    private LocalDateTime reportTime;
 
     /**
      * 创建时间
@@ -250,4 +316,10 @@ public class RepairOrder implements Serializable {
      */
     @TableField(exist = false)
     private String repairTypeName;
+
+    /**
+     * 请求参数
+     */
+    @TableField(exist = false)
+    private java.util.Map<String, Object> params;
 }

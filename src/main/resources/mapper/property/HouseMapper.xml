@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hyu.property.mapper.HouseMapper">
+
+    <resultMap type="com.hyu.property.domain.vo.HouseVO" id="HouseVOMap">
+        <result property="id" column="id"/>
+        <result property="houseNo" column="house_no"/>
+        <result property="buildingId" column="building_id"/>
+        <result property="unitId" column="unit_id"/>
+        <result property="floor" column="floor"/>
+        <result property="roomNumber" column="room_number"/>
+        <result property="houseType" column="house_type"/>
+        <result property="buildingAreaNum" column="buildingAreaNum"/>
+        <result property="usableArea" column="usable_area"/>
+        <result property="houseStatus" column="house_status"/>
+        <result property="buildingName" column="building_name"/>
+        <result property="unitName" column="unit_name"/>
+        <result property="propertyOwner" column="current_resident"/>
+        <result property="propertyOwnerId" column="current_resident_id"/>
+    </resultMap>
+
+    <sql id="selectHouseVo">
+        select h.id, h.house_no, h.building_id, h.unit_id, h.floor, h.room_number, h.house_type,
+               h.building_area as buildingAreaNum, h.usable_area, h.house_status,
+               b.building_name, u.unit_name,
+               (SELECT su.real_name FROM user_house uh
+                LEFT JOIN sys_user su ON uh.user_id = su.id
+                WHERE uh.house_id = h.id AND uh.is_current = 1
+                AND su.status = 1 AND su.deleted = 0
+                LIMIT 1) as current_resident,
+               (SELECT su.id FROM user_house uh
+                LEFT JOIN sys_user su ON uh.user_id = su.id
+                WHERE uh.house_id = h.id AND uh.is_current = 1
+                AND su.status = 1 AND su.deleted = 0
+                LIMIT 1) as current_resident_id
+        from house h
+        left join building b on h.building_id = b.id
+        left join unit u on h.unit_id = u.id
+    </sql>
+
+    <select id="selectAvailableHouses" parameterType="Long" resultMap="HouseVOMap">
+        <include refid="selectHouseVo"/>
+        where h.house_status = 1
+          and h.deleted = 0
+          and h.id not in (
+            select house_id from user_house where user_id = #{userId}
+          )
+        order by b.building_no, u.unit_no, h.room_number
+    </select>
+
+    <!-- 根据用户名查询用户ID -->
+    <select id="selectUserIdByUsername" parameterType="String" resultType="java.lang.Long">
+        select id
+        from sys_user
+        where username = #{username}
+          and status = 1
+          and deleted = 0
+        limit 1
+    </select>
+
+    <!-- 分页查询房产列表（包含产权人信息） -->
+    <select id="selectHouseVOPage" resultMap="HouseVOMap">
+        <include refid="selectHouseVo"/>
+        <where>
+            h.deleted = 0
+            <if test="house.buildingId != null">
+                AND h.building_id = #{house.buildingId}
+            </if>
+            <if test="house.unitId != null">
+                AND h.unit_id = #{house.unitId}
+            </if>
+            <if test="house.houseNo != null and house.houseNo != ''">
+                AND h.house_no LIKE CONCAT('%', #{house.houseNo}, '%')
+            </if>
+            <if test="house.roomNumber != null and house.roomNumber != ''">
+                AND h.room_number LIKE CONCAT('%', #{house.roomNumber}, '%')
+            </if>
+            <if test="house.houseStatus != null">
+                AND h.house_status = #{house.houseStatus}
+            </if>
+        </where>
+        ORDER BY h.create_time DESC
+    </select>
+
+    <!-- 根据房间编号查询房屋ID -->
+    <select id="selectHouseIdByHouseNo" parameterType="String" resultType="java.lang.Long">
+        select id
+        from house
+        where house_no = #{houseNo}
+          and deleted = 0
+        limit 1
+    </select>
+
+</mapper>

@@ -1,7 +1,7 @@
 package com.hyu.property.controller;
 
 import com.hyu.property.domain.dto.WorkbenchStatsDTO;
-import com.hyu.property.domain.vo.RepairOrderVO;
+import com.hyu.property.domain.RepairOrder;
 import com.hyu.property.service.IWorkbenchService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,7 +54,7 @@ public class WorkbenchController {
                                                     @RequestParam(required = false) Integer repairStatus) {
         Map<String, Object> result = new HashMap<>();
         try {
-            List<RepairOrderVO> orders = workbenchService.getMyRepairOrderList(pageNum, pageSize, repairStatus);
+            List<RepairOrder> orders = workbenchService.getMyRepairOrderList(pageNum, pageSize, repairStatus);
             result.put("code", 200);
             result.put("message", "获取我的工单列表成功");
             result.put("data", orders);

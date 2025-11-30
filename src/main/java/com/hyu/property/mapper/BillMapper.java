@@ -175,4 +175,30 @@ public interface BillMapper extends BaseMapper<Bill> {
      * @return 更新数量
      */
     int updateOverdueBills();
+
+    // ==================== 业主端API ====================
+
+    /**
+     * 分页查询我的账单列表
+     *
+     * @param page 分页参数
+     * @param userId 用户ID
+     * @param billNo 账单编号
+     * @param feeTypeId 费用类型ID
+     * @param billStatus 账单状态
+     * @param billPeriod 账期
+     * @return 账单分页信息
+     */
+    Page<Bill> selectMyBillPage(Page<Bill> page, @Param("userId") Long userId,
+                               @Param("billNo") String billNo, @Param("feeTypeId") Long feeTypeId,
+                               @Param("billStatus") Integer billStatus, @Param("billPeriod") String billPeriod);
+
+    /**
+     * 根据账单ID查询我的账单详情
+     *
+     * @param billId 账单ID
+     * @param userId 用户ID
+     * @return 账单详情
+     */
+    Bill selectMyBillById(@Param("billId") Long billId, @Param("userId") Long userId);
 }

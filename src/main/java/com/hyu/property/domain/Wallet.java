@@ -3,20 +3,21 @@ package com.hyu.property.domain;
 import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.experimental.Accessors;
 
-import javax.validation.constraints.*;
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
- * 虚拟钱包表 property_wallet
+ * 虚拟钱包对象 wallet
  *
  * @author hyu
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-@TableName("property_wallet")
+@Accessors(chain = true)
+@TableName("wallet")
 public class Wallet implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -24,83 +25,91 @@ public class Wallet implements Serializable {
     /**
      * 钱包ID
      */
-    @TableId(value = "wallet_id", type = IdType.AUTO)
-    private Long walletId;
+    @TableId(value = "id", type = IdType.AUTO)
+    private Long id;
 
     /**
-     * 业主ID
+     * 用户ID（业主）
      */
-    @NotNull(message = "业主ID不能为空")
-    @TableField("owner_id")
-    private Long ownerId;
+    @TableField("user_id")
+    private Long userId;
 
     /**
-     * 钱包余额
+     * 当前余额
      */
-    @NotNull(message = "钱包余额不能为空")
-    @DecimalMin(value = "0.00", message = "钱包余额不能小于0")
-    @Digits(integer = 12, fraction = 2, message = "钱包余额格式不正确")
     @TableField("balance")
     private BigDecimal balance;
 
     /**
-     * 支付密码（加密存储）
-     */
-    @TableField("pay_password")
-    private String payPassword;
-
-    /**
      * 累计充值金额
      */
-    @DecimalMin(value = "0.00", message = "累计充值金额不能小于0")
-    @Digits(integer = 12, fraction = 2, message = "累计充值金额格式不正确")
     @TableField("total_recharge")
     private BigDecimal totalRecharge;
 
     /**
      * 累计消费金额
      */
-    @DecimalMin(value = "0.00", message = "累计消费金额不能小于0")
-    @Digits(integer = 12, fraction = 2, message = "累计消费金额格式不正确")
     @TableField("total_consume")
     private BigDecimal totalConsume;
 
     /**
-     * 钱包状态 1:正常 0:冻结
+     * 支付密码（BCrypt加密）
      */
-    @NotNull(message = "钱包状态不能为空")
-    @Min(value = 0, message = "钱包状态值无效")
-    @Max(value = 1, message = "钱包状态值无效")
+    @TableField("pay_password")
+    private String payPassword;
+
+    /**
+     * 支付密码错误次数
+     */
+    @TableField("pay_password_error_count")
+    private Integer payPasswordErrorCount;
+
+    /**
+     * 支付密码锁定时间
+     */
+    @TableField("pay_password_lock_time")
+    private LocalDateTime payPasswordLockTime;
+
+    /**
+     * 钱包状态：1-正常 2-冻结
+     */
     @TableField("status")
     private Integer status;
 
     /**
-     * 最后交易时间
+     * 乐观锁版本号
      */
-    @TableField("last_transaction_time")
-    private Date lastTransactionTime;
-
-    /**
-     * 创建者
-     */
-    @TableField(value = "create_by", fill = FieldFill.INSERT)
-    private String createBy;
+    @TableField("version")
+    private Integer version;
 
     /**
      * 创建时间
      */
-    @TableField(value = "create_time", fill = FieldFill.INSERT)
-    private Date createTime;
-
-    /**
-     * 更新者
-     */
-    @TableField(value = "update_by", fill = FieldFill.INSERT_UPDATE)
-    private String updateBy;
+    @TableField("create_time")
+    private LocalDateTime createTime;
 
     /**
      * 更新时间
      */
-    @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
-    private Date updateTime;
-}
+    @TableField("update_time")
+    private LocalDateTime updateTime;
+
+    /**
+     * 用户名称（关联查询）
+     */
+    @TableField(exist = false)
+    private String userName;
+
+    /**
+     * 用户手机号（关联查询）
+     */
+    @TableField(exist = false)
+    private String userPhone;
+
+    /**
+     * 支付密码状态：0-未设置，1-已设置
+     */
+    @TableField("password_status")
+    private Integer passwordStatus;
+
+    }

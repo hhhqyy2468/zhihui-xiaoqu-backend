@@ -30,11 +30,23 @@ public class FeeTypeController {
      */
     @GetMapping("/page")
     @PreAuthorize("@ss.hasPermi('property:feetype:list')")
-    public AjaxResult list(@RequestParam(defaultValue = "1") Integer page,
-                          @RequestParam(defaultValue = "10") Integer size,
-                          FeeType feeType) {
+    public AjaxResult list(@RequestParam(defaultValue = "1") Integer pageNum,
+                          @RequestParam(defaultValue = "10") Integer pageSize,
+                          @RequestParam(required = false) String feeName,
+                          @RequestParam(required = false) String feeCode,
+                          @RequestParam(required = false) Integer status) {
+        log.info("分页查询费用类型列表, pageNum: {}, pageSize: {}, feeName: {}, feeCode: {}, status: {}",
+                 pageNum, pageSize, feeName, feeCode, status);
+
         com.baomidou.mybatisplus.extension.plugins.pagination.Page<FeeType> pageParam =
-            new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page, size);
+            new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(pageNum, pageSize);
+
+        // 构建查询条件
+        FeeType feeType = new FeeType();
+        feeType.setTypeName(feeName);  // 前端的feeName映射到后端的typeName
+        feeType.setTypeCode(feeCode);  // 前端的feeCode映射到后端的typeCode
+        feeType.setStatus(status);
+
         com.baomidou.mybatisplus.extension.plugins.pagination.Page<FeeType> result =
             feeTypeService.selectFeeTypePage(pageParam, feeType);
         return AjaxResult.success(result);

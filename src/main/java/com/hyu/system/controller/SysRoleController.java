@@ -7,6 +7,8 @@ import com.hyu.common.exception.BusinessException;
 import com.hyu.common.utils.SecurityUtils;
 import com.hyu.system.domain.SysRole;
 import com.hyu.system.service.ISysRoleService;
+import com.hyu.system.service.ISysMenuService;
+import com.hyu.system.domain.SysMenu;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -31,12 +33,15 @@ public class SysRoleController {
     @Autowired
     private ISysRoleService roleService;
 
+    @Autowired
+    private ISysMenuService menuService;
+
     /**
      * 分页查询角色列表
      */
     @GetMapping("/list")
     @PreAuthorize("@ss.hasPermi('system:role:view')")
-    public PageResult list(@RequestParam(defaultValue = "1") Integer pageNum,
+    public AjaxResult list(@RequestParam(defaultValue = "1") Integer pageNum,
                            @RequestParam(defaultValue = "10") Integer pageSize,
                            @RequestParam(required = false) String roleName,
                            @RequestParam(required = false) Integer status) {
@@ -48,7 +53,7 @@ public class SysRoleController {
         role.setStatus(status);
 
         Page<SysRole> result = roleService.selectRolePage(page, role);
-        return PageResult.success(result.getTotal(), result.getRecords());
+        return AjaxResult.success("查询成功", PageResult.success(result.getTotal(), result.getRecords()));
     }
 
     /**
@@ -199,6 +204,38 @@ public class SysRoleController {
         log.info("批量选择用户授权, roleId: {}, userIds: {}", roleId, userIds);
         roleService.checkRoleDataScope(roleId);
         return toAjax(roleService.insertAuthRoleUsers(roleId, userIds));
+    }
+
+    /**
+     * 获取角色菜单列表
+     */
+    @GetMapping("/{roleId}/menus")
+    @PreAuthorize("@ss.hasPermi('system:role:query')")
+    public AjaxResult getRoleMenus(@NotNull(message = "角色ID不能为空") @PathVariable Long roleId) {
+        log.info("获取角色菜单列表, roleId: {}", roleId);
+
+        // 查询所有菜单
+        List<SysMenu> menus = menuService.list();
+        // 构建树结构
+        List<SysMenu> menuTree = menuService.buildMenuTree(menus);
+
+        // TODO: 查询角色已分配的菜单ID列表
+
+        return AjaxResult.success(menuTree);
+    }
+
+    /**
+     * 分配角色菜单权限
+     */
+    @PostMapping("/{roleId}/menus")
+    @PreAuthorize("@ss.hasPermi('system:role:edit')")
+    public AjaxResult assignRoleMenus(@NotNull(message = "角色ID不能为空") @PathVariable Long roleId,
+                                     @RequestBody List<Long> menuIds) {
+        log.info("分配角色菜单权限, roleId: {}, menuIds: {}", roleId, menuIds);
+
+        // TODO: 实现角色菜单分配逻辑
+
+        return AjaxResult.success("权限分配成功");
     }
 
     /**

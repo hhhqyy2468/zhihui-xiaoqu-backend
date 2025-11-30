@@ -3,6 +3,7 @@ package com.hyu.property.service;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.hyu.property.domain.House;
+import com.hyu.property.domain.vo.HouseVO;
 
 import java.util.List;
 
@@ -14,7 +15,7 @@ import java.util.List;
 public interface IHouseService extends IService<House> {
 
     /**
-     * 查询房产列表
+     * 分页查询房产列表
      *
      * @param page 分页参数
      * @param house 房产信息
@@ -23,58 +24,80 @@ public interface IHouseService extends IService<House> {
     Page<House> selectHousePage(Page<House> page, House house);
 
     /**
-     * 根据单元ID查询房产列表（下拉框用）
+     * 分页查询房产列表（包含产权人信息）
      *
-     * @param unitId 单元ID
-     * @return 房产列表
+     * @param page 分页参数
+     * @param house 房产信息
+     * @return 房产分页数据
      */
-    List<House> selectHouseListByUnitId(Long unitId);
-
-    /**
-     * 根据房产ID查询房产详细信息
-     *
-     * @param houseId 房产ID
-     * @return 房产信息
-     */
-    House selectHouseById(Long houseId);
+    Page<HouseVO> selectHouseVOPage(Page<HouseVO> page, House house);
 
     /**
      * 校验房产编号是否唯一
      *
      * @param house 房产信息
-     * @return 结果
+     * @return 结果 true唯一 false不唯一
      */
-    boolean checkHouseCodeUnique(House house);
+    boolean checkHouseNoUnique(House house);
 
     /**
-     * 新增房产信息
+     * 获取可分配的房产列表（空置状态的房产）
      *
-     * @param house 房产信息
-     * @return 结果
+     * @param userId 用户ID
+     * @return 可分配房产列表
      */
-    int insertHouse(House house);
+    List<HouseVO> getAvailableHouses(Long userId);
 
     /**
-     * 修改房产信息
+     * 分配房产给用户
      *
-     * @param house 房产信息
-     * @return 结果
+     * @param userId 用户ID
+     * @param houseIds 房产ID列表
+     * @param relationType 关系类型 1-业主 2-租户
+     * @param startDate 开始日期
+     * @param endDate 结束日期
+     * @param isCurrent 是否当前居住
+     * @return 分配结果
      */
-    int updateHouse(House house);
+    boolean assignHouses(Long userId, List<Long> houseIds, Integer relationType,
+                         String startDate, String endDate, Boolean isCurrent);
 
     /**
-     * 批量删除房产信息
+     * 根据用户名分配房产给用户
      *
-     * @param houseIds 需要删除的房产ID数组
-     * @return 结果
+     * @param username 用户名
+     * @param houseId 房产ID
+     * @param relationType 关系类型 1-业主 2-租户
+     * @param startDate 开始日期
+     * @param endDate 结束日期
+     * @param isCurrent 是否当前居住
+     * @return 分配结果
      */
-    int deleteHouseByIds(Long[] houseIds);
+    boolean assignHouseToUserByUsername(String username, Long houseId, Integer relationType,
+                                       String startDate, String endDate, Boolean isCurrent);
 
     /**
-     * 删除房产信息
+     * 根据用户名查询用户ID
+     *
+     * @param username 用户名
+     * @return 用户ID
+     */
+    Long getUserIdByUsername(String username);
+
+    /**
+     * 根据用户名移除用户的房产
+     *
+     * @param username 用户名
+     * @param houseId 房产ID
+     * @return 移除结果
+     */
+    boolean removeHouseFromUserByUsername(String username, Long houseId);
+
+    /**
+     * 根据房产ID查询房产信息
      *
      * @param houseId 房产ID
-     * @return 结果
+     * @return 房产信息
      */
-    int deleteHouseById(Long houseId);
+    House selectHouseById(Long houseId);
 }

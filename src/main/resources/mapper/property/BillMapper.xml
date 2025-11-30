@@ -1,0 +1,295 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hyu.property.mapper.BillMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap type="com.hyu.property.domain.Bill" id="BillResult">
+        <result property="billId"         column="id" />
+        <result property="billNo"         column="bill_no" />
+        <result property="userId"         column="user_id" />
+        <result property="ownerName"      column="owner_name" />
+        <result property="ownerPhone"     column="owner_phone" />
+        <result property="houseId"        column="house_id" />
+        <result property="houseCode"      column="house_code" />
+        <result property="buildingName"  column="building_name" />
+        <result property="feeTypeId"      column="fee_type_id" />
+        <result property="feeName"        column="fee_name" />
+        <result property="billPeriod"     column="billing_period" />
+        <result property="amount"         column="amount" />
+        <result property="paidAmount"     column="paid_amount" />
+        <result property="discountAmount" column="discount_amount" />
+        <result property="billStatus"     column="bill_status" />
+        <result property="dueDate"        column="due_date" />
+        <result property="paidTime"       column="paid_time" />
+        <result property="payMethod"      column="pay_method" />
+        <result property="remark"         column="remark" />
+        <result property="createBy"       column="create_by" />
+        <result property="createTime"     column="create_time" />
+        <result property="updateBy"       column="update_by" />
+        <result property="updateTime"     column="update_time" />
+        <result property="deleted"        column="deleted" />
+        <result property="feeTypeName"    column="fee_type_name" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="selectBillVo">
+        select b.id, b.bill_no, b.user_id, b.house_id, b.fee_type_id, b.fee_type_name, b.billing_period,
+               b.amount, b.paid_amount, b.discount_amount, b.bill_status, b.due_date, b.paid_time,
+               b.pay_method, b.remark, b.create_by, b.create_time, b.update_by, b.update_time, b.deleted,
+               u.real_name as owner_name, u.phone as owner_phone,
+               h.house_no as house_code, h.building_id,
+               bd.building_name as building_name,
+               ft.type_name as fee_name
+        from bill b
+        left join house h on b.house_id = h.id
+        left join building bd on h.building_id = bd.id
+        left join user_house uh on b.house_id = uh.house_id and uh.is_current = 1
+        left join sys_user u on uh.user_id = u.id and u.status = 1 and u.deleted = 0
+        left join sys_user_role sur on u.id = sur.user_id
+        left join sys_role r on sur.role_id = r.id
+        left join fee_type ft on b.fee_type_id = ft.id
+    </sql>
+
+    <!-- 分页查询账单列表 -->
+    <select id="selectBillPage" parameterType="com.hyu.property.domain.Bill" resultMap="BillResult">
+        <include refid="selectBillVo"/>
+        <where>
+            b.deleted = 0 and (r.role_key is null or r.role_key != 'worker')
+            <if test="bill.billNo != null and bill.billNo != ''"> and b.bill_no like concat('%', #{bill.billNo}, '%')</if>
+            <if test="bill.userId != null"> and b.user_id = #{bill.userId}</if>
+            <if test="bill.houseId != null"> and b.house_id = #{bill.houseId}</if>
+            <if test="bill.feeTypeId != null"> and b.fee_type_id = #{bill.feeTypeId}</if>
+            <if test="bill.billStatus != null"> and b.bill_status = #{bill.billStatus}</if>
+            <if test="bill.billPeriod != null and bill.billPeriod != ''"> and b.billing_period = #{bill.billPeriod}</if>
+            <if test="bill.ownerName != null and bill.ownerName != ''"> and u.real_name like concat('%', #{bill.ownerName}, '%')</if>
+            <if test="bill.houseCode != null and bill.houseCode != ''"> and h.house_no like concat('%', #{bill.houseCode}, '%')</if>
+            <if test="bill.buildingName != null and bill.buildingName != ''"> and bd.building_name like concat('%', #{bill.buildingName}, '%')</if>
+        </where>
+        order by b.create_time desc
+    </select>
+
+    <!-- 查询账单列表 -->
+    <select id="selectBillList" parameterType="com.hyu.property.domain.Bill" resultMap="BillResult">
+        <include refid="selectBillVo"/>
+        <where>
+            b.deleted = 0 and (r.role_key is null or r.role_key != 'worker')
+            <if test="bill.billNo != null and bill.billNo != ''"> and b.bill_no like concat('%', #{bill.billNo}, '%')</if>
+            <if test="bill.userId != null"> and b.user_id = #{bill.userId}</if>
+            <if test="bill.houseId != null"> and b.house_id = #{bill.houseId}</if>
+            <if test="bill.feeTypeId != null"> and b.fee_type_id = #{bill.feeTypeId}</if>
+            <if test="bill.billStatus != null"> and b.bill_status = #{bill.billStatus}</if>
+            <if test="bill.billPeriod != null and bill.billPeriod != ''"> and b.billing_period = #{bill.billPeriod}</if>
+            <if test="bill.ownerName != null and bill.ownerName != ''"> and u.real_name like concat('%', #{bill.ownerName}, '%')</if>
+            <if test="bill.houseCode != null and bill.houseCode != ''"> and h.house_no like concat('%', #{bill.houseCode}, '%')</if>
+            <if test="bill.buildingName != null and bill.buildingName != ''"> and bd.building_name like concat('%', #{bill.buildingName}, '%')</if>
+        </where>
+        order by b.create_time desc
+    </select>
+
+    <!-- 根据账单ID查询账单 -->
+    <select id="selectBillById" parameterType="Long" resultMap="BillResult">
+        <include refid="selectBillVo"/>
+        where id = #{billId} and deleted = 0
+    </select>
+
+    <!-- 根据账单编号查询账单 -->
+    <select id="selectBillByNo" parameterType="String" resultMap="BillResult">
+        <include refid="selectBillVo"/>
+        where bill_no = #{billNo} and deleted = 0
+    </select>
+
+    <!-- 检查账单编号是否唯一 -->
+    <select id="checkBillNoUnique" parameterType="String" resultMap="BillResult">
+        <include refid="selectBillVo"/>
+        where bill_no = #{billNo} and deleted = 0 limit 1
+    </select>
+
+    <!-- 新增账单 -->
+    <insert id="insertBill" parameterType="com.hyu.property.domain.Bill" useGeneratedKeys="true" keyProperty="billId">
+        insert into bill
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="billNo != null and billNo != ''">bill_no,</if>
+            <if test="userId != null">user_id,</if>
+            <if test="houseId != null">house_id,</if>
+            <if test="feeTypeId != null">fee_type_id,</if>
+            <if test="feeTypeName != null">fee_type_name,</if>
+            <if test="billPeriod != null and billPeriod != ''">billing_period,</if>
+            <if test="amount != null">amount,</if>
+            <if test="paidAmount != null">paid_amount,</if>
+            <if test="discountAmount != null">discount_amount,</if>
+            <if test="billStatus != null">bill_status,</if>
+            <if test="dueDate != null">due_date,</if>
+            <if test="paidTime != null">paid_time,</if>
+            <if test="payMethod != null">pay_method,</if>
+            <if test="remark != null">remark,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="deleted != null">deleted,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="billNo != null and billNo != ''">#{billNo},</if>
+            <if test="userId != null">#{userId},</if>
+            <if test="houseId != null">#{houseId},</if>
+            <if test="feeTypeId != null">#{feeTypeId},</if>
+            <if test="feeTypeName != null">#{feeTypeName},</if>
+            <if test="billPeriod != null and billPeriod != ''">#{billPeriod},</if>
+            <if test="amount != null">#{amount},</if>
+            <if test="paidAmount != null">#{paidAmount},</if>
+            <if test="discountAmount != null">#{discountAmount},</if>
+            <if test="billStatus != null">#{billStatus},</if>
+            <if test="dueDate != null">#{dueDate},</if>
+            <if test="paidTime != null">#{paidTime},</if>
+            <if test="payMethod != null">#{payMethod},</if>
+            <if test="remark != null">#{remark},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="deleted != null">#{deleted},</if>
+        </trim>
+    </insert>
+
+    <!-- 批量插入账单 -->
+    <insert id="batchInsertBills" parameterType="java.util.List">
+        insert into bill (bill_no, user_id, house_id, fee_type_id, fee_type_name, billing_period,
+                         amount, paid_amount, discount_amount, bill_status, due_date, paid_time,
+                         pay_method, remark, create_by, create_time, update_by, update_time, deleted)
+        values
+        <foreach collection="list" item="bill" separator=",">
+            (#{bill.billNo}, #{bill.userId}, #{bill.houseId}, #{bill.feeTypeId}, #{bill.feeTypeName},
+             #{bill.billPeriod}, #{bill.amount}, #{bill.paidAmount}, #{bill.discountAmount},
+             #{bill.billStatus}, #{bill.dueDate}, #{bill.paidTime}, #{bill.payMethod},
+             #{bill.remark}, #{bill.createBy}, #{bill.createTime}, #{bill.updateBy},
+             #{bill.updateTime}, #{bill.deleted})
+        </foreach>
+    </insert>
+
+    <!-- 修改账单 -->
+    <update id="updateBill" parameterType="com.hyu.property.domain.Bill">
+        update bill
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="billNo != null and billNo != ''">bill_no = #{billNo},</if>
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="houseId != null">house_id = #{houseId},</if>
+            <if test="feeTypeId != null">fee_type_id = #{feeTypeId},</if>
+            <if test="feeTypeName != null">fee_type_name = #{feeTypeName},</if>
+            <if test="billPeriod != null and billPeriod != ''">billing_period = #{billPeriod},</if>
+            <if test="amount != null">amount = #{amount},</if>
+            <if test="paidAmount != null">paid_amount = #{paidAmount},</if>
+            <if test="discountAmount != null">discount_amount = #{discountAmount},</if>
+            <if test="billStatus != null">bill_status = #{billStatus},</if>
+            <if test="dueDate != null">due_date = #{dueDate},</if>
+            <if test="paidTime != null">paid_time = #{paidTime},</if>
+            <if test="payMethod != null">pay_method = #{payMethod},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where id = #{billId}
+    </update>
+
+    <!-- 更新账单状态 -->
+    <update id="updateBillStatus">
+        update bill set bill_status = #{billStatus}, update_time = now()
+        where id = #{billId}
+    </update>
+
+    <!-- 更新缴费信息 -->
+    <update id="updatePaymentInfo">
+        update bill set paid_amount = #{paidAmount}, paid_time = #{paidDate}, bill_status = #{billStatus}, update_time = now()
+        <where>
+            id = #{billId}
+        </where>
+    </update>
+
+    <!-- 批量删除账单 -->
+    <delete id="deleteBillByIds" parameterType="java.lang.Long">
+        update bill set deleted = 1, update_time = now() where id in
+        <foreach item="billId" collection="array" open="(" separator="," close=")">
+            #{billId}
+        </foreach>
+    </delete>
+
+    <!-- 查询符合条件的房产用于生成账单 -->
+    <select id="selectHouseForBill" resultType="java.util.Map">
+        select h.id, h.building_area, u.user_id
+        from house h
+        join user_house u on h.id = u.house_id
+        where u.is_current = 1 and h.house_status in (2, 3)
+        <if test="buildingIds != null and buildingIds.length > 0">
+            and h.building_id in
+            <foreach item="buildingId" collection="buildingIds" open="(" separator="," close=")">
+                #{buildingId}
+            </foreach>
+        </if>
+        <if test="unitIds != null and unitIds.length > 0">
+            and h.unit_id in
+            <foreach item="unitId" collection="unitIds" open="(" separator="," close=")">
+                #{unitId}
+            </foreach>
+        </if>
+        <if test="houseIds != null and houseIds.length > 0">
+            and h.id in
+            <foreach item="houseId" collection="houseIds" open="(" separator="," close=")">
+                #{houseId}
+            </foreach>
+        </if>
+    </select>
+
+    <!-- 根据费用类型ID查询费用类型信息 -->
+    <select id="selectFeeTypeById" parameterType="Long" resultType="java.util.Map">
+        select id, type_name, type_code, unit_price, billing_unit, billing_cycle, description, status
+        from fee_type
+        where id = #{feeTypeId} and status = 1
+    </select>
+
+  
+    <!-- 更新超期账单状态 -->
+    <update id="updateOverdueBills">
+        update bill set bill_status = 3, update_time = now()
+        where bill_status = 1 and due_date &lt; now() and deleted = 0
+    </update>
+
+    <!-- 根据业主ID查询钱包余额 -->
+    <select id="selectWalletBalance" parameterType="Long" resultType="java.math.BigDecimal">
+        select balance from wallet where owner_id = #{ownerId} and deleted = 0 limit 1
+    </select>
+
+    <!-- 更新钱包余额 -->
+    <update id="updateWalletBalance">
+        update wallet set balance = #{balance}, update_time = now()
+        where owner_id = #{ownerId}
+    </update>
+
+    <!-- 插入缴费交易记录 -->
+    <insert id="insertPaymentTransaction">
+        insert into transaction_record (owner_id, bill_id, amount, description, transaction_no, create_time)
+        values (#{ownerId}, #{billId}, #{amount}, #{description}, #{transactionNo}, now())
+    </insert>
+
+    <!-- ==================== 业主端API ==================== -->
+
+    <!-- 分页查询我的账单列表 -->
+    <select id="selectMyBillPage" resultMap="BillResult">
+        <include refid="selectBillVo"/>
+        <where>
+            b.deleted = 0 and b.user_id = #{userId}
+            <if test="billNo != null and billNo != ''"> and b.bill_no like concat('%', #{billNo}, '%')</if>
+            <if test="feeTypeId != null"> and b.fee_type_id = #{feeTypeId}</if>
+            <if test="billStatus != null"> and b.bill_status = #{billStatus}</if>
+            <if test="billPeriod != null and billPeriod != ''"> and b.billing_period = #{billPeriod}</if>
+        </where>
+        order by b.create_time desc
+    </select>
+
+    <!-- 根据账单ID查询我的账单详情 -->
+    <select id="selectMyBillById" resultMap="BillResult">
+        <include refid="selectBillVo"/>
+        where b.id = #{billId} and b.user_id = #{userId} and b.deleted = 0
+    </select>
+
+</mapper>

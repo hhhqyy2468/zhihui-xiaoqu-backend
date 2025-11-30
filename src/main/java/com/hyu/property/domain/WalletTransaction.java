@@ -16,7 +16,7 @@ import java.util.Date;
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-@TableName("property_wallet_transaction")
+@TableName("wallet_transaction")
 public class WalletTransaction implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -24,8 +24,8 @@ public class WalletTransaction implements Serializable {
     /**
      * 交易ID
      */
-    @TableId(value = "transaction_id", type = IdType.AUTO)
-    private Long transactionId;
+    @TableId(value = "id", type = IdType.AUTO)
+    private Long id;
 
     /**
      * 交易流水号
@@ -36,18 +36,25 @@ public class WalletTransaction implements Serializable {
     private String transactionNo;
 
     /**
-     * 业主ID
+     * 用户ID
      */
-    @NotNull(message = "业主ID不能为空")
-    @TableField("owner_id")
-    private Long ownerId;
+    @NotNull(message = "用户ID不能为空")
+    @TableField("user_id")
+    private Long userId;
 
     /**
-     * 交易类型 1:充值 2:消费
+     * 钱包ID
+     */
+    @NotNull(message = "钱包ID不能为空")
+    @TableField("wallet_id")
+    private Long walletId;
+
+    /**
+     * 交易类型 1:充值 2:消费 3:退款
      */
     @NotNull(message = "交易类型不能为空")
     @Min(value = 1, message = "交易类型值无效")
-    @Max(value = 2, message = "交易类型值无效")
+    @Max(value = 3, message = "交易类型值无效")
     @TableField("transaction_type")
     private Integer transactionType;
 
@@ -66,8 +73,8 @@ public class WalletTransaction implements Serializable {
     @NotNull(message = "交易前余额不能为空")
     @DecimalMin(value = "0.00", message = "交易前余额不能小于0")
     @Digits(integer = 12, fraction = 2, message = "交易前余额格式不正确")
-    @TableField("before_balance")
-    private BigDecimal beforeBalance;
+    @TableField("balance_before")
+    private BigDecimal balanceBefore;
 
     /**
      * 交易后余额
@@ -75,28 +82,20 @@ public class WalletTransaction implements Serializable {
     @NotNull(message = "交易后余额不能为空")
     @DecimalMin(value = "0.00", message = "交易后余额不能小于0")
     @Digits(integer = 12, fraction = 2, message = "交易后余额格式不正确")
-    @TableField("after_balance")
-    private BigDecimal afterBalance;
+    @TableField("balance_after")
+    private BigDecimal balanceAfter;
 
     /**
-     * 账单ID（消费时关联）
+     * 关联账单ID（消费时）
      */
-    @TableField("bill_id")
-    private Long billId;
+    @TableField("related_bill_id")
+    private Long relatedBillId;
 
     /**
-     * 账单编号
+     * 关联订单号
      */
-    @TableField(exist = false)
-    private String billNo;
-
-    /**
-     * 交易说明
-     */
-    @NotBlank(message = "交易说明不能为空")
-    @Size(min = 2, max = 200, message = "交易说明长度必须在2-200之间")
-    @TableField("description")
-    private String description;
+    @TableField("related_order_no")
+    private String relatedOrderNo;
 
     /**
      * 交易状态 1:成功 2:失败
@@ -104,43 +103,19 @@ public class WalletTransaction implements Serializable {
     @NotNull(message = "交易状态不能为空")
     @Min(value = 1, message = "交易状态值无效")
     @Max(value = 2, message = "交易状态值无效")
-    @TableField("status")
-    private Integer status;
+    @TableField("transaction_status")
+    private Integer transactionStatus;
 
     /**
-     * 失败原因
+     * 备注
      */
-    @Size(max = 500, message = "失败原因长度不能超过500")
-    @TableField("fail_reason")
-    private String failReason;
-
-    /**
-     * 交易时间
-     */
-    @TableField("transaction_time")
-    private Date transactionTime;
-
-    /**
-     * 创建者
-     */
-    @TableField(value = "create_by", fill = FieldFill.INSERT)
-    private String createBy;
+    @Size(max = 500, message = "备注长度不能超过500")
+    @TableField("remark")
+    private String remark;
 
     /**
      * 创建时间
      */
-    @TableField(value = "create_time", fill = FieldFill.INSERT)
-    private Date createTime;
-
-    /**
-     * 更新者
-     */
-    @TableField(value = "update_by", fill = FieldFill.INSERT_UPDATE)
-    private String updateBy;
-
-    /**
-     * 更新时间
-     */
-    @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
-    private Date updateTime;
+    @TableField("create_time")
+    private java.util.Date createTime;
 }

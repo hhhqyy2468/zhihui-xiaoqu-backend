@@ -2,6 +2,7 @@ package com.hyu.property.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.hyu.property.domain.House;
+import com.hyu.property.domain.vo.HouseVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -16,68 +17,36 @@ import java.util.List;
 public interface HouseMapper extends BaseMapper<House> {
 
     /**
-     * 查询房产列表
+     * 获取可分配的房产列表（空置状态的房产）
      *
-     * @param house 房产信息
-     * @return 房产集合
+     * @param userId 用户ID
+     * @return 可分配房产列表
      */
-    List<House> selectHouseList(House house);
+    List<HouseVO> selectAvailableHouses(@Param("userId") Long userId);
 
     /**
-     * 根据单元ID查询房产列表（下拉框用）
+     * 根据用户名查询用户ID
      *
-     * @param unitId 单元ID
+     * @param username 用户名
+     * @return 用户ID
+     */
+    Long selectUserIdByUsername(@Param("username") String username);
+
+    /**
+     * 分页查询房产列表（包含产权人信息）
+     *
+     * @param page 分页参数
+     * @param house 房产查询条件
      * @return 房产列表
      */
-    List<House> selectHouseListByUnitId(Long unitId);
+    List<HouseVO> selectHouseVOPage(@Param("house") House house);
 
     /**
-     * 根据房产ID查询房产详细信息
+     * 根据房间编号查询房屋ID
      *
-     * @param houseId 房产ID
-     * @return 房产信息
+     * @param houseNo 房间编号
+     * @return 房屋ID
      */
-    House selectHouseById(Long houseId);
+    Long selectHouseIdByHouseNo(@Param("houseNo") String houseNo);
 
-    /**
-     * 校验房产编号是否唯一（同一单元下）
-     *
-     * @param unitId 单元ID
-     * @param floorNum 楼层
-     * @param roomNum 房间号
-     * @return 房产信息
-     */
-    House checkHouseCodeUnique(@Param("unitId") Long unitId, @Param("floorNum") Integer floorNum, @Param("roomNum") String roomNum);
-
-    /**
-     * 新增房产信息
-     *
-     * @param house 房产信息
-     * @return 结果
-     */
-    int insertHouse(House house);
-
-    /**
-     * 修改房产信息
-     *
-     * @param house 房产信息
-     * @return 结果
-     */
-    int updateHouse(House house);
-
-    /**
-     * 删除房产信息
-     *
-     * @param houseId 房产ID
-     * @return 结果
-     */
-    int deleteHouseById(Long houseId);
-
-    /**
-     * 批量删除房产信息
-     *
-     * @param houseIds 需要删除的房产ID数组
-     * @return 结果
-     */
-    int deleteHouseByIds(Long[] houseIds);
 }

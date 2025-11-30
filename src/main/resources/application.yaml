@@ -5,7 +5,7 @@ spring:
   # 数据源配置
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/property_management?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=GMT%2B8
+    url: jdbc:mysql://localhost:3306/property_management?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true
     username: root
     password: 123456
 
@@ -40,13 +40,10 @@ server:
 # MyBatis Plus配置
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
-  type-aliases-package: com.hyu.**.domain,com.hyu.**.entity
+  type-aliases-package: com.hyu.**.domain,com.hyu.**.entity,com.hyu.**.domain.vo
   global-config:
     db-config:
       id-type: auto
-      logic-delete-field: deleted
-      logic-delete-value: 1
-      logic-not-delete-value: 0
   configuration:
     map-underscore-to-camel-case: true
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
@@ -54,7 +51,7 @@ mybatis-plus:
 
 # JWT配置
 jwt:
-  secret: propertyManagement2025SecretKeyForJWTTokenGeneration
+  secret: propertyManagement2025SecretKeyForJWTTokenGenerationAndAuthenticationThisIsASecureKeyThatMeetsHS512RequirementsWithMinimum64CharactersLength
   expiration: 7200000
   refresh-expiration: 604800000
 

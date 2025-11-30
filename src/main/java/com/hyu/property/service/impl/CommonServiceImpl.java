@@ -103,7 +103,7 @@ public class CommonServiceImpl implements ICommonService {
             fileInfo.setUploadUserId(SecurityUtils.getUserId());
             fileInfo.setBusinessType("general");
             fileInfo.setStatus(0);
-            fileInfo.setUploadTime(LocalDateTime.now());
+            fileInfo.setUploadTime(LocalDateTime.now().toString());
             fileInfo.setCreateTime(LocalDateTime.now());
             fileInfo.setUpdateTime(LocalDateTime.now());
 
@@ -137,12 +137,20 @@ public class CommonServiceImpl implements ICommonService {
             dictTypes.add(dictType2);
 
             Map<String, Object> dictType3 = new HashMap<>();
-            dictType3.put("dictType", "bill_status");
-            dictType3.put("dictName", "账单状态");
-            dictType3.put("dictCode", "bill_status");
-            dictType3.put("description", "账单状态字典");
+            dictType3.put("dictType", "order_status");
+            dictType3.put("dictName", "工单状态");
+            dictType3.put("dictCode", "order_status");
+            dictType3.put("description", "工单状态字典");
             dictType3.put("status", "0");
             dictTypes.add(dictType3);
+
+            Map<String, Object> dictType4 = new HashMap<>();
+            dictType4.put("dictType", "bill_status");
+            dictType4.put("dictName", "账单状态");
+            dictType4.put("dictCode", "bill_status");
+            dictType4.put("description", "账单状态字典");
+            dictType4.put("status", "0");
+            dictTypes.add(dictType4);
 
         } catch (Exception e) {
             log.error("获取字典类型列表异常", e);
@@ -158,16 +166,24 @@ public class CommonServiceImpl implements ICommonService {
         try {
             // 根据字典类型返回相应的字典数据
             if ("repair_status".equals(dictType)) {
-                dictData.add(createDictData(1L, "待接单", "1", "待接单状态"));
-                dictData.add(createDictData(2L, "进行中", "2", "进行中状态"));
-                dictData.add(createDictData(3L, "待验收", "3", "待验收状态"));
-                dictData.add(createDictData(4L, "已完成", "4", "已完成状态"));
-                dictData.add(createDictData(5L, "已取消", "5", "已取消状态"));
+                dictData.add(createDictData(1L, "待派工", "1", "待派工状态"));
+                dictData.add(createDictData(2L, "待接单", "2", "待接单状态"));
+                dictData.add(createDictData(3L, "进行中", "3", "进行中状态"));
+                dictData.add(createDictData(4L, "待验收", "4", "待验收状态"));
+                dictData.add(createDictData(5L, "已完成", "5", "已完成状态"));
+                dictData.add(createDictData(6L, "已归档", "6", "已归档状态"));
             } else if ("complaint_status".equals(dictType)) {
                 dictData.add(createDictData(1L, "待处理", "1", "待处理状态"));
                 dictData.add(createDictData(2L, "处理中", "2", "处理中状态"));
                 dictData.add(createDictData(3L, "已完成", "3", "已完成状态"));
                 dictData.add(createDictData(4L, "已关闭", "4", "已关闭状态"));
+            } else if ("order_status".equals(dictType)) {
+                dictData.add(createDictData(1L, "待派工", "1", "待派工状态"));
+                dictData.add(createDictData(2L, "待接单", "2", "待接单状态"));
+                dictData.add(createDictData(3L, "进行中", "3", "进行中状态"));
+                dictData.add(createDictData(4L, "待验收", "4", "待验收状态"));
+                dictData.add(createDictData(5L, "已完成", "5", "已完成状态"));
+                dictData.add(createDictData(6L, "已归档", "6", "已归档状态"));
             } else if ("bill_status".equals(dictType)) {
                 dictData.add(createDictData(1L, "待缴费", "1", "待缴费状态"));
                 dictData.add(createDictData(2L, "已缴费", "2", "已缴费状态"));

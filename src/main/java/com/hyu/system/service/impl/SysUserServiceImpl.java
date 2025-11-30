@@ -6,10 +6,15 @@ import com.hyu.common.exception.BusinessException;
 import com.hyu.common.utils.PasswordUtils;
 import com.hyu.system.domain.SysUser;
 import com.hyu.system.mapper.SysUserMapper;
+import com.hyu.system.mapper.SysUserRoleMapper;
 import com.hyu.system.service.ISysUserService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 /**
  * 用户Service业务层处理
@@ -19,6 +24,9 @@ import org.springframework.util.StringUtils;
 @Slf4j
 @Service
 public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> implements ISysUserService {
+
+    @Autowired
+    private SysUserRoleMapper userRoleMapper;
 
     @Override
     public SysUser selectUserByUsername(String username) {
@@ -175,5 +183,32 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
             result += baseMapper.insertUserRole(userRole);
         }
         return result > 0;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean assignUserRoles(Long userId, List<Long> roleIds) {
+        if (userId == null) {
+            return false;
+        }
+
+        // 先删除原有的用户角色关联
+        userRoleMapper.deleteUserRoleByUserId(userId);
+
+        // 如果没有分配角色，直接返回成功
+        if (roleIds == null || roleIds.isEmpty()) {
+            return true;
+        }
+
+        // 批量插入新的角色关联
+        return userRoleMapper.batchInsertUserRole(userId, roleIds) > 0;
+    }
+
+    @Override
+    public List<Long> getUserRoleIds(Long userId) {
+        if (userId == null) {
+            return new java.util.ArrayList<>();
+        }
+        return userRoleMapper.listRoleIdsByUserId(userId);
     }
 }

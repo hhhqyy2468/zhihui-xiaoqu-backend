@@ -24,7 +24,7 @@ public class SysUser {
     private static final long serialVersionUID = 1L;
 
     /** 用户ID */
-    @TableId(value = "user_id", type = IdType.AUTO)
+    @TableId(value = "id", type = IdType.AUTO)
     private Long userId;
 
     /** 用户名 */
@@ -54,6 +54,10 @@ public class SysUser {
     @TableField("email")
     private String email;
 
+    /** 性别 0-女 1-男 */
+    @TableField("gender")
+    private Integer gender;
+
     /** 用户类型 1:管理员 2:物业管理员 3:业主 4:维修人员 */
     @TableField("user_type")
     private Integer userType;
@@ -62,21 +66,29 @@ public class SysUser {
     @TableField("status")
     private Integer status;
 
+    /** 居住类型：1-业主 2-租户 */
+    @TableField("resident_type")
+    private Integer residentType;
+
+    /** 居住状态：1-在住 2-搬离 */
+    @TableField("resident_status")
+    private Integer residentStatus;
+
     /** 部门ID */
-    @TableField("dept_id")
-    private Long deptId;
+    // @TableField("dept_id") // 数据库中不存在此字段
+    // private Long deptId;
 
     /** 头像URL */
     @TableField("avatar")
     private String avatar;
 
     /** 最后登录时间 */
-    @TableField("last_login_time")
-    private LocalDateTime lastLoginTime;
+    // @TableField("last_login_time") // 数据库中不存在此字段
+    // private LocalDateTime lastLoginTime;
 
     /** 最后登录IP */
-    @TableField("last_login_ip")
-    private String lastLoginIp;
+    // @TableField("last_login_ip") // 数据库中不存在此字段
+    // private String lastLoginIp;
 
     /** 备注 */
     @TableField("remark")

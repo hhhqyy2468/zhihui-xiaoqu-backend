@@ -5,47 +5,42 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import com.hyu.common.domain.LoginUser;
 
 /**
- * 安全服务工具类
- *
- * @author hyu
+ * Security Utility Class
  */
 public class SecurityUtils {
 
     /**
-     * 获取用户ID
-     **/
+     * Get User ID
+     */
     public static Long getUserId() {
         try {
-            return getLoginUser().getUserId();
+            LoginUser loginUser = getLoginUser();
+            if (loginUser != null) {
+                return loginUser.getUserId();
+            }
         } catch (Exception e) {
-            return null;
+            // ignore exception
         }
+        return null;
     }
 
     /**
-     * 获取用户名
-     **/
+     * Get Username
+     */
     public static String getUsername() {
         try {
-            return getLoginUser().getUsername();
+            LoginUser loginUser = getLoginUser();
+            if (loginUser != null) {
+                return loginUser.getUsername();
+            }
         } catch (Exception e) {
-            return "";
+            // ignore exception
         }
+        return null;
     }
 
     /**
-     * 获取用户key
-     */
-    public static String getUserKey() {
-        try {
-            return getLoginUser().getUserKey();
-        } catch (Exception e) {
-            return "";
-        }
-    }
-
-    /**
-     * 获取登录用户信息
+     * Get Login User
      */
     public static LoginUser getLoginUser() {
         try {
@@ -53,24 +48,24 @@ public class SecurityUtils {
             if (authentication != null && authentication.getPrincipal() instanceof LoginUser) {
                 return (LoginUser) authentication.getPrincipal();
             }
-            return null;
         } catch (Exception e) {
-            return null;
+            // ignore exception
         }
+        return null;
     }
 
     /**
-     * 验证用户是否登录
+     * Check if Admin
      */
-    public static boolean isAuthenticated() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        return authentication != null && authentication.isAuthenticated();
-    }
-
-    /**
-     * 验证用户是否具有某权限
-     */
-    public static boolean hasPermi(String permission) {
-        return getLoginUser() != null && getLoginUser().getPermissions().contains(permission);
+    public static boolean isAdmin() {
+        try {
+            LoginUser loginUser = getLoginUser();
+            if (loginUser != null) {
+                return loginUser.getUserType() != null && loginUser.getUserType() == 1;
+            }
+        } catch (Exception e) {
+            return false;
+        }
+        return false;
     }
 }

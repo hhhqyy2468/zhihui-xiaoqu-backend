@@ -1,7 +1,7 @@
 package com.hyu.property.service;
 
 import com.hyu.property.domain.dto.WorkbenchStatsDTO;
-import com.hyu.property.domain.vo.RepairOrderVO;
+import com.hyu.property.domain.RepairOrder;
 
 import java.util.List;
 import java.util.Map;
@@ -29,5 +29,5 @@ public interface IWorkbenchService {
      * @param repairStatus 工单状态
      * @return 工单列表
      */
-    public List<RepairOrderVO> getMyRepairOrderList(Integer pageNum, Integer pageSize, Integer repairStatus);
+    public List<RepairOrder> getMyRepairOrderList(Integer pageNum, Integer pageSize, Integer repairStatus);
 }

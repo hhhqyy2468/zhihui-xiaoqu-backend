@@ -99,7 +99,7 @@ public class AuthServiceImpl implements IAuthService {
                 user.getUsername(),
                 user.getRealName(),
                 user.getUserType(),
-                user.getDeptId()
+                null // 数据库中不存在deptId字段，传入null
         );
 
         // 生成刷新token
@@ -108,10 +108,10 @@ public class AuthServiceImpl implements IAuthService {
         // 存储刷新token到Redis
         redisUtils.set(REFRESH_TOKEN_PREFIX + user.getUserId(), refreshToken, 7 * 24 * 60 * 60);
 
-        // 更新最后登录信息
-        user.setLastLoginTime(LocalDateTime.now());
-        user.setLastLoginIp(getClientIP());
-        userService.updateById(user);
+        // 更新最后登录信息 - 数据库中不存在这些字段，暂时注释掉
+        // user.setLastLoginTime(LocalDateTime.now());
+        // user.setLastLoginIp(getClientIP());
+        // userService.updateById(user);
 
         // 构建返回结果
         Map<String, Object> result = new HashMap<>();
@@ -225,7 +225,7 @@ public class AuthServiceImpl implements IAuthService {
                     user.getUsername(),
                     user.getRealName(),
                     user.getUserType(),
-                    user.getDeptId()
+                    null // 数据库中不存在deptId字段，传入null
             );
 
             // 生成新的刷新token
@@ -411,16 +411,213 @@ public class AuthServiceImpl implements IAuthService {
         userInfo.put("email", user.getEmail());
         userInfo.put("userType", user.getUserType());
         userInfo.put("avatar", user.getAvatar());
-        userInfo.put("lastLoginTime", user.getLastLoginTime());
-        userInfo.put("lastLoginIp", user.getLastLoginIp());
+        // userInfo.put("lastLoginTime", user.getLastLoginTime()); // 数据库中不存在此字段
+        // userInfo.put("lastLoginIp", user.getLastLoginIp()); // 数据库中不存在此字段
         userInfo.put("createTime", user.getCreateTime());
         userInfo.put("updateTime", user.getUpdateTime());
 
-        // 这里可以添加角色和权限信息
-        // userInfo.put("roles", user.getRoles());
-        // userInfo.put("permissions", user.getPermissions());
+        // 根据用户类型设置角色和权限信息
+        Set<String> roles = new HashSet<>();
+        Set<String> permissions = new HashSet<>();
+
+        switch (user.getUserType()) {
+            case 1: // 管理员
+                roles.add("admin");
+                // 管理员拥有所有权限
+                permissions.addAll(getAllPermissions());
+                break;
+            case 2: // 物业管理员
+                roles.add("property_manager");
+                permissions.addAll(getPropertyManagerPermissions());
+                break;
+            case 3: // 业主
+                roles.add("owner");
+                permissions.addAll(getOwnerPermissions());
+                break;
+            case 4: // 维修人员
+                roles.add("worker");
+                permissions.addAll(getWorkerPermissions());
+                break;
+        }
+
+        userInfo.put("roles", roles);
+        userInfo.put("permissions", permissions);
 
         return userInfo;
+    }
+
+    /**
+     * 获取所有权限
+     */
+    private Set<String> getAllPermissions() {
+        Set<String> permissions = new HashSet<>();
+        permissions.add("property:building:view");
+        permissions.add("property:building:add");
+        permissions.add("property:building:edit");
+        permissions.add("property:building:delete");
+        permissions.add("property:unit:view");
+        permissions.add("property:unit:add");
+        permissions.add("property:unit:edit");
+        permissions.add("property:unit:delete");
+        permissions.add("property:house:view");
+        permissions.add("property:house:add");
+        permissions.add("property:house:edit");
+        permissions.add("property:house:delete");
+        permissions.add("property:resident:view");
+        permissions.add("property:resident:add");
+        permissions.add("property:resident:edit");
+        permissions.add("property:resident:delete");
+        permissions.add("property:fee:type:view");
+        permissions.add("property:fee:type:add");
+        permissions.add("property:fee:type:edit");
+        permissions.add("property:fee:type:delete");
+        permissions.add("property:bill:view");
+        permissions.add("property:bill:add");
+        permissions.add("property:bill:edit");
+        permissions.add("property:bill:delete");
+        permissions.add("property:bill:generate");
+        permissions.add("property:bill:pay");
+        permissions.add("property:wallet:view");
+        permissions.add("property:wallet:recharge");
+        permissions.add("property:wallet:freeze");
+        permissions.add("property:wallet:resetPassword");
+        permissions.add("property:transaction:list");
+        permissions.add("property:complaint:view");
+        permissions.add("property:complaint:add");
+        permissions.add("property:complaint:edit");
+        permissions.add("property:complaint:delete");
+        permissions.add("property:complaint:assign");
+        permissions.add("property:complaint:handle");
+        permissions.add("property:complaint:rate");
+        permissions.add("property:repair:view");
+        permissions.add("property:repair:add");
+        permissions.add("property:repair:edit");
+        permissions.add("property:repair:delete");
+        permissions.add("property:repair:assign");
+        permissions.add("property:repair:handle");
+        permissions.add("property:repair:accept");
+        permissions.add("property:parking:view");
+        permissions.add("property:parking:add");
+        permissions.add("property:parking:edit");
+        permissions.add("property:parking:delete");
+        permissions.add("property:parking:rent");
+        permissions.add("property:parking:audit");
+        permissions.add("property:parking:renew");
+        permissions.add("property:parking:return");
+        permissions.add("property:notice:view");
+        permissions.add("property:notice:add");
+        permissions.add("property:notice:edit");
+        permissions.add("property:notice:delete");
+        permissions.add("property:notice:publish");
+        permissions.add("property:notice:withdraw");
+        permissions.add("analytics:view");
+        permissions.add("analytics:export");
+        permissions.add("system:config:view");
+        permissions.add("system:config:edit");
+        permissions.add("system:log:view");
+        permissions.add("system:log:export");
+        permissions.add("system:dict:view");
+        permissions.add("system:dict:add");
+        permissions.add("system:dict:edit");
+        permissions.add("system:dict:delete");
+        permissions.add("system:dict:refresh");
+        return permissions;
+    }
+
+    /**
+     * 获取物业管理员权限
+     */
+    private Set<String> getPropertyManagerPermissions() {
+        Set<String> permissions = new HashSet<>();
+        permissions.add("property:building:view");
+        permissions.add("property:building:add");
+        permissions.add("property:building:edit");
+        permissions.add("property:building:delete");
+        permissions.add("property:unit:view");
+        permissions.add("property:unit:add");
+        permissions.add("property:unit:edit");
+        permissions.add("property:unit:delete");
+        permissions.add("property:house:view");
+        permissions.add("property:house:add");
+        permissions.add("property:house:edit");
+        permissions.add("property:house:delete");
+        permissions.add("property:resident:view");
+        permissions.add("property:resident:add");
+        permissions.add("property:resident:edit");
+        permissions.add("property:resident:delete");
+        permissions.add("property:fee:type:view");
+        permissions.add("property:fee:type:add");
+        permissions.add("property:fee:type:edit");
+        permissions.add("property:fee:type:delete");
+        permissions.add("property:bill:view");
+        permissions.add("property:bill:add");
+        permissions.add("property:bill:edit");
+        permissions.add("property:bill:delete");
+        permissions.add("property:bill:generate");
+        permissions.add("property:wallet:view");
+        permissions.add("property:wallet:recharge");
+        permissions.add("property:wallet:freeze");
+        permissions.add("property:wallet:resetPassword");
+        permissions.add("property:transaction:list");
+        permissions.add("property:complaint:view");
+        permissions.add("property:complaint:add");
+        permissions.add("property:complaint:edit");
+        permissions.add("property:complaint:delete");
+        permissions.add("property:complaint:assign");
+        permissions.add("property:complaint:handle");
+        permissions.add("property:repair:view");
+        permissions.add("property:repair:add");
+        permissions.add("property:repair:edit");
+        permissions.add("property:repair:delete");
+        permissions.add("property:repair:assign");
+        permissions.add("property:repair:handle");
+        permissions.add("property:parking:view");
+        permissions.add("property:parking:add");
+        permissions.add("property:parking:edit");
+        permissions.add("property:parking:delete");
+        permissions.add("property:parking:audit");
+        permissions.add("property:notice:view");
+        permissions.add("property:notice:add");
+        permissions.add("property:notice:edit");
+        permissions.add("property:notice:delete");
+        permissions.add("property:notice:publish");
+        permissions.add("analytics:view");
+        permissions.add("system:config:view");
+        permissions.add("system:dict:view");
+        return permissions;
+    }
+
+    /**
+     * 获取业主权限
+     */
+    private Set<String> getOwnerPermissions() {
+        Set<String> permissions = new HashSet<>();
+        permissions.add("property:owner:list");
+        permissions.add("property:bill:view");
+        permissions.add("property:bill:pay");
+        permissions.add("property:wallet:view");
+        permissions.add("property:wallet:recharge");
+        permissions.add("property:transaction:list");
+        permissions.add("property:complaint:add");
+        permissions.add("property:complaint:rate");
+        permissions.add("property:repair:add");
+        permissions.add("property:repair:accept");
+        permissions.add("property:notice:view");
+        permissions.add("portal:view");
+        permissions.add("portal:dashboard:view");
+        return permissions;
+    }
+
+    /**
+     * 获取维修人员权限
+     */
+    private Set<String> getWorkerPermissions() {
+        Set<String> permissions = new HashSet<>();
+        permissions.add("property:repair:view");
+        permissions.add("property:repair:handle");
+        permissions.add("property:repair:accept");
+        permissions.add("property:notice:view");
+        return permissions;
     }
 
     /**

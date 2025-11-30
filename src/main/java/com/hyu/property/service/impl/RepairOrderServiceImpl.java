@@ -1,393 +1,531 @@
 package com.hyu.property.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.hyu.common.core.domain.AjaxResult;
+import com.hyu.common.utils.StringUtils;
 import com.hyu.common.utils.SecurityUtils;
 import com.hyu.property.domain.RepairOrder;
-import com.hyu.property.domain.dto.RepairOrderDTO;
-import com.hyu.property.domain.vo.RepairOrderVO;
+import com.hyu.property.domain.Bill;
 import com.hyu.property.mapper.RepairOrderMapper;
 import com.hyu.property.service.IRepairOrderService;
+import com.hyu.property.service.IBillService;
+import com.hyu.system.domain.SysUser;
 import com.hyu.system.service.ISysUserService;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.BeanUtils;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.HashMap;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 /**
  * 维修工单Service业务层处理
  *
- * @author system
- * @date 2025-11-11
+ * @author hyu
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class RepairOrderServiceImpl extends ServiceImpl<RepairOrderMapper, RepairOrder> implements IRepairOrderService {
 
-    private final RepairOrderMapper repairOrderMapper;
-    private final ISysUserService userService;
+    @Autowired
+    private IBillService billService;
+
+    @Autowired
+    private ISysUserService userService;
 
     /**
-     * 查询维修工单
+     * 分页查询维修工单列表
      *
-     * @param id 维修工单主键
-     * @return 维修工单
+     * @param page 分页参数
+     * @param repairOrder 维修工单信息
+     * @return 维修工单分页数据
      */
     @Override
-    public RepairOrderVO selectRepairOrderById(Long id) {
-        return repairOrderMapper.selectRepairOrderById(id);
-    }
+    public Page<RepairOrder> selectRepairOrderPage(Page<RepairOrder> page, RepairOrder repairOrder) {
+        QueryWrapper<RepairOrder> queryWrapper = new QueryWrapper<>();
 
-    /**
-     * 查询维修工单列表
-     *
-     * @param repairOrder 维修工单
-     * @return 维修工单
-     */
-    @Override
-    public List<RepairOrderVO> selectRepairOrderList(RepairOrder repairOrder) {
-        return repairOrderMapper.selectRepairOrderList(repairOrder);
-    }
+        // 精确匹配条件
+        queryWrapper.eq(StringUtils.isNotEmpty(repairOrder.getOrderNo()), "order_no", repairOrder.getOrderNo())
+                   .eq(repairOrder.getUserId() != null, "user_id", repairOrder.getUserId())
+                   .eq(repairOrder.getHouseId() != null, "house_id", repairOrder.getHouseId())
+                   .eq(StringUtils.isNotEmpty(repairOrder.getRepairType()), "repair_type", repairOrder.getRepairType())
+                   .eq(repairOrder.getUrgencyLevel() != null, "urgency_level", repairOrder.getUrgencyLevel())
+                   .eq(repairOrder.getOrderStatus() != null, "order_status", repairOrder.getOrderStatus())
+                   .eq(repairOrder.getWorkerId() != null, "worker_id", repairOrder.getWorkerId())
+                   .eq(StringUtils.isNotEmpty(repairOrder.getPhone()), "phone", repairOrder.getPhone());
 
-    /**
-     * 新增维修工单
-     *
-     * @param repairOrderDTO 维修工单
-     * @return 结果
-     */
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public int insertRepairOrder(RepairOrderDTO repairOrderDTO) {
-        RepairOrder repairOrder = new RepairOrder();
-        BeanUtils.copyProperties(repairOrderDTO, repairOrder);
-        return repairOrderMapper.insert(repairOrder);
-    }
+        // 模糊匹配条件
+        queryWrapper.like(StringUtils.isNotEmpty(repairOrder.getUserName()), "user_name", repairOrder.getUserName())
+                   .like(StringUtils.isNotEmpty(repairOrder.getHouseNo()), "house_no", repairOrder.getHouseNo())
+                   .like(StringUtils.isNotEmpty(repairOrder.getWorkerName()), "worker_name", repairOrder.getWorkerName())
+                   .like(StringUtils.isNotEmpty(repairOrder.getFaultDescription()), "fault_description", repairOrder.getFaultDescription());
 
-    /**
-     * 修改维修工单
-     *
-     * @param repairOrderDTO 维修工单
-     * @return 结果
-     */
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public int updateRepairOrder(RepairOrderDTO repairOrderDTO) {
-        RepairOrder repairOrder = new RepairOrder();
-        BeanUtils.copyProperties(repairOrderDTO, repairOrder);
-        return repairOrderMapper.updateById(repairOrder);
-    }
+        // 日期范围查询 - 创建时间
+        if (repairOrder.getParams() != null) {
+            Map<String, Object> params = repairOrder.getParams();
+            if (params.get("beginTime") != null && StringUtils.isNotEmpty(params.get("beginTime").toString())) {
+                queryWrapper.ge("create_time", params.get("beginTime"));
+            }
+            if (params.get("endTime") != null && StringUtils.isNotEmpty(params.get("endTime").toString())) {
+                queryWrapper.le("create_time", params.get("endTime"));
+            }
 
-    /**
-     * 批量删除维修工单
-     *
-     * @param ids 需要删除的维修工单主键
-     * @return 结果
-     */
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public int deleteRepairOrderByIds(List<Long> ids) {
-        return repairOrderMapper.deleteBatchIds(ids);
-    }
+            // 日期范围查询 - 预约时间
+            if (params.get("beginAppointmentTime") != null && StringUtils.isNotEmpty(params.get("beginAppointmentTime").toString())) {
+                queryWrapper.ge("appointment_time", params.get("beginAppointmentTime"));
+            }
+            if (params.get("endAppointmentTime") != null && StringUtils.isNotEmpty(params.get("endAppointmentTime").toString())) {
+                queryWrapper.le("appointment_time", params.get("endAppointmentTime"));
+            }
 
-    /**
-     * 删除维修工单信息
-     *
-     * @param id 维修工单主键
-     * @return 结果
-     */
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public int deleteRepairOrderById(Long id) {
-        return repairOrderMapper.deleteById(id);
-    }
+            // 日期范围查询 - 完成时间
+            if (params.get("beginFinishTime") != null && StringUtils.isNotEmpty(params.get("beginFinishTime").toString())) {
+                queryWrapper.ge("finish_time", params.get("beginFinishTime"));
+            }
+            if (params.get("endFinishTime") != null && StringUtils.isNotEmpty(params.get("endFinishTime").toString())) {
+                queryWrapper.le("finish_time", params.get("endFinishTime"));
+            }
 
-    // ========== 业务方法 ==========
-
-    /**
-     * 业主提交报修申请
-     */
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public int submitRepairRequest(RepairOrderDTO repairOrderDTO) {
-        Long currentUserId = SecurityUtils.getUserId();
-        String currentUserName = SecurityUtils.getUsername();
-
-        // 查询用户房产信息
-        // TODO: 根据houseId查询房产信息，验证权限
-
-        RepairOrder repairOrder = new RepairOrder();
-        BeanUtils.copyProperties(repairOrderDTO, repairOrder);
-        repairOrder.setUserId(currentUserId);
-        repairOrder.setUserName(currentUserName);
-        repairOrder.setOrderStatus(1); // 待派工
-        repairOrder.setReworkCount(0);
-        repairOrder.setDeleted(0);
-
-        return repairOrderMapper.insert(repairOrder);
-    }
-
-    /**
-     * 物业管理员派工
-     */
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public int assignWorker(Long id, Long workerId, String workerName, LocalDateTime requiredFinishTime) {
-        RepairOrder updateOrder = new RepairOrder();
-        updateOrder.setId(id);
-        updateOrder.setWorkerId(workerId);
-        updateOrder.setWorkerName(workerName);
-        updateOrder.setRequiredFinishTime(requiredFinishTime);
-        updateOrder.setOrderStatus(2); // 已派工
-        updateOrder.setAssignTime(LocalDateTime.now());
-
-        return repairOrderMapper.updateById(updateOrder);
-    }
-
-    /**
-     * 维修人员接单
-     */
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public int acceptOrder(Long id, Long workerId) {
-        RepairOrder repairOrder = repairOrderMapper.selectById(id);
-        if (repairOrder == null) {
-            throw new RuntimeException("维修工单不存在");
-        }
-        if (!repairOrder.getWorkerId().equals(workerId)) {
-            throw new RuntimeException("无权操作此工单");
-        }
-        if (!repairOrder.getOrderStatus().equals(2)) {
-            throw new RuntimeException("工单状态不正确，无法接单");
-        }
-
-        RepairOrder updateOrder = new RepairOrder();
-        updateOrder.setId(id);
-        updateOrder.setOrderStatus(3); // 进行中
-        return repairOrderMapper.updateById(updateOrder);
-    }
-
-    /**
-     * 维修人员开始维修
-     */
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public int startRepair(Long id, Long workerId) {
-        RepairOrder repairOrder = repairOrderMapper.selectById(id);
-        if (repairOrder == null) {
-            throw new RuntimeException("维修工单不存在");
-        }
-        if (!repairOrder.getWorkerId().equals(workerId)) {
-            throw new RuntimeException("无权操作此工单");
-        }
-        if (!repairOrder.getOrderStatus().equals(3)) {
-            throw new RuntimeException("工单状态不正确，无法开始维修");
-        }
-
-        // 更新状态为进行中
-        return repairOrderMapper.updateOrderStatus(id, 3);
-    }
-
-    /**
-     * 维修人员完成维修
-     */
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public int completeRepair(RepairOrderDTO repairOrderDTO) {
-        Long currentUserId = SecurityUtils.getUserId();
-        RepairOrder repairOrder = repairOrderMapper.selectById(repairOrderDTO.getId());
-
-        if (repairOrder == null) {
-            throw new RuntimeException("维修工单不存在");
-        }
-        if (!repairOrder.getWorkerId().equals(currentUserId)) {
-            throw new RuntimeException("无权操作此工单");
-        }
-        if (!repairOrder.getOrderStatus().equals(3)) {
-            throw new RuntimeException("工单状态不正确，无法完成维修");
-        }
-
-        RepairOrder updateOrder = new RepairOrder();
-        updateOrder.setId(repairOrderDTO.getId());
-        updateOrder.setActualFault(repairOrderDTO.getActualFault());
-        updateOrder.setRepairContent(repairOrderDTO.getRepairContent());
-        updateOrder.setRepairImageUrls(repairOrderDTO.getRepairImageUrls());
-        updateOrder.setRepairCost(repairOrderDTO.getRepairCost());
-        updateOrder.setPartsReplaced(repairOrderDTO.getPartsReplaced());
-        updateOrder.setOrderStatus(4); // 待验收
-        updateOrder.setFinishTime(LocalDateTime.now());
-        updateOrder.setAutoAcceptTime(LocalDateTime.now().plusDays(3)); // 3天后自动验收
-
-        return repairOrderMapper.updateById(updateOrder);
-    }
-
-    /**
-     * 业主验收维修
-     */
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public int acceptRepair(Long id, Long userId, Integer acceptanceResult, Integer acceptanceRating, String acceptanceComment) {
-        RepairOrder repairOrder = repairOrderMapper.selectById(id);
-
-        if (repairOrder == null) {
-            throw new RuntimeException("维修工单不存在");
-        }
-        if (!repairOrder.getUserId().equals(userId)) {
-            throw new RuntimeException("无权操作此工单");
-        }
-        if (!repairOrder.getOrderStatus().equals(4)) {
-            throw new RuntimeException("工单状态不正确，无法验收");
-        }
-
-        RepairOrder updateOrder = new RepairOrder();
-        updateOrder.setId(id);
-        updateOrder.setAcceptanceResult(acceptanceResult);
-        updateOrder.setAcceptanceRating(acceptanceRating);
-        updateOrder.setAcceptanceComment(acceptanceComment);
-        updateOrder.setAcceptanceTime(LocalDateTime.now());
-
-        if (acceptanceResult == 1) {
-            // 验收合格
-            updateOrder.setOrderStatus(5); // 已完成
-        } else {
-            // 验收不合格，增加返工次数
-            updateOrder.setOrderStatus(3); // 进行中
-            repairOrderMapper.incrementReworkCount(id);
-
-            // 检查返工次数，最多返工2次
-            if (repairOrder.getReworkCount() >= 2) {
-                throw new RuntimeException("返工次数已达上限，请联系管理员");
+            // 维修费用范围查询
+            if (params.get("minRepairCost") != null && StringUtils.isNotEmpty(params.get("minRepairCost").toString())) {
+                queryWrapper.ge("repair_cost", new BigDecimal(params.get("minRepairCost").toString()));
+            }
+            if (params.get("maxRepairCost") != null && StringUtils.isNotEmpty(params.get("maxRepairCost").toString())) {
+                queryWrapper.le("repair_cost", new BigDecimal(params.get("maxRepairCost").toString()));
             }
         }
 
-        return repairOrderMapper.updateById(updateOrder);
+        // 排除已删除的数据
+        queryWrapper.eq("deleted", 0);
+
+        // 按创建时间倒序排列
+        queryWrapper.orderByDesc("create_time");
+
+        Page<RepairOrder> resultPage = page(page, queryWrapper);
+
+        // 设置报修时间和真实姓名（前端显示用）
+        resultPage.getRecords().forEach(order -> {
+            if (order.getCreateTime() != null) {
+                order.setReportTime(order.getCreateTime());
+            }
+
+            // 获取用户真实姓名
+            if (order.getUserId() != null) {
+                SysUser user = userService.getById(order.getUserId());
+                if (user != null && StringUtils.isNotEmpty(user.getRealName())) {
+                    order.setRealName(user.getRealName());
+                }
+            }
+
+            // 获取维修人员电话
+            if (order.getWorkerId() != null) {
+                SysUser worker = userService.getById(order.getWorkerId());
+                if (worker != null && StringUtils.isNotEmpty(worker.getPhone())) {
+                    order.setWorkerPhone(worker.getPhone());
+                }
+            }
+        });
+
+        return resultPage;
     }
 
     /**
-     * 自动验收维修
+     * 校验工单编号是否唯一
+     *
+     * @param repairOrder 维修工单信息
+     * @return 结果 true唯一 false不唯一
      */
     @Override
-    @Transactional(rollbackFor = Exception.class)
-    public int autoAcceptRepair(Long id) {
-        RepairOrder repairOrder = repairOrderMapper.selectById(id);
+    public boolean checkOrderNoUnique(RepairOrder repairOrder) {
+        Long repairOrderId = repairOrder.getId() == null ? -1L : repairOrder.getId();
+        QueryWrapper<RepairOrder> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("order_no", repairOrder.getOrderNo())
+                   .eq("deleted", 0);
 
-        if (repairOrder == null || !repairOrder.getOrderStatus().equals(4)) {
-            return 0;
+        RepairOrder info = getOne(queryWrapper);
+        if (info != null && !info.getId().equals(repairOrderId)) {
+            return false;
         }
-
-        RepairOrder updateOrder = new RepairOrder();
-        updateOrder.setId(id);
-        updateOrder.setAcceptanceResult(1); // 默认合格
-        updateOrder.setAcceptanceRating(5); // 默认5星
-        updateOrder.setAcceptanceComment("系统自动验收");
-        updateOrder.setAcceptanceTime(LocalDateTime.now());
-        updateOrder.setOrderStatus(5); // 已完成
-
-        return repairOrderMapper.updateById(updateOrder);
+        return true;
     }
 
     /**
-     * 业主取消报修
+     * 查询维修工单详情
+     *
+     * @param id 维修工单主键
+     * @return 维修工单
      */
     @Override
-    @Transactional(rollbackFor = Exception.class)
-    public int cancelRepairOrder(Long id, Long userId) {
-        RepairOrder repairOrder = repairOrderMapper.selectById(id);
-
+    public RepairOrder selectRepairOrderById(Long id) {
+        RepairOrder repairOrder = getById(id);
         if (repairOrder == null) {
-            throw new RuntimeException("维修工单不存在");
-        }
-        if (!repairOrder.getUserId().equals(userId)) {
-            throw new RuntimeException("无权操作此工单");
+            return null;
         }
 
-        // 只有待派工状态才能取消
-        if (!repairOrder.getOrderStatus().equals(1)) {
-            throw new RuntimeException("工单已派工，无法取消");
+        // 设置报修时间和真实姓名
+        if (repairOrder.getCreateTime() != null) {
+            repairOrder.setReportTime(repairOrder.getCreateTime());
         }
 
-        return repairOrderMapper.deleteById(id);
+        // 获取用户真实姓名
+        if (repairOrder.getUserId() != null) {
+            SysUser user = userService.getById(repairOrder.getUserId());
+            if (user != null && StringUtils.isNotEmpty(user.getRealName())) {
+                repairOrder.setRealName(user.getRealName());
+            }
+        }
+
+        // 获取维修人员电话
+        if (repairOrder.getWorkerId() != null) {
+            SysUser worker = userService.getById(repairOrder.getWorkerId());
+            if (worker != null && StringUtils.isNotEmpty(worker.getPhone())) {
+                repairOrder.setWorkerPhone(worker.getPhone());
+            }
+        }
+
+        return repairOrder;
     }
 
     /**
      * 根据用户ID查询维修工单列表
+     *
+     * @param userId 用户ID
+     * @return 维修工单集合
      */
     @Override
-    public List<RepairOrderVO> selectRepairOrdersByUserId(Long userId) {
-        return repairOrderMapper.selectRepairOrdersByUserId(userId);
+    public List<RepairOrder> selectRepairOrdersByUserId(Long userId) {
+        QueryWrapper<RepairOrder> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("user_id", userId)
+                   .eq("deleted", 0)
+                   .orderByDesc("create_time");
+        return list(queryWrapper);
     }
 
     /**
-     * 根据维修人员ID查询维修工单列表
+     * 获取维修人员列表
      */
     @Override
-    public List<RepairOrderVO> selectRepairOrdersByWorkerId(Long workerId) {
-        return repairOrderMapper.selectRepairOrdersByWorkerId(workerId);
+    public List<Map<String, Object>> getRepairerList() {
+        try {
+            // 查询所有状态正常的维修人员 (user_type = 4)
+            List<Map<String, Object>> repairers = userService.list(
+                new QueryWrapper<SysUser>()
+                    .eq("status", 1) // 正常状态
+                    .eq("user_type", 4) // 维修人员
+                    .orderByAsc("real_name")
+            ).stream()
+            .filter(user -> user.getRealName() != null && !user.getRealName().isEmpty())
+            .map(user -> {
+                Map<String, Object> repairer = new HashMap<>();
+                repairer.put("value", user.getUserId());
+                repairer.put("label", user.getRealName() + (user.getPhone() != null ? "-" + user.getPhone() : ""));
+                repairer.put("realName", user.getRealName());
+                repairer.put("phone", user.getPhone());
+                return repairer;
+            })
+            .collect(Collectors.toList());
+
+            log.info("获取到{}个维修人员", repairers.size());
+            return repairers;
+        } catch (Exception e) {
+            log.error("获取维修人员列表失败: {}", e.getMessage(), e);
+            return new ArrayList<>();
+        }
     }
 
     /**
-     * 查询待派工的维修工单列表
+     * 系统管理员派工
      */
     @Override
-    public List<RepairOrderVO> selectPendingRepairOrders() {
-        return repairOrderMapper.selectPendingRepairOrders();
+    public boolean assignOrder(Long id, Map<String, Object> params) {
+        RepairOrder repairOrder = getById(id);
+        if (repairOrder == null || repairOrder.getOrderStatus() != 1) {
+            log.warn("维修工单状态不正确，无法派工: {}", id);
+            return false;
+        }
+
+        try {
+            // 获取派工参数
+            Long repairerId = Long.valueOf(params.get("repairerId").toString());
+            String expectedCompleteTime = params.get("expectedCompleteTime").toString();
+            BigDecimal repairCost = new BigDecimal(params.get("repairCost").toString());
+            String remark = params.get("remark") != null ? params.get("remark").toString() : null;
+
+            // 获取维修人员信息
+            SysUser worker = userService.getById(repairerId);
+            if (worker == null) {
+                log.warn("维修人员不存在: {}", repairerId);
+                return false;
+            }
+
+            // 更新工单信息
+            repairOrder.setWorkerId(repairerId);
+            repairOrder.setWorkerName(worker.getRealName());
+            repairOrder.setRequiredFinishTime(LocalDateTime.parse(expectedCompleteTime, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
+            repairOrder.setRepairCost(repairCost);
+            repairOrder.setAssignTime(LocalDateTime.now());
+            repairOrder.setOrderStatus(2); // 状态改为待接单
+            repairOrder.setUpdateBy(SecurityUtils.getUsername());
+
+            return updateById(repairOrder);
+        } catch (Exception e) {
+            log.error("派工失败: {}", e.getMessage(), e);
+            return false;
+        }
     }
 
     /**
-     * 查询维修统计信息
+     * 维修师傅接单
      */
     @Override
-    public Map<String, Object> getRepairStatistics() {
-        Map<String, Object> stats = new HashMap<>();
+    public boolean acceptOrder(Long id) {
+        RepairOrder repairOrder = getById(id);
+        if (repairOrder == null || repairOrder.getOrderStatus() != 2) {
+            log.warn("维修工单状态不正确，无法接单: {}", id);
+            return false;
+        }
 
-        stats.put("pendingCount", repairOrderMapper.countByOrderStatus(1)); // 待派工
-        stats.put("assignedCount", repairOrderMapper.countByOrderStatus(2)); // 已派工
-        stats.put("processingCount", repairOrderMapper.countByOrderStatus(3)); // 进行中
-        stats.put("waitingAcceptanceCount", repairOrderMapper.countByOrderStatus(4)); // 待验收
-        stats.put("completedCount", repairOrderMapper.countByOrderStatus(5)); // 已完成
-
-        return stats;
+        repairOrder.setOrderStatus(3); // 状态改为进行中
+        repairOrder.setUpdateBy(SecurityUtils.getUsername());
+        return updateById(repairOrder);
     }
 
     /**
-     * 查询维修人员工作量统计
+     * 完成维修
      */
     @Override
-    public List<RepairOrderVO> getWorkerWorkloadStats() {
-        return repairOrderMapper.selectWorkerWorkloadStats();
+    public boolean completeOrder(Long id, Map<String, Object> params) {
+        RepairOrder repairOrder = getById(id);
+        if (repairOrder == null || repairOrder.getOrderStatus() != 3) {
+            log.warn("维修工单状态不正确，无法完成维修: {}", id);
+            return false;
+        }
+
+        // 更新维修信息
+        repairOrder.setActualFault((String) params.get("faultReason")); // 前端发送的是 faultReason
+        repairOrder.setRepairContent((String) params.get("faultReason")); // 使用故障原因作为维修内容
+        repairOrder.setPartsReplaced((String) params.get("partsUsed")); // 前端发送的是 partsUsed
+
+        // 处理维修费用 - 只有维修师傅提供了费用才更新，否则保持派工时设定的费用
+        if (params.get("repairCost") != null && StringUtils.isNotEmpty(params.get("repairCost").toString())) {
+            String repairCostStr = params.get("repairCost").toString();
+            BigDecimal repairCost = new BigDecimal(repairCostStr);
+            repairOrder.setRepairCost(repairCost);
+        }
+        // 如果没有提供费用，保持原有的repairCost不变
+
+        // 保存维修后图片信息（如果有）
+        String afterImages = (String) params.get("afterImages");
+        if (StringUtils.isNotEmpty(afterImages)) {
+            repairOrder.setRepairImageUrls(afterImages);
+        }
+
+        repairOrder.setFinishTime(LocalDateTime.now());
+        repairOrder.setOrderStatus(4); // 状态改为待验收
+        repairOrder.setUpdateBy(SecurityUtils.getUsername());
+
+        return updateById(repairOrder);
     }
 
     /**
-     * 查询维修类型统计
+     * 验收维修
      */
     @Override
-    public List<RepairOrderVO> getRepairTypeStats() {
-        return repairOrderMapper.selectRepairTypeStats();
+    public boolean inspectOrder(Long id, Map<String, Object> params) {
+        RepairOrder repairOrder = getById(id);
+        if (repairOrder == null || repairOrder.getOrderStatus() != 4) {
+            log.warn("维修工单状态不正确，无法验收: {}", id);
+            return false;
+        }
+
+        // 更新验收信息
+        repairOrder.setAcceptanceResult(Integer.valueOf(params.get("acceptanceResult").toString()));
+        repairOrder.setAcceptanceRating(Integer.valueOf(params.get("acceptanceRating").toString()));
+        repairOrder.setAcceptanceComment((String) params.get("acceptanceComment"));
+        repairOrder.setAcceptanceTime(LocalDateTime.now());
+        repairOrder.setOrderStatus(4); // 状态改为已完成
+        repairOrder.setUpdateBy(SecurityUtils.getUsername());
+
+        // 验收通过且维修费用大于0时，自动生成账单
+        log.info("开始检查维修账单生成条件: 工单ID={}, 验收结果={}, 维修费用={}",
+            id, repairOrder.getAcceptanceResult(), repairOrder.getRepairCost());
+
+        if (repairOrder.getAcceptanceResult() == 1 &&
+            repairOrder.getRepairCost() != null &&
+            repairOrder.getRepairCost().compareTo(BigDecimal.ZERO) > 0) {
+
+            log.info("维修账单生成条件满足，开始生成账单: 工单ID={}", id);
+            Long billId = generateRepairBill(repairOrder);
+            if (billId != null) {
+                repairOrder.setBillId(billId);
+                log.info("✅ 维修验收通过，已生成账单: 工单ID={}, 账单ID={}", id, billId);
+            } else {
+                log.error("❌ 维修账单生成失败: 工单ID={}, 账单ID=null", id);
+            }
+        } else {
+            log.warn("⚠️ 维修账单生成条件不满足: 工单ID={}, 验收结果={}, 维修费用={}",
+                id, repairOrder.getAcceptanceResult(), repairOrder.getRepairCost());
+        }
+
+        return updateById(repairOrder);
     }
 
     /**
-     * 定时任务：检查待验收的工单，自动验收
+     * 业主评价维修工单
      */
     @Override
-    public void checkAutoAcceptRepairOrders() {
-        log.info("开始检查待验收的维修工单，执行自动验收");
-        // TODO: 查询超过3天的待验收工单，执行自动验收
-        log.info("自动验收检查完成");
+    public boolean rateOrder(Long id, Map<String, Object> params) {
+        RepairOrder repairOrder = getById(id);
+        if (repairOrder == null || repairOrder.getOrderStatus() != 4) {
+            log.warn("维修工单状态不正确，无法评价: {}", id);
+            return false;
+        }
+
+        // 更新评价信息
+        repairOrder.setServiceRating(Integer.valueOf(params.get("serviceRating").toString()));
+        repairOrder.setResponseRating(Integer.valueOf(params.get("responseRating").toString()));
+        repairOrder.setProfessionalRating(Integer.valueOf(params.get("professionalRating").toString()));
+        repairOrder.setOverallRating(Integer.valueOf(params.get("overallRating").toString()));
+        repairOrder.setComment((String) params.get("comment"));
+        repairOrder.setRatingTime(LocalDateTime.now());
+        repairOrder.setOrderStatus(5); // 状态改为已完成
+
+        // 业主评价时同时生成维修账单（跳过物业验收）
+        if (repairOrder.getRepairCost() != null &&
+            repairOrder.getRepairCost().compareTo(BigDecimal.ZERO) > 0 &&
+            repairOrder.getBillId() == null) { // 避免重复生成
+
+            log.info("🔧 业主评价维修工单，开始生成维修账单: 工单ID={}, 维修费用={}", id, repairOrder.getRepairCost());
+
+            Long billId = generateRepairBill(repairOrder);
+            if (billId != null) {
+                repairOrder.setBillId(billId);
+                log.info("✅ 业主评价维修工单，维修账单生成成功: 工单ID={}, 账单ID={}", id, billId);
+            } else {
+                log.error("❌ 业主评价维修工单，维修账单生成失败: 工单ID={}", id);
+            }
+        }
+
+        repairOrder.setUpdateBy(SecurityUtils.getUsername());
+
+        return updateById(repairOrder);
     }
 
     /**
-     * 定时任务：检查超期的工单
+     * 系统管理员归档维修工单
      */
     @Override
-    public void checkOverdueRepairOrders() {
-        log.info("开始检查超期的维修工单");
-        // TODO: 查询超期的工单，发送提醒
-        log.info("超期工单检查完成");
+    public boolean archiveOrder(Long id) {
+        RepairOrder repairOrder = getById(id);
+        if (repairOrder == null) {
+            log.warn("维修工单不存在，无法归档: {}", id);
+            return false;
+        }
+
+        // 只有已完成的工单才能归档（状态5）
+        if (repairOrder.getOrderStatus() != 5) {
+            log.warn("只有已完成的维修工单才能归档，当前状态: {}", repairOrder.getOrderStatus());
+            return false;
+        }
+
+        try {
+            repairOrder.setOrderStatus(6); // 状态改为已归档
+            repairOrder.setUpdateBy(SecurityUtils.getUsername());
+
+            return updateById(repairOrder);
+        } catch (Exception e) {
+            log.error("归档维修工单失败: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * 批量归档维修工单
+     */
+    @Override
+    public boolean batchArchiveOrders(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            log.warn("归档工单ID列表为空");
+            return false;
+        }
+
+        try {
+            int successCount = 0;
+            int failCount = 0;
+
+            for (Long id : ids) {
+                if (archiveOrder(id)) {
+                    successCount++;
+                } else {
+                    failCount++;
+                    log.warn("归档工单失败: {}", id);
+                }
+            }
+
+            log.info("批量归档完成，成功: {}, 失败: {}", successCount, failCount);
+            return failCount == 0; // 只有全部成功才返回true
+
+        } catch (Exception e) {
+            log.error("批量归档维修工单失败: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * 生成维修费用账单
+     */
+    private Long generateRepairBill(RepairOrder repairOrder) {
+        try {
+            log.info("🔧 开始生成维修账单: 工单ID={}, 用户ID={}, 房产ID={}, 维修费用={}",
+                repairOrder.getId(), repairOrder.getUserId(), repairOrder.getHouseId(), repairOrder.getRepairCost());
+
+            Bill bill = new Bill();
+            // 生成账单编号
+            String billNo = "REPAIR_" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss")) +
+                          "_" + String.format("%04d", new Random().nextInt(10000));
+            bill.setBillNo(billNo);
+            log.info("📝 维修账单编号生成: {}", billNo);
+
+            // 设置账单信息
+            bill.setUserId(repairOrder.getUserId());
+            bill.setHouseId(repairOrder.getHouseId());
+            bill.setFeeTypeId(12L); // 使用维修费用类型ID
+            bill.setFeeTypeName("维修费用"); // 设置费用类型名称
+            bill.setBillPeriod("维修-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM")));
+            bill.setAmount(repairOrder.getRepairCost());
+            bill.setBillStatus(1); // 待缴费
+            // 转换LocalDateTime为Date
+            bill.setDueDate(java.sql.Timestamp.valueOf(LocalDateTime.now().plusDays(7)));
+            bill.setRemark("维修工单：" + repairOrder.getOrderNo());
+
+            log.info("💰 账单信息设置完成: 用户ID={}, 房产ID={}, 费用类型ID={}, 账单金额={}, 账单周期={}",
+                bill.getUserId(), bill.getHouseId(), bill.getFeeTypeId(), bill.getAmount(), bill.getBillPeriod());
+
+            // 保存账单
+            log.info("💾 开始保存维修账单到数据库...");
+            int result = billService.insertBill(bill);
+            log.info("📊 账单保存结果: {}", result > 0 ? "成功" : "失败");
+
+            if (result > 0) {
+                Long billId = bill.getBillId();
+                log.info("✅ 维修账单生成成功: 账单ID={}, 账单编号={}", billId, billNo);
+                return billId;
+            } else {
+                log.error("❌ 维修账单生成失败: 账单保存返回结果={}", result);
+            }
+        } catch (Exception e) {
+            log.error("💥 生成维修费用账单异常: 工单ID={}, 错误信息={}", repairOrder.getId(), e.getMessage(), e);
+        }
+        return null;
     }
 }

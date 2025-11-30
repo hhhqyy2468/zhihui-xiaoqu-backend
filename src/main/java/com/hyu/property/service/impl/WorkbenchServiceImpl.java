@@ -1,9 +1,10 @@
 package com.hyu.property.service.impl;
 
 import com.hyu.common.utils.SecurityUtils;
+import com.hyu.property.domain.RepairOrder;
 import com.hyu.property.domain.dto.WorkbenchStatsDTO;
 import com.hyu.property.domain.dto.WorkbenchStatsDTO;
-import com.hyu.property.domain.vo.RepairOrderVO;
+// import com.hyu.property.domain.vo.RepairOrder; // Use RepairOrder instead
 import com.hyu.property.service.IRepairOrderService;
 import com.hyu.property.service.IWorkbenchService;
 import lombok.RequiredArgsConstructor;
@@ -35,7 +36,7 @@ public class WorkbenchServiceImpl implements IWorkbenchService {
             Long currentUserId = SecurityUtils.getUserId();
 
             // 获取我的工单列表
-            List<RepairOrderVO> allOrders = repairOrderService.selectRepairOrdersByUserId(currentUserId);
+            List<RepairOrder> allOrders = repairOrderService.selectRepairOrdersByUserId(currentUserId);
 
             // 统计各状态工单数量
             int pendingCount = 0;        // 待接单
@@ -49,7 +50,7 @@ public class WorkbenchServiceImpl implements IWorkbenchService {
             String todayStr = now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
             String monthStr = now.format(DateTimeFormatter.ofPattern("yyyy-MM"));
 
-            for (RepairOrderVO order : allOrders) {
+            for (RepairOrder order : allOrders) {
                 if (order.getOrderStatus() != null) {
                     switch (order.getOrderStatus()) {
                         case 1: // 待接单
@@ -101,15 +102,15 @@ public class WorkbenchServiceImpl implements IWorkbenchService {
     }
 
     @Override
-    public List<RepairOrderVO> getMyRepairOrderList(Integer pageNum, Integer pageSize, Integer repairStatus) {
+    public List<RepairOrder> getMyRepairOrderList(Integer pageNum, Integer pageSize, Integer repairStatus) {
         try {
             Long currentUserId = SecurityUtils.getUserId();
-            List<RepairOrderVO> allOrders = repairOrderService.selectRepairOrdersByUserId(currentUserId);
+            List<RepairOrder> allOrders = repairOrderService.selectRepairOrdersByUserId(currentUserId);
 
             // 如果指定了状态，则进行过滤
             if (repairStatus != null) {
-                List<RepairOrderVO> filteredOrders = new ArrayList<>();
-                for (RepairOrderVO order : allOrders) {
+                List<RepairOrder> filteredOrders = new ArrayList<>();
+                for (RepairOrder order : allOrders) {
                     if (order.getOrderStatus() != null && order.getOrderStatus().equals(repairStatus)) {
                         filteredOrders.add(order);
                     }

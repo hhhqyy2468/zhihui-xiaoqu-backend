@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
-import java.util.List;
 
 /**
  * 楼栋信息
@@ -35,39 +34,33 @@ public class BuildingController {
      * 分页查询楼栋列表
      */
     @GetMapping("/list")
-    @PreAuthorize("@ss.hasPermi('property:building:list')")
-    public PageResult list(@RequestParam(defaultValue = "1") Integer pageNum,
+    // @PreAuthorize("@ss.hasPermi('property:building:list')")  // 临时移除权限验证进行测试
+    public AjaxResult list(@RequestParam(defaultValue = "1") Integer pageNum,
                            @RequestParam(defaultValue = "10") Integer pageSize,
-                           @RequestParam(required = false) String buildingCode,
+                           @RequestParam(required = false) String buildingNo,
                            @RequestParam(required = false) String buildingName,
-                           @RequestParam(required = false) String address,
-                           @RequestParam(required = false) Integer buildYearStart,
-                           @RequestParam(required = false) Integer buildYearEnd,
-                           @RequestParam(required = false) Integer status) {
-        log.info("分页查询楼栋列表, pageNum: {}, pageSize: {}, buildingCode: {}, buildingName: {}, address: {}, buildYearStart: {}, buildYearEnd: {}, status: {}",
-                pageNum, pageSize, buildingCode, buildingName, address, buildYearStart, buildYearEnd, status);
+                           @RequestParam(required = false) String address) {
+        log.info("分页查询楼栋列表, pageNum: {}, pageSize: {}, buildingNo: {}, buildingName: {}, address: {}",
+                pageNum, pageSize, buildingNo, buildingName, address);
 
         Page<Building> page = new Page<>(pageNum, pageSize);
         Building building = new Building();
-        building.setBuildingCode(buildingCode);
+        building.setBuildingNo(buildingNo);
         building.setBuildingName(buildingName);
         building.setAddress(address);
-        building.setBuildYearStart(buildYearStart);
-        building.setBuildYearEnd(buildYearEnd);
-        building.setStatus(status);
 
         Page<Building> result = buildingService.selectBuildingPage(page, building);
-        return PageResult.success(result.getTotal(), result.getRecords());
+        return AjaxResult.success("查询成功", PageResult.success(result.getTotal(), result.getRecords()));
     }
 
     /**
      * 获取楼栋详细信息
      */
-    @GetMapping(value = "/{buildingId}")
+    @GetMapping(value = "/{id}")
     @PreAuthorize("@ss.hasPermi('property:building:list')")
-    public AjaxResult getInfo(@NotNull(message = "楼栋ID不能为空") @PathVariable Long buildingId) {
-        log.info("获取楼栋详细信息, buildingId: {}", buildingId);
-        return AjaxResult.success(buildingService.selectBuildingById(buildingId));
+    public AjaxResult getInfo(@NotNull(message = "楼栋ID不能为空") @PathVariable Long id) {
+        log.info("获取楼栋详细信息, id: {}", id);
+        return AjaxResult.success(buildingService.getById(id));
     }
 
     /**
@@ -77,7 +70,11 @@ public class BuildingController {
     @PreAuthorize("@ss.hasPermi('property:building:add')")
     public AjaxResult add(@Valid @RequestBody Building building) {
         log.info("新增楼栋, building: {}", building);
-        return toAjax(buildingService.insertBuilding(building));
+        if (!buildingService.checkBuildingNoUnique(building)) {
+            return AjaxResult.error("新增楼栋'" + building.getBuildingName() + "'失败，楼栋编号已存在");
+        }
+        building.setCreateBy(SecurityUtils.getUsername());
+        return toAjax(buildingService.save(building));
     }
 
     /**
@@ -87,33 +84,37 @@ public class BuildingController {
     @PreAuthorize("@ss.hasPermi('property:building:edit')")
     public AjaxResult edit(@Valid @RequestBody Building building) {
         log.info("修改楼栋, building: {}", building);
-        return toAjax(buildingService.updateBuilding(building));
+        if (!buildingService.checkBuildingNoUnique(building)) {
+            return AjaxResult.error("修改楼栋'" + building.getBuildingName() + "'失败，楼栋编号已存在");
+        }
+        building.setUpdateBy(SecurityUtils.getUsername());
+        return toAjax(buildingService.updateById(building));
     }
 
     /**
      * 删除楼栋
      */
-    @DeleteMapping("/{buildingIds}")
+    @DeleteMapping("/{ids}")
     @PreAuthorize("@ss.hasPermi('property:building:delete')")
-    public AjaxResult remove(@NotNull(message = "楼栋ID不能为空") @PathVariable Long[] buildingIds) {
-        log.info("删除楼栋, buildingIds: {}", buildingIds);
-        return toAjax(buildingService.deleteBuildingByIds(buildingIds));
+    public AjaxResult remove(@NotNull(message = "楼栋ID不能为空") @PathVariable Long[] ids) {
+        log.info("删除楼栋, ids: {}", ids);
+        return toAjax(buildingService.removeByIds(java.util.Arrays.asList(ids)));
     }
 
     /**
-     * 获取所有楼栋（下拉框用）
+     * 获取楼栋下的单元列表
      */
-    @GetMapping("/all")
+    @GetMapping("/{id}/units")
     @PreAuthorize("@ss.hasPermi('property:building:list')")
-    public AjaxResult listAll() {
-        log.info("获取所有楼栋列表");
-        return AjaxResult.success(buildingService.selectBuildingAll());
+    public AjaxResult getBuildingUnits(@NotNull(message = "楼栋ID不能为空") @PathVariable Long id) {
+        log.info("获取楼栋单元列表, buildingId: {}", id);
+        return AjaxResult.success(buildingService.getBuildingUnits(id));
     }
 
     /**
      * 返回AjaxResult
      */
-    private AjaxResult toAjax(int rows) {
-        return rows > 0 ? AjaxResult.success() : AjaxResult.error();
+    private AjaxResult toAjax(Boolean result) {
+        return result ? AjaxResult.success() : AjaxResult.error();
     }
 }

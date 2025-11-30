@@ -3,6 +3,7 @@ package com.hyu.property.controller;
 import com.hyu.common.core.domain.AjaxResult;
 import com.hyu.property.domain.dto.*;
 import com.hyu.property.domain.vo.*;
+import com.hyu.property.domain.RepairOrder;
 import com.hyu.property.service.IPortalService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -130,7 +131,7 @@ public class PortalController {
     public AjaxResult getMyRepairList(@RequestParam(defaultValue = "1") Integer pageNum,
                                       @RequestParam(defaultValue = "10") Integer pageSize,
                                       @RequestParam(required = false) Integer orderStatus) {
-        List<RepairOrderVO> list = portalService.getMyRepairList(orderStatus, pageNum, pageSize);
+        List<RepairOrder> list = portalService.getMyRepairList(orderStatus, pageNum, pageSize);
         return success(list);
     }
 
@@ -139,7 +140,7 @@ public class PortalController {
      */
     @GetMapping("/repair/detail/{repairId}")
     public AjaxResult getMyRepairDetail(@PathVariable Long repairId) {
-        RepairOrderVO detail = portalService.getMyRepairDetail(repairId);
+        RepairOrder detail = portalService.getMyRepairDetail(repairId);
         return success(detail);
     }
 

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hyu.property.mapper.ParkingRentalApplicationMapper">
+
+    <resultMap type="ParkingRentalApplication" id="ParkingRentalApplicationResult">
+        <result property="id" column="id"/>
+        <result property="parkingSpaceId" column="parking_space_id"/>
+        <result property="spaceNo" column="space_no"/>
+        <result property="ownerId" column="owner_id"/>
+        <result property="ownerName" column="owner_name"/>
+        <result property="contactPhone" column="contact_phone"/>
+        <result property="vehicleNumber" column="vehicle_number"/>
+        <result property="vehicleBrand" column="vehicle_brand"/>
+        <result property="vehicleColor" column="vehicle_color"/>
+        <result property="rentalStartDate" column="rental_start_date"/>
+        <result property="rentalEndDate" column="rental_end_date"/>
+        <result property="rentalMonths" column="rental_months"/>
+        <result property="applicationReason" column="application_reason"/>
+        <result property="applicationStatus" column="application_status"/>
+        <result property="reviewUserId" column="review_user_id"/>
+        <result property="reviewUserName" column="review_user_name"/>
+        <result property="reviewTime" column="review_time"/>
+        <result property="reviewRemark" column="review_remark"/>
+        <result property="deleted" column="deleted"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <sql id="selectParkingRentalApplicationVo">
+        select a.id, a.parking_space_id, a.space_no, a.owner_id, a.owner_name,
+               a.contact_phone, a.vehicle_number, a.vehicle_brand, a.vehicle_color,
+               a.rental_start_date, a.rental_end_date, a.rental_months, a.application_reason,
+               a.application_status, a.review_user_id, a.review_user_name,
+               a.review_time, a.review_remark, a.deleted,
+               a.create_by, a.create_time, a.update_by, a.update_time,
+               p.location, p.monthly_rent
+        from parking_rental_application a
+        left join parking_space p on a.parking_space_id = p.id
+    </sql>
+
+    <select id="selectParkingRentalApplicationById" parameterType="Long" resultMap="ParkingRentalApplicationResult">
+        <include refid="selectParkingRentalApplicationVo"/>
+        where a.id = #{id} and a.deleted = 0
+    </select>
+
+    <select id="selectParkingRentalApplicationList" parameterType="ParkingRentalApplication" resultMap="ParkingRentalApplicationResult">
+        <include refid="selectParkingRentalApplicationVo"/>
+        <where>
+            a.deleted = 0
+            <if test="spaceNo != null and spaceNo != ''">
+                and a.space_no like concat('%', #{spaceNo}, '%')
+            </if>
+            <if test="ownerName != null and ownerName != ''">
+                and a.owner_name like concat('%', #{ownerName}, '%')
+            </if>
+            <if test="vehicleNumber != null and vehicleNumber != ''">
+                and a.vehicle_number like concat('%', #{vehicleNumber}, '%')
+            </if>
+            <if test="applicationStatus != null">
+                and a.application_status = #{applicationStatus}
+            </if>
+        </where>
+        order by a.create_time desc
+    </select>
+
+    <select id="selectPendingApplications" resultMap="ParkingRentalApplicationResult">
+        <include refid="selectParkingRentalApplicationVo"/>
+        where a.application_status = 1 and a.deleted = 0
+        order by a.create_time asc
+    </select>
+
+</mapper>

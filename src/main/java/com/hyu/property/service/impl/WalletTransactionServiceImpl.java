@@ -38,9 +38,9 @@ public class WalletTransactionServiceImpl extends ServiceImpl<WalletTransactionM
     public Page<WalletTransaction> selectTransactionPage(Page<WalletTransaction> page, WalletTransaction transaction) {
         LambdaQueryWrapper<WalletTransaction> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.like(StringUtils.isNotEmpty(transaction.getTransactionNo()), WalletTransaction::getTransactionNo, transaction.getTransactionNo())
-                   .eq(transaction.getOwnerId() != null, WalletTransaction::getOwnerId, transaction.getOwnerId())
+                   .eq(transaction.getUserId() != null, WalletTransaction::getUserId, transaction.getUserId())
                    .eq(transaction.getTransactionType() != null, WalletTransaction::getTransactionType, transaction.getTransactionType())
-                   .eq(transaction.getStatus() != null, WalletTransaction::getStatus, transaction.getStatus())
+                   .eq(transaction.getTransactionStatus() != null, WalletTransaction::getTransactionStatus, transaction.getTransactionStatus())
                    .orderByDesc(WalletTransaction::getCreateTime);
         return page(page, queryWrapper);
     }
@@ -55,9 +55,9 @@ public class WalletTransactionServiceImpl extends ServiceImpl<WalletTransactionM
     public List<WalletTransaction> selectTransactionList(WalletTransaction transaction) {
         LambdaQueryWrapper<WalletTransaction> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.like(StringUtils.isNotEmpty(transaction.getTransactionNo()), WalletTransaction::getTransactionNo, transaction.getTransactionNo())
-                   .eq(transaction.getOwnerId() != null, WalletTransaction::getOwnerId, transaction.getOwnerId())
+                   .eq(transaction.getUserId() != null, WalletTransaction::getUserId, transaction.getUserId())
                    .eq(transaction.getTransactionType() != null, WalletTransaction::getTransactionType, transaction.getTransactionType())
-                   .eq(transaction.getStatus() != null, WalletTransaction::getStatus, transaction.getStatus())
+                   .eq(transaction.getTransactionStatus() != null, WalletTransaction::getTransactionStatus, transaction.getTransactionStatus())
                    .orderByDesc(WalletTransaction::getCreateTime);
         return list(queryWrapper);
     }

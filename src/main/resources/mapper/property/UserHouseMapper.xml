@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hyu.property.mapper.UserHouseMapper">
+
+    <resultMap type="UserHouse" id="UserHouseResult">
+        <result property="id" column="id" />
+        <result property="userId" column="user_id" />
+        <result property="houseId" column="house_id" />
+        <result property="relationType" column="relation_type" />
+        <result property="startDate" column="start_date" />
+        <result property="endDate" column="end_date" />
+        <result property="isCurrent" column="is_current" />
+        <result property="remark" column="remark" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy" column="update_by" />
+        <result property="updateTime" column="update_time" />
+        <result property="userName" column="user_name" />
+        <result property="houseNo" column="house_no" />
+        <result property="buildingName" column="building_name" />
+        <result property="unitName" column="unit_name" />
+        <!-- 添加ID字段用于前端匹配 -->
+        <result property="buildingId" column="building_id" />
+        <result property="unitId" column="unit_id" />
+        <!-- 房产详细信息 -->
+        <result property="roomNumber" column="room_number" />
+        <result property="floor" column="floor" />
+        <result property="houseType" column="house_type" />
+        <result property="buildingArea" column="building_area" />
+        <result property="usableArea" column="usable_area" />
+        <result property="houseStatus" column="house_status" />
+    </resultMap>
+
+    <sql id="selectUserHouseVo">
+        select uh.id, uh.user_id, uh.house_id, uh.relation_type, uh.start_date, uh.end_date, uh.is_current, uh.remark, uh.create_by, uh.create_time, uh.update_by, uh.update_time,
+               u.real_name as user_name,
+               h.house_no, h.room_number, h.floor, h.house_type, h.building_area, h.usable_area, h.house_status,
+               b.building_name, b.id as building_id,
+               un.unit_name, un.id as unit_id
+        from user_house uh
+        left join sys_user u on uh.user_id = u.id
+        left join house h on uh.house_id = h.id
+        left join building b on h.building_id = b.id
+        left join unit un on h.unit_id = un.id
+    </sql>
+
+    <select id="selectUserHouseList" parameterType="UserHouse" resultMap="UserHouseResult">
+        <include refid="selectUserHouseVo"/>
+        <where>
+            <if test="userId != null"> and uh.user_id = #{userId}</if>
+            <if test="houseId != null"> and uh.house_id = #{houseId}</if>
+            <if test="relationType != null"> and uh.relation_type = #{relationType}</if>
+            <if test="isCurrent != null"> and uh.is_current = #{isCurrent}</if>
+        </where>
+        order by uh.create_time desc
+    </select>
+
+    <select id="selectUserHousePage" parameterType="UserHouse" resultMap="UserHouseResult">
+        <include refid="selectUserHouseVo"/>
+        <where>
+            <if test="userHouse.userId != null"> and uh.user_id = #{userHouse.userId}</if>
+            <if test="userHouse.houseId != null"> and uh.house_id = #{userHouse.houseId}</if>
+            <if test="userHouse.relationType != null"> and uh.relation_type = #{userHouse.relationType}</if>
+            <if test="userHouse.isCurrent != null"> and uh.is_current = #{userHouse.isCurrent}</if>
+        </where>
+        order by uh.create_time desc
+    </select>
+
+    <select id="selectUserHouseByUserId" parameterType="Long" resultMap="UserHouseResult">
+        <include refid="selectUserHouseVo"/>
+        where uh.user_id = #{userId}
+        order by uh.is_current desc, uh.create_time desc
+    </select>
+
+    <select id="selectUserHouseByHouseId" parameterType="Long" resultMap="UserHouseResult">
+        <include refid="selectUserHouseVo"/>
+        where uh.house_id = #{houseId}
+        order by uh.is_current desc, uh.create_time desc
+    </select>
+
+    <select id="selectCurrentUserHouseByUserId" parameterType="Long" resultMap="UserHouseResult">
+        <include refid="selectUserHouseVo"/>
+        where uh.user_id = #{userId} and uh.is_current = 1
+        order by uh.create_time desc
+    </select>
+
+    <delete id="deleteUserHouseById" parameterType="Long">
+        delete from user_house where id = #{id}
+    </delete>
+
+    <delete id="deleteUserHouseByIds" parameterType="String">
+        delete from user_house where id in
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <delete id="deleteUserHouseByUserId" parameterType="Long">
+        delete from user_house where user_id = #{userId}
+    </delete>
+
+</mapper>

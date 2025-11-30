@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hyu.property.mapper.WalletMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="WalletResult" type="com.hyu.property.domain.Wallet">
+        <result property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="balance" column="balance"/>
+        <result property="totalRecharge" column="total_recharge"/>
+        <result property="totalConsume" column="total_consume"/>
+        <result property="payPassword" column="pay_password"/>
+        <result property="payPasswordErrorCount" column="pay_password_error_count"/>
+        <result property="payPasswordLockTime" column="pay_password_lock_time"/>
+        <result property="status" column="status"/>
+        <result property="version" column="version"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="userName" column="user_name"/>
+        <result property="userPhone" column="user_phone"/>
+        <result property="passwordStatus" column="password_status"/>
+            </resultMap>
+
+    <!-- 查询钱包列表（包含用户信息） -->
+    <select id="selectWalletPage" parameterType="com.hyu.property.domain.Wallet" resultMap="WalletResult">
+        select
+            w.id, w.user_id, w.balance, w.total_recharge, w.total_consume,
+            w.pay_password, w.pay_password_error_count, w.pay_password_lock_time,
+            w.status, w.version, w.create_time, w.update_time,
+            w.password_status, u.real_name as user_name, u.phone as user_phone
+        from wallet w
+        left join sys_user u on w.user_id = u.id
+        <where>
+            <if test="wallet.userId != null">
+                AND w.user_id = #{wallet.userId}
+            </if>
+            <if test="wallet.balance != null">
+                AND w.balance >= #{wallet.balance}
+            </if>
+            <if test="wallet.status != null">
+                AND w.status = #{wallet.status}
+            </if>
+        </where>
+        order by w.create_time desc
+    </select>
+
+    <!-- 查询钱包列表（支持模糊查询） -->
+    <select id="selectWalletPageWithFuzzySearch" resultType="com.hyu.property.domain.Wallet">
+        select
+            w.id, w.user_id, w.balance, w.total_recharge, w.total_consume,
+            w.pay_password, w.pay_password_error_count, w.pay_password_lock_time,
+            w.status, w.version, w.create_time, w.update_time,
+            w.password_status, u.real_name as user_name, u.phone as user_phone
+        from wallet w
+        left join sys_user u on w.user_id = u.id
+        <where>
+            <if test="userId != null">
+                AND w.user_id = #{userId}
+            </if>
+            <if test="ownerName != null and ownerName != ''">
+                AND u.real_name LIKE CONCAT('%', #{ownerName}, '%')
+            </if>
+            <if test="phone != null and phone != ''">
+                AND u.phone LIKE CONCAT('%', #{phone}, '%')
+            </if>
+            <if test="minBalance != null">
+                AND w.balance >= #{minBalance}
+            </if>
+            <if test="maxBalance != null">
+                AND w.balance &lt;= #{maxBalance}
+            </if>
+            <if test="status != null">
+                AND w.status = #{status}
+            </if>
+        </where>
+        order by w.create_time desc
+    </select>
+
+</mapper>

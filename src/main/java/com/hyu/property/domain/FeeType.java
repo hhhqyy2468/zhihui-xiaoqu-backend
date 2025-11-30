@@ -10,13 +10,13 @@ import java.math.BigDecimal;
 import java.util.Date;
 
 /**
- * 费用类型表 property_fee_type
+ * 费用类型表 fee_type
  *
  * @author hyu
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-@TableName("property_fee_type")
+@TableName("fee_type")
 public class FeeType implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -24,57 +24,43 @@ public class FeeType implements Serializable {
     /**
      * 费用类型ID
      */
-    @TableId(value = "fee_type_id", type = IdType.AUTO)
-    private Long feeTypeId;
+    @TableId(value = "id", type = IdType.AUTO)
+    private Long id;
 
     /**
      * 费用名称
      */
     @NotBlank(message = "费用名称不能为空")
     @Size(min = 2, max = 50, message = "费用名称长度必须在2-50之间")
-    @TableField("fee_name")
-    private String feeName;
+    @TableField("type_name")
+    private String typeName;
 
     /**
      * 费用编码
      */
     @NotBlank(message = "费用编码不能为空")
-    @Size(min = 2, max = 20, message = "费用编码长度必须在2-20之间")
-    @TableField("fee_code")
-    private String feeCode;
+    @Size(min = 2, max = 50, message = "费用编码长度必须在2-50之间")
+    @TableField("type_code")
+    private String typeCode;
 
     /**
      * 单价
      */
-    @NotNull(message = "单价不能为空")
-    @DecimalMin(value = "0.01", message = "单价必须大于0")
-    @Digits(integer = 10, fraction = 2, message = "单价格式不正确")
     @TableField("unit_price")
     private BigDecimal unitPrice;
 
     /**
      * 计费单位
      */
-    @NotBlank(message = "计费单位不能为空")
-    @Size(min = 2, max = 50, message = "计费单位长度必须在2-50之间")
-    @TableField("unit_type")
-    private String unitType;
+    @Size(max = 20, message = "计费单位长度不能超过20")
+    @TableField("billing_unit")
+    private String billingUnit;
 
     /**
      * 计费周期 1:月 2:季 3:年
      */
-    @NotNull(message = "计费周期不能为空")
-    @Min(value = 1, message = "计费周期值无效")
-    @Max(value = 3, message = "计费周期值无效")
     @TableField("billing_cycle")
     private Integer billingCycle;
-
-    /**
-     * 状态 1:启用 0:禁用
-     */
-    @NotNull(message = "状态不能为空")
-    @TableField("status")
-    private Integer status;
 
     /**
      * 费用说明
@@ -82,6 +68,12 @@ public class FeeType implements Serializable {
     @Size(max = 500, message = "费用说明长度不能超过500")
     @TableField("description")
     private String description;
+
+    /**
+     * 状态 1:启用 0:禁用
+     */
+    @TableField("status")
+    private Integer status;
 
     /**
      * 创建者
@@ -106,4 +98,37 @@ public class FeeType implements Serializable {
      */
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private Date updateTime;
+
+    // 为了兼容前端，添加getter方法
+    public Long getFeeTypeId() {
+        return id;
+    }
+
+    public void setFeeTypeId(Long feeTypeId) {
+        this.id = feeTypeId;
+    }
+
+    public String getFeeName() {
+        return typeName;
+    }
+
+    public void setFeeName(String feeName) {
+        this.typeName = feeName;
+    }
+
+    public String getFeeCode() {
+        return typeCode;
+    }
+
+    public void setFeeCode(String feeCode) {
+        this.typeCode = feeCode;
+    }
+
+    public String getUnitType() {
+        return billingUnit;
+    }
+
+    public void setUnitType(String unitType) {
+        this.billingUnit = unitType;
+    }
 }

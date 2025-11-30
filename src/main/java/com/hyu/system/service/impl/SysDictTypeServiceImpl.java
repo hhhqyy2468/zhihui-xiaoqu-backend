@@ -45,7 +45,7 @@ public class SysDictTypeServiceImpl extends ServiceImpl<SysDictTypeMapper, SysDi
         queryWrapper.like(StringUtils.isNotEmpty(dictType.getDictName()), "dict_name", dictType.getDictName())
                    .like(StringUtils.isNotEmpty(dictType.getDictType()), "dict_type", dictType.getDictType())
                    .eq(StringUtils.isNotEmpty(dictType.getStatus()), "status", dictType.getStatus())
-                   .orderByAsc("dict_sort");
+                   .orderByAsc("id");
         return page(page, queryWrapper);
     }
 
@@ -146,7 +146,7 @@ public class SysDictTypeServiceImpl extends ServiceImpl<SysDictTypeMapper, SysDi
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int updateDictType(SysDictType dictType) {
-        SysDictType oldDict = dictTypeMapper.selectDictTypeById(dictType.getDictId());
+        SysDictType oldDict = dictTypeMapper.selectDictTypeById(dictType.getId());
         dictDataMapper.updateDictDataType(oldDict.getDictType(), dictType.getDictType());
         return dictTypeMapper.updateDictType(dictType);
     }
@@ -159,9 +159,9 @@ public class SysDictTypeServiceImpl extends ServiceImpl<SysDictTypeMapper, SysDi
      */
     @Override
     public boolean checkDictTypeUnique(SysDictType dictType) {
-        Long dictId = StringUtils.isNull(dictType.getDictId()) ? -1L : dictType.getDictId();
+        Long dictId = StringUtils.isNull(dictType.getId()) ? -1L : dictType.getId();
         SysDictType dict = dictTypeMapper.checkDictTypeUnique(dictType.getDictType());
-        if (StringUtils.isNotNull(dict) && dict.getDictId().longValue() != dictId.longValue()) {
+        if (StringUtils.isNotNull(dict) && dict.getId().longValue() != dictId.longValue()) {
             return false;
         }
         return true;

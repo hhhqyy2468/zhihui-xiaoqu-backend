@@ -9,19 +9,19 @@ import java.io.Serializable;
 import java.util.Date;
 
 /**
- * 单元信息表 property_unit
+ * 单元表 unit
  *
  * @author hyu
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-@TableName("property_unit")
+@TableName("unit")
 public class Unit implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    @TableId(value = "unit_id", type = IdType.AUTO)
-    private Long unitId;
+    @TableId(value = "id", type = IdType.AUTO)
+    private Long id;
 
     /**
      * 楼栋ID
@@ -31,24 +31,18 @@ public class Unit implements Serializable {
     private Long buildingId;
 
     /**
-     * 楼栋名称（非数据库字段，用于显示）
-     */
-    @TableField(exist = false)
-    private String buildingName;
-
-    /**
      * 单元编号
      */
     @NotBlank(message = "单元编号不能为空")
-    @Size(min = 2, max = 20, message = "单元编号长度必须在2-20之间")
-    @TableField("unit_code")
-    private String unitCode;
+    @Size(max = 50, message = "单元编号长度不能超过50")
+    @TableField("unit_no")
+    private String unitNo;
 
     /**
      * 单元名称
      */
     @NotBlank(message = "单元名称不能为空")
-    @Size(min = 2, max = 50, message = "单元名称长度必须在2-50之间")
+    @Size(max = 100, message = "单元名称长度不能超过100")
     @TableField("unit_name")
     private String unitName;
 
@@ -57,9 +51,9 @@ public class Unit implements Serializable {
      */
     @NotNull(message = "楼层数不能为空")
     @Min(value = 1, message = "楼层数必须大于0")
-    @Max(value = 99, message = "楼层数不能超过99")
-    @TableField("floors")
-    private Integer floors;
+    @Max(value = 100, message = "楼层数不能超过100")
+    @TableField("floor_count")
+    private Integer floorCount;
 
     /**
      * 每层房间数
@@ -67,21 +61,8 @@ public class Unit implements Serializable {
     @NotNull(message = "每层房间数不能为空")
     @Min(value = 1, message = "每层房间数必须大于0")
     @Max(value = 20, message = "每层房间数不能超过20")
-    @TableField("rooms_per_floor")
-    private Integer roomsPerFloor;
-
-    /**
-     * 总房间数（非数据库字段，用于显示）
-     */
-    @TableField(exist = false)
-    private Integer totalRooms;
-
-    /**
-     * 状态
-     */
-    @NotNull(message = "状态不能为空")
-    @TableField("status")
-    private Integer status;
+    @TableField("room_count_per_floor")
+    private Integer roomCountPerFloor;
 
     /**
      * 备注
@@ -89,6 +70,12 @@ public class Unit implements Serializable {
     @Size(max = 500, message = "备注长度不能超过500")
     @TableField("remark")
     private String remark;
+
+    /**
+     * 删除标记
+     */
+    @TableField("deleted")
+    private Integer deleted;
 
     /**
      * 创建者
@@ -113,4 +100,30 @@ public class Unit implements Serializable {
      */
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private Date updateTime;
+
+    // ==================== 非数据库字段（关联查询用） ====================
+
+    /**
+     * 楼栋名称（关联查询用）
+     */
+    @TableField(exist = false)
+    private String buildingName;
+
+    /**
+     * 房产总数(计算字段)
+     */
+    @TableField(exist = false)
+    private Integer houseCount;
+
+    /**
+     * 已售数量(计算字段)
+     */
+    @TableField(exist = false)
+    private Integer soldCount;
+
+    /**
+     * 空置数量(计算字段)
+     */
+    @TableField(exist = false)
+    private Integer vacantCount;
 }
