@@ -58,6 +58,14 @@ public class ParkingRentalApplication {
     /** 租赁月数 */
     private Integer rentalMonths;
 
+    /** 月租金（从车位表关联查询） */
+    @TableField(exist = false)
+    private java.math.BigDecimal monthlyRent;
+
+    /** 车位位置（从车位表关联查询） */
+    @TableField(exist = false)
+    private String location;
+
     /** 申请原因 */
     private String applicationReason;
 
@@ -97,12 +105,4 @@ public class ParkingRentalApplication {
     /** 更新时间 */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date updateTime;
-
-    /** 车位位置 */
-    @TableField(exist = false)
-    private String location;
-
-    /** 月租金 */
-    @TableField(exist = false)
-    private Double monthlyRent;
 }

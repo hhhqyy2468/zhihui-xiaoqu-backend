@@ -28,6 +28,12 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill> implements IB
     @Autowired
     private BillMapper billMapper;
 
+    @Autowired(required = false)
+    private com.hyu.property.service.IParkingRentalContractService parkingRentalContractService;
+
+    @Autowired(required = false)
+    private com.hyu.property.service.IParkingSpaceService parkingSpaceService;
+
     /**
      * 分页查询账单列表
      *
@@ -456,6 +462,15 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill> implements IB
             boolean result = updateById(bill);
             if (result) {
                 log.info("账单缴费成功，账单ID: {}, 用户ID: {}, 支付方式: {}", billId, userId, paymentMethod);
+
+                // 检查并激活车位租赁合同
+                try {
+                    activateParkingContractIfNeeded(bill);
+                } catch (Exception e) {
+                    log.error("激活车位租赁合同失败", e);
+                    // 激活失败不影响缴费结果，只记录日志
+                }
+
                 Map<String, Object> response = new HashMap<>();
                 response.put("code", 200);
                 response.put("msg", "缴费成功");
@@ -548,6 +563,13 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill> implements IB
 
                 if (updateById(bill)) {
                     successCount++;
+                    // 检查并激活车位租赁合同
+                    try {
+                        activateParkingContractIfNeeded(bill);
+                    } catch (Exception e) {
+                        log.error("激活车位租赁合同失败", e);
+                        // 激活失败不影响缴费结果，只记录日志
+                    }
                 }
             }
 
@@ -577,6 +599,59 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill> implements IB
             result.put("code", 500);
             result.put("msg", "系统异常，批量缴费失败");
             return result;
+        }
+    }
+
+    /**
+     * 检查并激活车位租赁合同
+     * 当车位租赁账单付款后，将合同状态从"待付款"改为"进行中"，并占用车位
+     */
+    private void activateParkingContractIfNeeded(Bill bill) {
+        if (parkingRentalContractService == null || parkingSpaceService == null) {
+            log.debug("车位租赁服务未注入，跳过合同激活");
+            return;
+        }
+
+        try {
+            // 检查是否是车位租赁费类型账单（通过备注判断）
+            String remark = bill.getRemark();
+            if (remark != null && (remark.contains("车位") || remark.contains("租赁"))) {
+                log.debug("检测到车位租赁账单，尝试激活合同。账单ID: {}, 费用类型ID: {}", bill.getBillId(), bill.getFeeTypeId());
+
+                // 查询该用户的待付款车位租赁合同
+                com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.hyu.property.domain.ParkingRentalContract> queryWrapper =
+                    new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
+                queryWrapper.eq("owner_id", bill.getUserId())
+                           .eq("contract_status", 1) // 待付款状态
+                           .eq("deleted", 0)
+                           .orderByDesc("create_time")
+                           .last("LIMIT 1");
+
+                com.hyu.property.domain.ParkingRentalContract contract =
+                    parkingRentalContractService.getOne(queryWrapper);
+
+                if (contract != null) {
+                    log.info("找到待付款合同，开始激活。合同ID: {}, 车位ID: {}", contract.getId(), contract.getParkingSpaceId());
+
+                    // 更新合同状态为进行中
+                    contract.setContractStatus(2); // 进行中
+                    parkingRentalContractService.updateById(contract);
+
+                    // 更新车位状态为已租
+                    com.hyu.property.domain.ParkingSpace parkingSpace = new com.hyu.property.domain.ParkingSpace();
+                    parkingSpace.setId(contract.getParkingSpaceId());
+                    parkingSpace.setSpaceStatus(2); // 已租
+                    parkingSpaceService.updateById(parkingSpace);
+
+                    log.info("车位租赁合同已激活。合同ID: {}, 车位ID: {}, 车位编号: {}",
+                            contract.getId(), contract.getParkingSpaceId(), contract.getSpaceNo());
+                } else {
+                    log.warn("未找到待付款的车位租赁合同。用户ID: {}", bill.getUserId());
+                }
+            }
+        } catch (Exception e) {
+            log.error("激活车位租赁合同时发生错误，账单ID: {}", bill.getBillId(), e);
+            throw e;
         }
     }
 }

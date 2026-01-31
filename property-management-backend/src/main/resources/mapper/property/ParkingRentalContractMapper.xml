@@ -73,7 +73,7 @@
     <select id="selectExpiringContracts" resultMap="ParkingRentalContractResult">
         <include refid="selectParkingRentalContractVo"/>
         where c.deleted = 0
-          and c.contract_status = 1
+          and c.contract_status = 2
           and DATEDIFF(c.end_date, CURDATE()) &lt;= #{days}
           and DATEDIFF(c.end_date, CURDATE()) &gt; 0
         order by c.end_date asc
@@ -82,9 +82,14 @@
     <select id="selectExpiredContracts" resultMap="ParkingRentalContractResult">
         <include refid="selectParkingRentalContractVo"/>
         where c.deleted = 0
-          and c.contract_status = 1
+          and c.contract_status = 2
           and c.end_date &lt; CURDATE()
         order by c.end_date asc
+    </select>
+
+    <select id="selectContractById" parameterType="Long" resultMap="ParkingRentalContractResult">
+        <include refid="selectParkingRentalContractVo"/>
+        where c.id = #{id} and c.deleted = 0
     </select>
 
 </mapper>

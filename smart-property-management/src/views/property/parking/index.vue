@@ -21,9 +21,10 @@
         </el-form-item>
         <el-form-item label="合同状态">
           <el-select v-model="searchForm.contractStatus" placeholder="请选择状态" clearable style="width: 150px">
-            <el-option label="进行中" :value="1" />
-            <el-option label="已到期" :value="2" />
-            <el-option label="已终止" :value="3" />
+            <el-option label="待付款" :value="1" />
+            <el-option label="进行中" :value="2" />
+            <el-option label="已到期" :value="3" />
+            <el-option label="已终止" :value="4" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -354,9 +355,10 @@ const totalAmount = computed(() => {
 // 获取状态名称
 const getStatusName = (status) => {
   const statusMap = {
-    1: '进行中',
-    2: '已到期',
-    3: '已终止'
+    1: '待付款',
+    2: '进行中',
+    3: '已到期',
+    4: '已终止'
   }
   return statusMap[status] || '未知'
 }
@@ -384,9 +386,10 @@ const getApplicationStatusColor = (status) => {
 // 获取状态颜色
 const getStatusColor = (status) => {
   const colorMap = {
-    1: 'success',
-    2: 'warning',
-    3: 'danger'
+    1: 'warning',
+    2: 'success',
+    3: 'info',
+    4: 'danger'
   }
   return colorMap[status] || 'info'
 }

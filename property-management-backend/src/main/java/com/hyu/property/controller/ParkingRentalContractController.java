@@ -64,7 +64,7 @@ public class ParkingRentalContractController {
     @PreAuthorize("@ss.hasPermi('parking:contract:query')")
     public AjaxResult getInfo(@NotNull(message = "合同ID不能为空") @PathVariable Long id) {
         log.info("获取合同详细信息, id: {}", id);
-        ParkingRentalContract contract = contractService.getById(id);
+        ParkingRentalContract contract = contractService.selectContractById(id);
         return AjaxResult.success(contract);
     }
 

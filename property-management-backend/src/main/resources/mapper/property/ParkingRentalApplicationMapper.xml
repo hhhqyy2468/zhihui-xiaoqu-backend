@@ -17,6 +17,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="rentalStartDate" column="rental_start_date"/>
         <result property="rentalEndDate" column="rental_end_date"/>
         <result property="rentalMonths" column="rental_months"/>
+        <result property="monthlyRent" column="monthly_rent"/>
+        <result property="location" column="location"/>
         <result property="applicationReason" column="application_reason"/>
         <result property="applicationStatus" column="application_status"/>
         <result property="reviewUserId" column="review_user_id"/>

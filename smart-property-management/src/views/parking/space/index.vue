@@ -61,11 +61,11 @@
         <!-- 操作按钮 -->
         <div class="action-section">
           <el-button
-            type="primary"
-            @click="handleAdd"
+            type="success"
+            @click="handleApply"
           >
             <el-icon><Plus /></el-icon>
-            新增车位
+            申请新车位
           </el-button>
           <el-button
             type="danger"
@@ -193,6 +193,101 @@
         <el-button type="primary" @click="handleSubmit">确定</el-button>
       </template>
     </el-dialog>
+
+    <!-- 申请车位对话框 -->
+    <el-dialog
+      v-model="applyDialogVisible"
+      title="申请新车位"
+      width="700px"
+    >
+      <el-form
+        ref="applyFormRef"
+        :model="applyForm"
+        :rules="applyRules"
+        label-width="120px"
+      >
+        <el-form-item label="选择车位" prop="parkingSpaceId">
+          <el-select
+            v-model="applyForm.parkingSpaceId"
+            placeholder="请选择车位"
+            filterable
+            @change="handleSpaceChange"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="space in availableSpaces"
+              :key="space.id"
+              :label="`${space.spaceNo} - ${space.location} (¥${space.monthlyRent}/月)`"
+              :value="space.id"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="车位编号">
+          <el-input v-model="applyForm.spaceNo" disabled />
+        </el-form-item>
+        <el-form-item label="月租金">
+          <el-input v-model="applyForm.monthlyRent" disabled />
+        </el-form-item>
+        <el-form-item label="联系电话" prop="contactPhone">
+          <el-input
+            v-model="applyForm.contactPhone"
+            placeholder="请输入联系电话"
+          />
+        </el-form-item>
+        <el-form-item label="车辆号码" prop="vehicleNumber">
+          <el-input
+            v-model="applyForm.vehicleNumber"
+            placeholder="请输入车辆号码"
+          />
+        </el-form-item>
+        <el-form-item label="车辆品牌" prop="vehicleBrand">
+          <el-input
+            v-model="applyForm.vehicleBrand"
+            placeholder="请输入车辆品牌"
+          />
+        </el-form-item>
+        <el-form-item label="车辆颜色" prop="vehicleColor">
+          <el-input
+            v-model="applyForm.vehicleColor"
+            placeholder="请输入车辆颜色"
+          />
+        </el-form-item>
+        <el-form-item label="租赁月数" prop="rentalMonths">
+          <el-input-number
+            v-model="applyForm.rentalMonths"
+            :min="1"
+            :max="60"
+            @change="calculateTotal"
+          />
+        </el-form-item>
+        <el-form-item label="租赁开始日期" prop="rentalStartDate">
+          <el-date-picker
+            v-model="applyForm.rentalStartDate"
+            type="date"
+            placeholder="选择开始日期"
+            format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD"
+            @change="calculateTotal"
+            style="width: 100%"
+          />
+        </el-form-item>
+        <el-form-item label="总金额">
+          <el-input v-model="totalAmountDisplay" disabled />
+        </el-form-item>
+        <el-form-item label="申请原因" prop="applicationReason">
+          <el-input
+            v-model="applyForm.applicationReason"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入申请原因"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="applyDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="submitLoading" @click="submitApply">提交申请</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -212,14 +307,21 @@ import {
   getParkingSpace,
   addParkingSpace,
   updateParkingSpace,
-  deleteParkingSpaces
+  deleteParkingSpaces,
+  getAvailableSpaces
 } from '@/api/parkingSpace'
+import {
+  submitMyApplication as submitApplication
+} from '@/api/parking/rentalApplication'
 
 // 响应式数据
 const activeTab = ref('list')
 const loading = ref(false)
 const dialogVisible = ref(false)
 const dialogTitle = ref('新增车位')
+const applyDialogVisible = ref(false)
+const submitLoading = ref(false)
+const availableSpaces = ref([])
 
 // 表单数据
 const formRef = ref()
@@ -261,6 +363,53 @@ const rules = {
     { required: true, message: '请输入月租金', trigger: 'blur' }
   ]
 }
+
+// 申请表单
+const applyFormRef = ref()
+const applyForm = reactive({
+  parkingSpaceId: null,
+  spaceNo: '',
+  monthlyRent: 0,
+  contactPhone: '',
+  vehicleNumber: '',
+  vehicleBrand: '',
+  vehicleColor: '',
+  rentalMonths: 12,
+  rentalStartDate: '',
+  applicationReason: ''
+})
+
+// 申请表单验证规则
+const applyRules = {
+  parkingSpaceId: [
+    { required: true, message: '请选择车位', trigger: 'change' }
+  ],
+  contactPhone: [
+    { required: true, message: '请输入联系电话', trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
+  ],
+  vehicleNumber: [
+    { required: true, message: '请输入车辆号码', trigger: 'blur' }
+  ],
+  vehicleBrand: [
+    { required: true, message: '请输入车辆品牌', trigger: 'blur' }
+  ],
+  vehicleColor: [
+    { required: true, message: '请输入车辆颜色', trigger: 'blur' }
+  ],
+  rentalMonths: [
+    { required: true, message: '请选择租赁月数', trigger: 'change' }
+  ],
+  rentalStartDate: [
+    { required: true, message: '请选择租赁开始日期', trigger: 'change' }
+  ],
+  applicationReason: [
+    { required: true, message: '请输入申请原因', trigger: 'blur' }
+  ]
+}
+
+// 总金额显示
+const totalAmountDisplay = ref('¥0')
 
 // 获取状态名称
 const getStatusName = (status) => {
@@ -338,15 +487,7 @@ const handleReset = () => {
 
 // 新增
 const handleAdd = () => {
-  dialogTitle.value = '新增车位'
-  Object.assign(form, {
-    spaceNo: '',
-    location: '',
-    spaceStatus: 1,
-    monthlyRent: 0,
-    remark: ''
-  })
-  dialogVisible.value = true
+  handleApply()
 }
 
 // 编辑
@@ -451,6 +592,87 @@ const handleSubmit = async () => {
 const handleSelectionChange = (selection) => {
   selectedSpaces.value = selection
 }
+
+// 申请车位
+const handleApply = async () => {
+  try {
+    const response = await getAvailableSpaces()
+    if (response.code === 200) {
+      availableSpaces.value = response.data || []
+      if (availableSpaces.value.length === 0) {
+        ElMessage.warning('暂无可用的空闲车位')
+        return
+      }
+      applyDialogVisible.value = true
+    } else {
+      ElMessage.error('加载可用车位失败')
+    }
+  } catch (error) {
+    console.error('加载可用车位错误:', error)
+    ElMessage.error('加载可用车位失败')
+  }
+}
+
+// 车位选择变化
+const handleSpaceChange = (spaceId) => {
+  const space = availableSpaces.value.find(s => s.id === spaceId)
+  if (space) {
+    applyForm.spaceNo = space.spaceNo
+    applyForm.monthlyRent = space.monthlyRent
+    calculateTotal()
+  }
+}
+
+// 计算总金额
+const calculateTotal = () => {
+  if (applyForm.monthlyRent && applyForm.rentalMonths) {
+    const total = applyForm.monthlyRent * applyForm.rentalMonths
+    totalAmountDisplay.value = `¥${total.toFixed(2)}`
+  } else {
+    totalAmountDisplay.value = '¥0'
+  }
+}
+
+// 提交申请
+const submitApply = async () => {
+  if (!applyFormRef.value) return
+
+  try {
+    await applyFormRef.value.validate()
+    submitLoading.value = true
+
+    const response = await submitApplication(applyForm)
+    if (response.code === 200) {
+      ElMessage.success('申请提交成功，请等待管理员审核')
+      applyDialogVisible.value = false
+      // 重置表单
+      applyFormRef.value.resetFields()
+      Object.assign(applyForm, {
+        parkingSpaceId: null,
+        spaceNo: '',
+        monthlyRent: 0,
+        contactPhone: '',
+        vehicleNumber: '',
+        vehicleBrand: '',
+        vehicleColor: '',
+        rentalMonths: 12,
+        rentalStartDate: '',
+        applicationReason: ''
+      })
+      totalAmountDisplay.value = '¥0'
+    } else {
+      ElMessage.error(response.msg || '申请提交失败')
+    }
+  } catch (error) {
+    if (error !== false) { // 排除表单验证失败
+      console.error('提交申请错误:', error)
+      ElMessage.error('申请提交失败')
+    }
+  } finally {
+    submitLoading.value = false
+  }
+}
+
 
 // 分页处理
 const handleSizeChange = (val) => {

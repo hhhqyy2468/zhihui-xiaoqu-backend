@@ -41,25 +41,33 @@ public class ParkingRentalApplicationServiceImpl extends ServiceImpl<ParkingRent
 
     @Override
     public Page<ParkingRentalApplication> selectApplicationPage(Page<ParkingRentalApplication> page, ParkingRentalApplication application) {
-        QueryWrapper<ParkingRentalApplication> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("deleted", 0);
+        // 先查询数据
+        List<ParkingRentalApplication> list = baseMapper.selectParkingRentalApplicationList(application);
 
-        if (StringUtils.isNotEmpty(application.getSpaceNo())) {
-            queryWrapper.like("space_no", application.getSpaceNo());
-        }
-        if (StringUtils.isNotEmpty(application.getOwnerName())) {
-            queryWrapper.like("owner_name", application.getOwnerName());
-        }
-        if (StringUtils.isNotEmpty(application.getVehicleNumber())) {
-            queryWrapper.like("vehicle_number", application.getVehicleNumber());
-        }
-        if (application.getApplicationStatus() != null) {
-            queryWrapper.eq("application_status", application.getApplicationStatus());
+        // 手动填充月租金和位置信息
+        for (ParkingRentalApplication app : list) {
+            if (app.getParkingSpaceId() != null) {
+                ParkingSpace space = parkingSpaceService.selectParkingSpaceById(app.getParkingSpaceId());
+                if (space != null) {
+                    app.setMonthlyRent(space.getMonthlyRent());
+                    app.setLocation(space.getLocation());
+                }
+            }
         }
 
-        queryWrapper.orderByDesc("create_time");
+        // 手动分页
+        long total = list.size();
+        int pageNum = (int) page.getCurrent();
+        int pageSize = (int) page.getSize();
+        int fromIndex = (pageNum - 1) * pageSize;
+        int toIndex = Math.min(fromIndex + pageSize, (int) total);
 
-        return this.page(page, queryWrapper);
+        List<ParkingRentalApplication> pageRecords = fromIndex < total ? list.subList(fromIndex, toIndex) : new java.util.ArrayList<>();
+
+        page.setRecords(pageRecords);
+        page.setTotal(total);
+
+        return page;
     }
 
     @Override
@@ -120,21 +128,14 @@ public class ParkingRentalApplicationServiceImpl extends ServiceImpl<ParkingRent
 
         boolean result = baseMapper.updateById(application) > 0;
 
-        // 2. 审核通过时更新车位状态并生成合同
+        // 2. 审核通过时生成合同（不立即占用车位，等待付款后激活）
         if (result && status == 2) {
             ParkingRentalApplication fullApplication = baseMapper.selectById(id);
             if (fullApplication != null && fullApplication.getParkingSpaceId() != null) {
-                // 更新车位状态为已租
-                ParkingSpace parkingSpace = new ParkingSpace();
-                parkingSpace.setId(fullApplication.getParkingSpaceId());
-                parkingSpace.setSpaceStatus(2); // 已租
-                parkingSpaceService.updateById(parkingSpace);
-                log.info("审核通过，车位状态已更新为已租。车位ID：{}", fullApplication.getParkingSpaceId());
-
                 // 生成租赁合同和账单
                 try {
                     ParkingRentalContract contract = contractService.generateContract(id);
-                    log.info("审核通过，租赁合同已生成。合同编号：{}", contract.getContractNo());
+                    log.info("审核通过，租赁合同已生成（待付款状态）。合同编号：{}", contract.getContractNo());
                 } catch (Exception e) {
                     log.error("生成租赁合同失败", e);
                     // 合同生成失败不影响审核流程，只记录日志

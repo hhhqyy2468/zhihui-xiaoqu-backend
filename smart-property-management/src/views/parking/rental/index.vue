@@ -17,7 +17,7 @@
                   v-model="searchForm.applicant"
                   placeholder="请输入申请人姓名"
                   clearable
-                  style="width: 200px"
+                  style="width: 180px"
                 />
               </el-form-item>
               <el-form-item label="车位编号">
@@ -25,7 +25,15 @@
                   v-model="searchForm.spaceNo"
                   placeholder="请输入车位编号"
                   clearable
-                  style="width: 200px"
+                  style="width: 180px"
+                />
+              </el-form-item>
+              <el-form-item label="车牌号">
+                <el-input
+                  v-model="searchForm.vehicleNumber"
+                  placeholder="请输入车牌号"
+                  clearable
+                  style="width: 150px"
                 />
               </el-form-item>
               <el-form-item label="申请状态">
@@ -33,11 +41,11 @@
                   v-model="searchForm.status"
                   placeholder="请选择状态"
                   clearable
-                  style="width: 150px"
+                  style="width: 120px"
                 >
-                  <el-option label="待审核" value="1" />
-                  <el-option label="已通过" value="2" />
-                  <el-option label="已驳回" value="3" />
+                  <el-option label="待审核" :value="1" />
+                  <el-option label="已通过" :value="2" />
+                  <el-option label="已驳回" :value="3" />
                 </el-select>
               </el-form-item>
               <el-form-item>
@@ -85,33 +93,45 @@
               @selection-change="handleSelectionChange"
             >
               <el-table-column type="selection" width="55" />
-              <el-table-column prop="applicationNo" label="申请编号" width="150" />
-              <el-table-column label="车位信息" width="180">
+              <el-table-column prop="spaceNo" label="车位编号" width="100" />
+              <el-table-column prop="ownerName" label="申请人" width="100" />
+              <el-table-column prop="contactPhone" label="联系电话" width="120" />
+              <el-table-column prop="vehicleNumber" label="车牌号" width="120" />
+              <el-table-column prop="vehicleBrand" label="车辆品牌" width="120" />
+              <el-table-column label="租赁日期" width="180">
                 <template #default="{ row }">
-                  {{ row.vehicleNumber }} - {{ row.spaceNo }}
+                  {{ formatDate(row.rentalStartDate) }} 至<br/>
+                  {{ formatDate(row.rentalEndDate) }}
                 </template>
               </el-table-column>
-              <el-table-column prop="ownerName" label="申请人" width="120" />
-              <el-table-column prop="contactPhone" label="联系电话" width="120" />
-              <el-table-column prop="monthlyRent" label="月租金" width="120">
+              <el-table-column prop="rentalMonths" label="租期(月)" width="90" />
+              <el-table-column prop="monthlyRent" label="月租金" width="100">
                 <template #default="{ row }">
                   ¥{{ row.monthlyRent }}
                 </template>
               </el-table-column>
-              <el-table-column prop="rentalMonths" label="租期(月)" width="100" />
-              <el-table-column prop="applicationStatus" label="申请状态" width="100">
+              <el-table-column prop="applicationStatus" label="状态" width="90">
                 <template #default="{ row }">
                   <el-tag :type="getStatusColor(row.applicationStatus)">
                     {{ getStatusName(row.applicationStatus) }}
                   </el-tag>
                 </template>
               </el-table-column>
-              <el-table-column prop="createTime" label="申请时间" width="180">
+              <el-table-column label="审核信息" width="150">
+                <template #default="{ row }">
+                  <div v-if="row.applicationStatus !== 1" class="review-info">
+                    <div>{{ row.reviewUserName || '-' }}</div>
+                    <div class="review-time">{{ formatDateTime(row.reviewTime) }}</div>
+                  </div>
+                  <span v-else>-</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="createTime" label="申请时间" width="160">
                 <template #default="{ row }">
                   {{ formatDateTime(row.createTime) }}
                 </template>
               </el-table-column>
-              <el-table-column label="操作" width="200" fixed="right">
+              <el-table-column label="操作" width="180" fixed="right">
                 <template #default="{ row }">
                   <el-button
                     v-if="row.applicationStatus === 1"
@@ -142,8 +162,8 @@
 
             <div class="pagination-wrapper">
               <el-pagination
-                v-model:current-page="currentPage"
-                v-model:page-size="pageSize"
+                :current-page="currentPage"
+                :page-size="pageSize"
                 :page-sizes="[10, 20, 50, 100]"
                 :total="total"
                 layout="total, sizes, prev, pager, next, jumper"
@@ -161,10 +181,10 @@
             <el-form :model="recordSearchForm" inline>
               <el-form-item label="承租人">
                 <el-input
-                  v-model="recordSearchForm.tenant"
+                  v-model="recordSearchForm.ownerName"
                   placeholder="请输入承租人姓名"
                   clearable
-                  style="width: 200px"
+                  style="width: 180px"
                 />
               </el-form-item>
               <el-form-item label="车位编号">
@@ -172,19 +192,28 @@
                   v-model="recordSearchForm.spaceNo"
                   placeholder="请输入车位编号"
                   clearable
-                  style="width: 200px"
+                  style="width: 180px"
                 />
               </el-form-item>
-              <el-form-item label="租赁状态">
-                <el-select
-                  v-model="recordSearchForm.leaseStatus"
-                  placeholder="请选择状态"
+              <el-form-item label="车牌号">
+                <el-input
+                  v-model="recordSearchForm.vehicleNumber"
+                  placeholder="请输入车牌号"
                   clearable
                   style="width: 150px"
+                />
+              </el-form-item>
+              <el-form-item label="合同状态">
+                <el-select
+                  v-model="recordSearchForm.contractStatus"
+                  placeholder="请选择状态"
+                  clearable
+                  style="width: 120px"
                 >
-                  <el-option label="进行中" value="1" />
-                  <el-option label="已到期" value="2" />
-                  <el-option label="已终止" value="3" />
+                  <el-option label="待付款" :value="1" />
+                  <el-option label="进行中" :value="2" />
+                  <el-option label="已到期" :value="3" />
+                  <el-option label="已终止" :value="4" />
                 </el-select>
               </el-form-item>
               <el-form-item>
@@ -200,17 +229,6 @@
             </el-form>
           </div>
 
-          <!-- 操作按钮 -->
-          <div class="action-section">
-            <el-button
-              type="warning"
-              @click="handleExportRecords"
-            >
-              <el-icon><Download /></el-icon>
-              导出记录
-            </el-button>
-          </div>
-
           <!-- 记录表格 -->
           <div class="table-section">
             <el-table
@@ -218,38 +236,54 @@
               :data="recordList"
             >
               <el-table-column prop="contractNo" label="合同编号" width="150" />
-              <el-table-column prop="tenant" label="承租人" width="120" />
-              <el-table-column prop="spaceNo" label="车位编号" width="120" />
-              <el-table-column prop="monthlyRent" label="月租金" width="120">
+              <el-table-column prop="spaceNo" label="车位编号" width="100" />
+              <el-table-column prop="ownerName" label="承租人" width="100" />
+              <el-table-column prop="vehicleNumber" label="车牌号" width="120" />
+              <el-table-column prop="vehicleBrand" label="车辆品牌" width="120" />
+              <el-table-column label="租赁期限" width="180">
+                <template #default="{ row }">
+                  {{ formatDate(row.startDate) }} 至<br/>
+                  {{ formatDate(row.endDate) }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="rentalMonths" label="租期" width="80">
+                <template #default="{ row }">
+                  {{ row.rentalMonths }}个月
+                </template>
+              </el-table-column>
+              <el-table-column prop="monthlyRent" label="月租金" width="100">
                 <template #default="{ row }">
                   ¥{{ row.monthlyRent }}
                 </template>
               </el-table-column>
-              <el-table-column prop="leaseStatus" label="租赁状态" width="100">
-                <template #default="{ row }">
-                  <el-tag :type="getLeaseStatusColor(row.leaseStatus)">
-                    {{ getLeaseStatusName(row.leaseStatus) }}
-                  </el-tag>
-                </template>
-              </el-table-column>
-              <el-table-column prop="startDate" label="开始日期" width="120" />
-              <el-table-column prop="endDate" label="结束日期" width="120" />
-              <el-table-column prop="totalAmount" label="总金额" width="120">
+              <el-table-column prop="totalAmount" label="总金额" width="110">
                 <template #default="{ row }">
                   ¥{{ row.totalAmount }}
                 </template>
               </el-table-column>
-              <el-table-column label="操作" width="150" fixed="right">
+              <el-table-column prop="paidAmount" label="已付金额" width="110">
+                <template #default="{ row }">
+                  ¥{{ row.paidAmount || 0 }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="contractStatus" label="合同状态" width="100">
+                <template #default="{ row }">
+                  <el-tag :type="getContractStatusColor(row.contractStatus)">
+                    {{ getContractStatusName(row.contractStatus) }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="180" fixed="right">
                 <template #default="{ row }">
                   <el-button
                     link
                     type="primary"
                     @click="handleViewContract(row)"
                   >
-                    查看合同
+                    查看
                   </el-button>
                   <el-button
-                    v-if="row.leaseStatus === '1'"
+                    v-if="row.contractStatus === 2"
                     link
                     type="warning"
                     @click="handleTerminate(row)"
@@ -262,8 +296,8 @@
 
             <div class="pagination-wrapper">
               <el-pagination
-                v-model:current-page="recordCurrentPage"
-                v-model:page-size="recordPageSize"
+                :current-page="recordCurrentPage"
+                :page-size="recordPageSize"
                 :page-sizes="[10, 20, 50, 100]"
                 :total="recordTotal"
                 layout="total, sizes, prev, pager, next, jumper"
@@ -461,6 +495,56 @@
         </div>
       </template>
     </el-dialog>
+
+    <!-- 合同详情对话框 -->
+    <el-dialog
+      v-model="contractDetailVisible"
+      title="合同详情"
+      width="700px"
+    >
+      <el-descriptions :column="2" border>
+        <el-descriptions-item label="合同编号">{{ currentContract.contractNo }}</el-descriptions-item>
+        <el-descriptions-item label="车位编号">{{ currentContract.spaceNo }}</el-descriptions-item>
+        <el-descriptions-item label="车位位置">{{ currentContract.location }}</el-descriptions-item>
+        <el-descriptions-item label="月租金">¥{{ currentContract.monthlyRent }}</el-descriptions-item>
+        <el-descriptions-item label="业主姓名">{{ currentContract.ownerName }}</el-descriptions-item>
+        <el-descriptions-item label="联系电话">{{ currentContract.contactPhone }}</el-descriptions-item>
+        <el-descriptions-item label="车辆号码">{{ currentContract.vehicleNumber }}</el-descriptions-item>
+        <el-descriptions-item label="车辆品牌">{{ currentContract.vehicleBrand }}</el-descriptions-item>
+        <el-descriptions-item label="车辆颜色">{{ currentContract.vehicleColor }}</el-descriptions-item>
+        <el-descriptions-item label="租赁月数">{{ currentContract.rentalMonths }} 个月</el-descriptions-item>
+        <el-descriptions-item label="租赁开始日期">{{ parseTime(currentContract.startDate, '{y}-{m}-{d}') }}</el-descriptions-item>
+        <el-descriptions-item label="租赁结束日期">{{ parseTime(currentContract.endDate, '{y}-{m}-{d}') }}</el-descriptions-item>
+        <el-descriptions-item label="总金额">¥{{ currentContract.totalAmount }}</el-descriptions-item>
+        <el-descriptions-item label="已付金额">¥{{ currentContract.paidAmount || 0 }}</el-descriptions-item>
+        <el-descriptions-item label="合同状态">
+          <el-tag :type="getContractStatusColor(currentContract.contractStatus)">
+            {{ getContractStatusName(currentContract.contractStatus) }}
+          </el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="签订日期">{{ parseTime(currentContract.signDate, '{y}-{m}-{d}') }}</el-descriptions-item>
+        <el-descriptions-item label="剩余天数" :span="2">
+          <span v-if="currentContract.remainingDays !== null && currentContract.remainingDays !== undefined">
+            {{ currentContract.remainingDays > 0 ? currentContract.remainingDays + ' 天' : '已到期' }}
+          </span>
+          <span v-else>-</span>
+        </el-descriptions-item>
+        <el-descriptions-item v-if="currentContract.contractStatus === 4" label="终止日期" :span="2">
+          {{ parseTime(currentContract.terminateDate, '{y}-{m}-{d}') }}
+        </el-descriptions-item>
+        <el-descriptions-item v-if="currentContract.contractStatus === 4" label="终止原因" :span="2">
+          {{ currentContract.terminateReason }}
+        </el-descriptions-item>
+        <el-descriptions-item label="备注" :span="2">{{ currentContract.remark || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="创建时间">{{ parseTime(currentContract.createTime) }}</el-descriptions-item>
+        <el-descriptions-item label="更新时间">{{ parseTime(currentContract.updateTime) }}</el-descriptions-item>
+      </el-descriptions>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="contractDetailVisible = false">关 闭</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -480,23 +564,28 @@ import {
 import {
   listApplication,
   getApplication,
-  addApplication,
-  updateApplication,
   delApplication,
   reviewApplication
 } from '@/api/parking/rentalApplication'
+import {
+  listContract,
+  getContract,
+  terminateContract
+} from '@/api/parking/rentalContract'
 
 // 响应式数据
 const activeTab = ref('applications')
 const loading = ref(false)
 const recordLoading = ref(false)
 const detailVisible = ref(false)
+const contractDetailVisible = ref(false)
 
 // 搜索表单
 const searchForm = reactive({
   applicant: '',
   spaceNo: '',
-  status: ''
+  vehicleNumber: '',
+  status: null
 })
 
 const queryParams = ref({
@@ -509,9 +598,19 @@ const queryParams = ref({
 })
 
 const recordSearchForm = reactive({
-  tenant: '',
+  ownerName: '',
   spaceNo: '',
-  leaseStatus: ''
+  vehicleNumber: '',
+  contractStatus: null
+})
+
+const recordSearchParams = ref({
+  pageNum: 1,
+  pageSize: 10,
+  spaceNo: '',
+  ownerName: '',
+  vehicleNumber: '',
+  contractStatus: null
 })
 
 // 数据
@@ -519,6 +618,7 @@ const applicationList = ref([])
 const recordList = ref([])
 const selectedApplications = ref([])
 const currentApplication = ref({})
+const currentContract = ref({})
 const ids = ref([])
 const total = ref(0)
 const single = ref(true)
@@ -606,29 +706,50 @@ const getStatusColor = (status) => {
   return getStatusType(status)
 }
 
-// 获取租赁状态名称
+// 获取租赁状态名称（保留兼容）
 const getLeaseStatusName = (status) => {
+  return getContractStatusName(status)
+}
+
+// 获取租赁状态颜色（保留兼容）
+const getLeaseStatusColor = (status) => {
+  return getContractStatusColor(status)
+}
+
+// 获取合同状态名称
+const getContractStatusName = (status) => {
   const statusMap = {
-    1: '进行中',
-    2: '已到期',
-    3: '已终止'
+    1: '待付款',
+    2: '进行中',
+    3: '已到期',
+    4: '已终止'
   }
   return statusMap[status] || '未知'
 }
 
-// 获取租赁状态颜色
-const getLeaseStatusColor = (status) => {
+// 获取合同状态颜色
+const getContractStatusColor = (status) => {
   const colorMap = {
-    1: 'success',
-    2: 'warning',
-    3: 'danger'
+    1: 'warning',
+    2: 'success',
+    3: 'info',
+    4: 'danger'
   }
   return colorMap[status] || 'info'
 }
 
+// 格式化日期
+const formatDate = (date) => {
+  if (!date) return '-'
+  const d = new Date(date)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 // 格式化日期时间
 const formatDateTime = (dateTime) => {
-  return new Date(dateTime).toLocaleString('zh-CN')
+  if (!dateTime) return '-'
+  const d = new Date(dateTime)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
 // 计算总金额
@@ -771,27 +892,10 @@ const handleUpdate = (row) => {
   })
 }
 
-// 提交表单
+// 提交表单（已移除新增和修改功能）
 const submitForm = () => {
-  if (formRef.value) {
-    formRef.value.validate(valid => {
-      if (valid) {
-        if (form.value.id != null) {
-          updateApplication(form.value).then(response => {
-            ElMessage.success("修改成功")
-            open.value = false
-            getList()
-          })
-        } else {
-          addApplication(form.value).then(response => {
-            ElMessage.success("新增成功")
-            open.value = false
-            getList()
-          })
-        }
-      }
-    })
-  }
+  // 新增和修改功能已禁用，业主只能通过"我的车位"页面提交申请
+  ElMessage.info('请通过"我的车位"页面提交申请')
 }
 
 // 删除按钮操作
@@ -803,16 +907,6 @@ const handleDelete = (row) => {
     getList()
     ElMessage.success("删除成功")
   }).catch(() => {})
-}
-
-// 审核按钮操作
-const handleReview = (row) => {
-  const applicationIds = row.id || ids.value
-  reviewForm.value = {
-    status: 2,
-    reviewRemark: ''
-  }
-  reviewOpen.value = true
 }
 
 // 单个审核
@@ -860,21 +954,23 @@ const handleTabChange = (tabName) => {
   }
 }
 
-// 搜索 (兼容旧的搜索接口)
+// 搜索
 const handleSearch = () => {
   queryParams.value.ownerName = searchForm.applicant
   queryParams.value.spaceNo = searchForm.spaceNo
-  queryParams.value.applicationStatus = searchForm.status ? parseInt(searchForm.status) : null
+  queryParams.value.vehicleNumber = searchForm.vehicleNumber
+  queryParams.value.applicationStatus = searchForm.status
   queryParams.value.pageNum = 1
   getList()
 }
 
-// 重置 (兼容旧的重置接口)
+// 重置
 const handleReset = () => {
   Object.assign(searchForm, {
     applicant: '',
     spaceNo: '',
-    status: ''
+    vehicleNumber: '',
+    status: null
   })
   queryParams.value = {
     pageNum: 1,
@@ -887,74 +983,119 @@ const handleReset = () => {
   getList()
 }
 
-// 记录搜索 (保持模拟数据)
+// 记录搜索
 const handleRecordSearch = () => {
-  recordCurrentPage.value = 1
+  recordSearchParams.value.ownerName = recordSearchForm.ownerName
+  recordSearchParams.value.spaceNo = recordSearchForm.spaceNo
+  recordSearchParams.value.vehicleNumber = recordSearchForm.vehicleNumber
+  recordSearchParams.value.contractStatus = recordSearchForm.contractStatus
+  recordSearchParams.value.pageNum = 1
   loadRecords()
 }
 
-// 记录重置 (保持模拟数据)
+// 记录重置
 const handleRecordReset = () => {
   Object.assign(recordSearchForm, {
-    tenant: '',
+    ownerName: '',
     spaceNo: '',
-    leaseStatus: ''
+    vehicleNumber: '',
+    contractStatus: null
   })
-  handleRecordSearch()
+  recordSearchParams.value = {
+    pageNum: 1,
+    pageSize: 10,
+    spaceNo: '',
+    ownerName: '',
+    vehicleNumber: '',
+    contractStatus: null
+  }
+  loadRecords()
 }
 
 // 批量通过
-const handleBatchApprove = () => {
+const handleBatchApprove = async () => {
   if (selectedApplications.value.length === 0) {
     ElMessage.warning('请选择要审核的申请')
     return
   }
 
-  ElMessageBox.confirm(
-    `确定要通过选中的 ${selectedApplications.value.length} 个申请吗？`,
-    '批量通过',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    }
-  ).then(() => {
-    // 批量审核逻辑
-    selectedApplications.value.forEach(app => {
-      if (app.applicationStatus === 1) {
-        reviewApplication(app.id, 2, '批量审核通过').catch(() => {})
+  try {
+    await ElMessageBox.confirm(
+      `确定要通过选中的 ${selectedApplications.value.length} 个申请吗？`,
+      '批量通过',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
       }
-    })
+    )
+
+    // 过滤出待审核的申请
+    const pendingApps = selectedApplications.value.filter(app => app.applicationStatus === 1)
+
+    if (pendingApps.length === 0) {
+      ElMessage.warning('所选申请中没有待审核的申请')
+      return
+    }
+
+    // 批量审核逻辑
+    const promises = pendingApps.map(app =>
+      reviewApplication(app.id, 2, '批量审核通过')
+    )
+
+    await Promise.all(promises)
     ElMessage.success('批量审核成功')
     getList()
-  })
+  } catch (error) {
+    // 用户取消操作
+    if (error !== 'cancel') {
+      console.error('批量审核失败:', error)
+      ElMessage.error('批量审核失败')
+    }
+  }
 }
 
 // 批量拒绝
-const handleBatchReject = () => {
+const handleBatchReject = async () => {
   if (selectedApplications.value.length === 0) {
     ElMessage.warning('请选择要拒绝的申请')
     return
   }
 
-  ElMessageBox.confirm(
-    `确定要拒绝选中的 ${selectedApplications.value.length} 个申请吗？`,
-    '批量拒绝',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    }
-  ).then(() => {
-    // 批量审核逻辑
-    selectedApplications.value.forEach(app => {
-      if (app.applicationStatus === 1) {
-        reviewApplication(app.id, 3, '批量审核驳回').catch(() => {})
+  try {
+    await ElMessageBox.confirm(
+      `确定要拒绝选中的 ${selectedApplications.value.length} 个申请吗？`,
+      '批量拒绝',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
       }
-    })
+    )
+
+    // 过滤出待审核的申请
+    const pendingApps = selectedApplications.value.filter(app => app.applicationStatus === 1)
+
+    if (pendingApps.length === 0) {
+      ElMessage.warning('所选申请中没有待审核的申请')
+      return
+    }
+
+    // 批量审核逻辑
+    const promises = pendingApps.map(app =>
+      reviewApplication(app.id, 3, '批量审核驳回')
+    )
+
+    await Promise.all(promises)
     ElMessage.success('批量审核成功')
     getList()
-  })
+  } catch (error) {
+    // 用户取消操作
+    if (error !== 'cancel') {
+      console.error('批量审核失败:', error)
+      ElMessage.error('批量审核失败')
+    }
+  }
 }
 
 // 通过申请
@@ -999,29 +1140,32 @@ const handleView = (row) => {
 }
 
 // 查看合同
-const handleViewContract = (row) => {
-  ElMessage.info(`查看合同 ${row.contractNo} 的详细信息`)
+const handleViewContract = async (row) => {
+  try {
+    const response = await getContract(row.id)
+    currentContract.value = response.data
+    contractDetailVisible.value = true
+  } catch (error) {
+    console.error('查看合同失败:', error)
+    ElMessage.error('查看合同失败')
+  }
 }
 
 // 终止合同
 const handleTerminate = (row) => {
-  ElMessageBox.confirm(
-    `确定要终止合同 ${row.contractNo} 吗？`,
-    '终止合同',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    }
-  ).then(() => {
-    ElMessage.success('合同已终止')
-    loadRecords()
-  })
-}
-
-// 导出记录
-const handleExportRecords = () => {
-  ElMessage.success('租赁记录导出成功')
+  ElMessageBox.prompt('请输入终止原因', '终止合同', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    inputPattern: /\S+/,
+    inputErrorMessage: '终止原因不能为空'
+  }).then(({ value }) => {
+    terminateContract(row.id, value).then(() => {
+      ElMessage.success('合同已终止')
+      loadRecords()
+    }).catch(() => {
+      ElMessage.error('终止合同失败')
+    })
+  }).catch(() => {})
 }
 
 // 分页处理
@@ -1036,54 +1180,29 @@ const handleCurrentChange = (val) => {
 }
 
 const handleRecordSizeChange = (val) => {
-  recordPageSize.value = val
+  recordSearchParams.value.pageSize = val
+  recordCurrentPage.value = 1
   loadRecords()
 }
 
 const handleRecordCurrentChange = (val) => {
-  recordCurrentPage.value = val
+  recordSearchParams.value.pageNum = val
   loadRecords()
 }
 
-// 保持模拟数据生成功能（用于租赁记录）
-const generateMockRecords = () => {
-  const records = []
-  const tenants = ['张三', '李四', '王五', '赵六', '钱七', '孙八']
-  const statuses = ['1', '2', '3']
-
-  for (let i = 1; i <= 50; i++) {
-    const leaseTerm = Math.floor(Math.random() * 12) + 6
-    const startDate = new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000)
-    const endDate = new Date(startDate.getTime() + leaseTerm * 30 * 24 * 60 * 60 * 1000)
-
-    records.push({
-      id: i,
-      contractNo: `C${String(i).padStart(6, '0')}`,
-      tenant: tenants[Math.floor(Math.random() * tenants.length)],
-      spaceNo: `P${String(Math.floor(Math.random() * 500) + 1).padStart(3, '0')}`,
-      monthlyRent: Math.floor(Math.random() * 500) + 200,
-      leaseStatus: statuses[Math.floor(Math.random() * statuses.length)],
-      startDate: startDate.toISOString().split('T')[0],
-      endDate: endDate.toISOString().split('T')[0],
-      totalAmount: (Math.floor(Math.random() * 500) + 200) * leaseTerm
-    })
-  }
-
-  return records
-}
-
-// 加载记录数据 (保持模拟数据)
-const loadRecords = () => {
+// 加载记录数据
+const loadRecords = async () => {
   recordLoading.value = true
-  setTimeout(() => {
-    const mockData = generateMockRecords()
-    recordList.value = mockData.slice(
-      (recordCurrentPage.value - 1) * recordPageSize.value,
-      recordCurrentPage.value * recordPageSize.value
-    )
-    recordTotal.value = mockData.length
+  try {
+    const response = await listContract(recordSearchParams.value)
+    recordList.value = response.data.rows || []
+    recordTotal.value = response.data.total || 0
+  } catch (error) {
+    console.error('查询租赁记录失败:', error)
+    ElMessage.error('查询数据失败')
+  } finally {
     recordLoading.value = false
-  }, 500)
+  }
 }
 
 // 初始化
@@ -1122,6 +1241,16 @@ onMounted(() => {
   .pagination-wrapper {
     margin-top: 20px;
     text-align: right;
+  }
+
+  .review-info {
+    font-size: 12px;
+    line-height: 1.5;
+
+    .review-time {
+      color: #909399;
+      font-size: 11px;
+    }
   }
 }
 </style>

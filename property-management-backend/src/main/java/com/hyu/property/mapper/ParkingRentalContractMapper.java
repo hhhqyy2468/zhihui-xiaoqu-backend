@@ -38,4 +38,12 @@ public interface ParkingRentalContractMapper extends BaseMapper<ParkingRentalCon
      * @return 租赁合同集合
      */
     List<ParkingRentalContract> selectExpiredContracts();
+
+    /**
+     * 根据合同ID查询合同详情（包含车位位置）
+     *
+     * @param id 合同ID
+     * @return 租赁合同
+     */
+    ParkingRentalContract selectContractById(@Param("id") Long id);
 }

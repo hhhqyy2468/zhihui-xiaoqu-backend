@@ -9,6 +9,7 @@ import com.hyu.property.mapper.ParkingRentalContractMapper;
 import com.hyu.property.service.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +34,7 @@ public class ParkingRentalContractServiceImpl extends ServiceImpl<ParkingRentalC
     @Autowired
     private IParkingSpaceService parkingSpaceService;
 
+    @Lazy
     @Autowired
     private IBillService billService;
 
@@ -117,7 +119,7 @@ public class ParkingRentalContractServiceImpl extends ServiceImpl<ParkingRentalC
         contract.setEndDate(endDate);
         contract.setTotalAmount(totalAmount);
         contract.setPaidAmount(BigDecimal.ZERO);
-        contract.setContractStatus(1); // 进行中
+        contract.setContractStatus(1); // 待付款
         contract.setSignDate(new Date());
         contract.setDeleted(0);
 
@@ -185,12 +187,12 @@ public class ParkingRentalContractServiceImpl extends ServiceImpl<ParkingRentalC
             throw new RuntimeException("合同不存在");
         }
 
-        if (contract.getContractStatus() != 1) {
+        if (contract.getContractStatus() != 2) {
             throw new RuntimeException("只能终止进行中的合同");
         }
 
         // 更新合同状态
-        contract.setContractStatus(3); // 已终止
+        contract.setContractStatus(4); // 已终止
         contract.setTerminateDate(new Date());
         contract.setTerminateReason(terminateReason);
         boolean result = this.updateById(contract);
@@ -226,7 +228,7 @@ public class ParkingRentalContractServiceImpl extends ServiceImpl<ParkingRentalC
 
         for (ParkingRentalContract contract : expiredContracts) {
             // 更新合同状态
-            contract.setContractStatus(2); // 已到期
+            contract.setContractStatus(3); // 已到期
             this.updateById(contract);
 
             // 释放车位
@@ -253,29 +255,36 @@ public class ParkingRentalContractServiceImpl extends ServiceImpl<ParkingRentalC
         long totalCount = this.count(queryWrapper);
         stats.put("totalCount", totalCount);
 
-        // 进行中合同数
+        // 待付款合同数
         queryWrapper.eq("contract_status", 1);
+        long pendingPaymentCount = this.count(queryWrapper);
+        stats.put("pendingPaymentCount", pendingPaymentCount);
+
+        // 进行中合同数
+        queryWrapper.clear();
+        queryWrapper.eq("deleted", 0);
+        queryWrapper.eq("contract_status", 2);
         long activeCount = this.count(queryWrapper);
         stats.put("activeCount", activeCount);
 
         // 已到期合同数
         queryWrapper.clear();
         queryWrapper.eq("deleted", 0);
-        queryWrapper.eq("contract_status", 2);
+        queryWrapper.eq("contract_status", 3);
         long expiredCount = this.count(queryWrapper);
         stats.put("expiredCount", expiredCount);
 
         // 已终止合同数
         queryWrapper.clear();
         queryWrapper.eq("deleted", 0);
-        queryWrapper.eq("contract_status", 3);
+        queryWrapper.eq("contract_status", 4);
         long terminatedCount = this.count(queryWrapper);
         stats.put("terminatedCount", terminatedCount);
 
-        // 总金额
+        // 总金额（统计进行中的合同）
         queryWrapper.clear();
         queryWrapper.eq("deleted", 0);
-        queryWrapper.eq("contract_status", 1);
+        queryWrapper.eq("contract_status", 2);
         List<ParkingRentalContract> activeContracts = this.list(queryWrapper);
         BigDecimal totalAmount = activeContracts.stream()
                 .map(ParkingRentalContract::getTotalAmount)
@@ -283,6 +292,41 @@ public class ParkingRentalContractServiceImpl extends ServiceImpl<ParkingRentalC
         stats.put("totalAmount", totalAmount);
 
         return stats;
+    }
+
+    @Override
+    public ParkingRentalContract selectContractById(Long id) {
+        ParkingRentalContract contract = baseMapper.selectContractById(id);
+        if (contract != null) {
+            // 设置合同状态名称
+            if (contract.getContractStatus() != null) {
+                switch (contract.getContractStatus()) {
+                    case 1:
+                        contract.setContractStatusName("待付款");
+                        break;
+                    case 2:
+                        contract.setContractStatusName("进行中");
+                        break;
+                    case 3:
+                        contract.setContractStatusName("已到期");
+                        break;
+                    case 4:
+                        contract.setContractStatusName("已终止");
+                        break;
+                    default:
+                        contract.setContractStatusName("未知");
+                        break;
+                }
+            }
+
+            // 计算剩余天数（仅进行中的合同）
+            if (contract.getEndDate() != null && contract.getContractStatus() == 2) {
+                long diff = contract.getEndDate().getTime() - System.currentTimeMillis();
+                long days = diff / (1000 * 60 * 60 * 24);
+                contract.setRemainingDays(days);
+            }
+        }
+        return contract;
     }
 
     /**

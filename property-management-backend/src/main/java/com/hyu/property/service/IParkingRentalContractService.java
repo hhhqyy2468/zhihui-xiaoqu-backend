@@ -77,4 +77,12 @@ public interface IParkingRentalContractService extends IService<ParkingRentalCon
      * @return 统计数据
      */
     Map<String, Object> getContractStats();
+
+    /**
+     * 根据合同ID查询合同详情（包含车位位置等信息）
+     *
+     * @param id 合同ID
+     * @return 合同详情
+     */
+    ParkingRentalContract selectContractById(Long id);
 }

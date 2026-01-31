@@ -78,7 +78,7 @@ public class ParkingRentalContract implements Serializable {
     /** 已付金额 */
     private BigDecimal paidAmount;
 
-    /** 合同状态：1-进行中 2-已到期 3-已终止 */
+    /** 合同状态：1-待付款 2-进行中 3-已到期 4-已终止 */
     private Integer contractStatus;
 
     /** 签订日期 */
