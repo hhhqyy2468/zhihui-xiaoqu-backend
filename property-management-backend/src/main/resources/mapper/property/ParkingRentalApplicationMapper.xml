@@ -51,6 +51,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <include refid="selectParkingRentalApplicationVo"/>
         <where>
             a.deleted = 0
+            <if test="ownerId != null">
+                and a.owner_id = #{ownerId}
+            </if>
             <if test="spaceNo != null and spaceNo != ''">
                 and a.space_no like concat('%', #{spaceNo}, '%')
             </if>

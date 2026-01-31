@@ -62,3 +62,20 @@ export function getPendingApplications() {
     method: 'get'
   })
 }
+
+// 业主提交车位租赁申请（无需权限）
+export function submitMyApplication(data) {
+  return request({
+    url: '/parking/rental/application/my',
+    method: 'post',
+    data: data
+  })
+}
+
+// 查询我的租赁申请记录
+export function getMyApplications() {
+  return request({
+    url: '/parking/rental/application/my',
+    method: 'get'
+  })
+}

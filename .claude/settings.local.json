@@ -58,7 +58,13 @@
       "Bash(.mvnw.cmd spring-boot:run:*)",
       "Bash(git fetch:*)",
       "Bash(git cherry-pick:*)",
-      "Bash(redis-cli:*)"
+      "Bash(redis-cli:*)",
+      "Bash(git pull:*)",
+      "Bash(/usr/bin/git status)",
+      "Bash(powershell:*)",
+      "Bash(/c/Program Files/Git/bin/git.exe status:*)",
+      "Bash(/c/Program Files/Git/bin/git.exe remote -v)",
+      "Bash(/c/Program Files/Git/bin/git.exe add:*)"
     ],
     "deny": [],
     "ask": []

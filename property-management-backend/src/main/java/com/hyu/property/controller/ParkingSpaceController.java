@@ -112,6 +112,24 @@ public class ParkingSpaceController {
     }
 
     /**
+     * 查询可用车位（业主端使用，无需权限）
+     */
+    @GetMapping("/available")
+    public AjaxResult getAvailableSpaces() {
+        log.info("查询可用车位");
+
+        ParkingSpace query = new ParkingSpace();
+        query.setSpaceStatus(1); // 1-空闲状态
+
+        List<ParkingSpace> availableSpaces = parkingSpaceService.selectParkingSpaceList(query);
+
+        // 为每个车位添加前端需要的字段
+        availableSpaces.forEach(this::addFrontendFields);
+
+        return AjaxResult.success(availableSpaces);
+    }
+
+    /**
      * 添加前端需要的字段映射
      */
     private void addFrontendFields(ParkingSpace parkingSpace) {

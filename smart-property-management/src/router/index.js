@@ -183,7 +183,13 @@ const routes = [
         path: 'rental',
         name: 'ParkingRental',
         component: () => import('@/views/parking/rental/index.vue'),
-        meta: { title: '租赁管理', icon: 'Document' }
+        meta: { title: '租赁申请', icon: 'Document' }
+      },
+      {
+        path: 'contract',
+        name: 'ParkingContract',
+        component: () => import('@/views/parking/contract/index.vue'),
+        meta: { title: '租赁合同', icon: 'Document' }
       }
     ]
   },

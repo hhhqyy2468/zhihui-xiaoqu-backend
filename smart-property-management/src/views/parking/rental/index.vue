@@ -299,6 +299,26 @@
           <el-input v-model="form.vehicleColor" placeholder="请输入车辆颜色" />
         </el-form-item>
 
+        <el-form-item label="选择车位" prop="parkingSpaceId">
+          <el-select
+            v-model="form.parkingSpaceId"
+            placeholder="请选择车位"
+            filterable
+            style="width: 100%"
+            @change="handleSpaceChange">
+            <el-option
+              v-for="space in availableSpaces"
+              :key="space.id"
+              :label="`${space.spaceNo} - ${space.location}`"
+              :value="space.id">
+              <span>{{ space.spaceNo }}</span>
+              <span style="float: right; color: #8492a6;">
+                {{ space.location }} - ¥{{ space.monthlyRent }}/月
+              </span>
+            </el-option>
+          </el-select>
+        </el-form-item>
+
         <el-form-item label="租赁开始日期" prop="rentalStartDate">
           <el-date-picker
             v-model="form.rentalStartDate"
@@ -324,7 +344,41 @@
             :max="60"
             placeholder="请输入租赁月数"
             style="width: 100%"
+            @change="calculateTotalAmount"
           />
+        </el-form-item>
+
+        <!-- 费用明细 -->
+        <el-divider content-position="left">费用明细</el-divider>
+        <el-form-item label="月租金">
+          <el-input v-model="form.monthlyRent" disabled>
+            <template #prefix>¥</template>
+          </el-input>
+        </el-form-item>
+        <el-form-item label="租赁月数">
+          <el-input v-model="form.rentalMonths" disabled>
+            <template #suffix>个月</template>
+          </el-input>
+        </el-form-item>
+        <el-form-item label="小计">
+          <el-input :value="subtotal" disabled>
+            <template #prefix>¥</template>
+          </el-input>
+        </el-form-item>
+        <el-form-item label="折扣">
+          <el-input-number
+            v-model="form.discount"
+            :min="0"
+            :precision="2"
+            placeholder="折扣金额"
+            style="width: 100%"
+            @change="calculateTotalAmount"
+          />
+        </el-form-item>
+        <el-form-item label="总金额">
+          <el-input :value="totalAmount" disabled>
+            <template #prefix>¥</template>
+          </el-input>
         </el-form-item>
 
         <el-form-item label="申请原因" prop="applicationReason">
@@ -411,7 +465,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Search,
@@ -474,10 +528,24 @@ const multiple = ref(true)
 const open = ref(false)
 const reviewOpen = ref(false)
 const title = ref('')
-const form = ref({})
+const form = ref({
+  monthlyRent: 0,
+  discount: 0
+})
 const reviewForm = ref({})
 const formRef = ref()
 const reviewFormRef = ref()
+
+// 费用计算
+const subtotal = computed(() => {
+  const rent = form.value.monthlyRent || 0
+  const months = form.value.rentalMonths || 1
+  return rent * months
+})
+
+const totalAmount = computed(() => {
+  return Math.max(0, subtotal.value - (form.value.discount || 0))
+})
 
 // 表单验证规则
 const rules = reactive({
@@ -509,6 +577,9 @@ const pageSize = ref(10)
 const recordCurrentPage = ref(1)
 const recordPageSize = ref(10)
 const recordTotal = ref(0)
+
+// 可用车位列表
+const availableSpaces = ref([])
 
 // 获取申请状态名称
 const getStatusName = (status) => {
@@ -558,6 +629,35 @@ const getLeaseStatusColor = (status) => {
 // 格式化日期时间
 const formatDateTime = (dateTime) => {
   return new Date(dateTime).toLocaleString('zh-CN')
+}
+
+// 计算总金额
+const calculateTotalAmount = () => {
+  // 费用计算通过 computed 自动完成
+}
+
+// 加载可用车位
+const loadAvailableSpaces = async () => {
+  try {
+    // 导入车位API
+    const { listParkingSpaces } = await import('@/api/parkingSpace')
+    const response = await listParkingSpaces({
+      spaceStatus: 1, // 只加载空闲车位
+      pageSize: 1000
+    })
+    availableSpaces.value = response.data.rows || []
+  } catch (error) {
+    console.error('加载可用车位失败:', error)
+  }
+}
+
+// 车位变化时自动填充信息
+const handleSpaceChange = (spaceId) => {
+  const space = availableSpaces.value.find(s => s.id === spaceId)
+  if (space) {
+    form.value.spaceNo = space.spaceNo
+    form.value.monthlyRent = space.monthlyRent || 0
+  }
 }
 
 // 工具函数
@@ -618,6 +718,8 @@ const reset = () => {
     rentalStartDate: null,
     rentalEndDate: null,
     rentalMonths: 1,
+    monthlyRent: 0,
+    discount: 0,
     applicationReason: ''
   }
   if (formRef.value) {
@@ -987,6 +1089,7 @@ const loadRecords = () => {
 // 初始化
 onMounted(() => {
   getList()
+  loadAvailableSpaces()
 })
 </script>
 

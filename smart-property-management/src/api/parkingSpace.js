@@ -58,3 +58,11 @@ export function getParkingSpaceStats() {
     method: 'get'
   })
 }
+
+// 获取可用车位（业主端使用，无需权限）
+export function getAvailableSpaces() {
+  return request({
+    url: '/parking/space/available',
+    method: 'get'
+  })
+}

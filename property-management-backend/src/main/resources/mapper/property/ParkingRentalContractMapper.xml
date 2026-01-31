@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hyu.property.mapper.ParkingRentalContractMapper">
+
+    <resultMap type="com.hyu.property.domain.ParkingRentalContract" id="ParkingRentalContractResult">
+        <result property="id" column="id"/>
+        <result property="contractNo" column="contract_no"/>
+        <result property="applicationId" column="application_id"/>
+        <result property="parkingSpaceId" column="parking_space_id"/>
+        <result property="spaceNo" column="space_no"/>
+        <result property="ownerId" column="owner_id"/>
+        <result property="ownerName" column="owner_name"/>
+        <result property="contactPhone" column="contact_phone"/>
+        <result property="vehicleNumber" column="vehicle_number"/>
+        <result property="vehicleBrand" column="vehicle_brand"/>
+        <result property="vehicleColor" column="vehicle_color"/>
+        <result property="monthlyRent" column="monthly_rent"/>
+        <result property="rentalMonths" column="rental_months"/>
+        <result property="startDate" column="start_date"/>
+        <result property="endDate" column="end_date"/>
+        <result property="totalAmount" column="total_amount"/>
+        <result property="paidAmount" column="paid_amount"/>
+        <result property="contractStatus" column="contract_status"/>
+        <result property="signDate" column="sign_date"/>
+        <result property="terminateDate" column="terminate_date"/>
+        <result property="terminateReason" column="terminate_reason"/>
+        <result property="remark" column="remark"/>
+        <result property="deleted" column="deleted"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="location" column="location"/>
+    </resultMap>
+
+    <sql id="selectParkingRentalContractVo">
+        select c.id, c.contract_no, c.application_id, c.parking_space_id, c.space_no,
+               c.owner_id, c.owner_name, c.contact_phone, c.vehicle_number,
+               c.vehicle_brand, c.vehicle_color, c.monthly_rent, c.rental_months,
+               c.start_date, c.end_date, c.total_amount, c.paid_amount,
+               c.contract_status, c.sign_date, c.terminate_date, c.terminate_reason,
+               c.remark, c.deleted, c.create_by, c.create_time, c.update_by, c.update_time,
+               p.location
+        from parking_rental_contract c
+        left join parking_space p on c.parking_space_id = p.id
+    </sql>
+
+    <select id="selectContractList" parameterType="com.hyu.property.domain.ParkingRentalContract"
+            resultMap="ParkingRentalContractResult">
+        <include refid="selectParkingRentalContractVo"/>
+        <where>
+            c.deleted = 0
+            <if test="contractNo != null and contractNo != ''">
+                and c.contract_no like concat('%', #{contractNo}, '%')
+            </if>
+            <if test="spaceNo != null and spaceNo != ''">
+                and c.space_no like concat('%', #{spaceNo}, '%')
+            </if>
+            <if test="ownerName != null and ownerName != ''">
+                and c.owner_name like concat('%', #{ownerName}, '%')
+            </if>
+            <if test="vehicleNumber != null and vehicleNumber != ''">
+                and c.vehicle_number like concat('%', #{vehicleNumber}, '%')
+            </if>
+            <if test="contractStatus != null">
+                and c.contract_status = #{contractStatus}
+            </if>
+        </where>
+        order by c.create_time desc
+    </select>
+
+    <select id="selectExpiringContracts" resultMap="ParkingRentalContractResult">
+        <include refid="selectParkingRentalContractVo"/>
+        where c.deleted = 0
+          and c.contract_status = 1
+          and DATEDIFF(c.end_date, CURDATE()) &lt;= #{days}
+          and DATEDIFF(c.end_date, CURDATE()) &gt; 0
+        order by c.end_date asc
+    </select>
+
+    <select id="selectExpiredContracts" resultMap="ParkingRentalContractResult">
+        <include refid="selectParkingRentalContractVo"/>
+        where c.deleted = 0
+          and c.contract_status = 1
+          and c.end_date &lt; CURDATE()
+        order by c.end_date asc
+    </select>
+
+</mapper>
