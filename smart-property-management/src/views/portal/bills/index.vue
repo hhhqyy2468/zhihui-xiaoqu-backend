@@ -221,7 +221,7 @@
             {{ currentBill.dueDate }}
           </el-descriptions-item>
           <el-descriptions-item label="账单金额">
-            <span class="amount-text">¥{{ currentBill.amount.toLocaleString() }}</span>
+            <span class="amount-text">¥{{ (currentBill.amount || 0).toLocaleString() }}</span>
           </el-descriptions-item>
           <el-descriptions-item label="账单状态">
             <el-tag :type="getStatusTag(currentBill.billStatus)">
@@ -239,13 +239,13 @@
             <el-table-column prop="itemName" label="费用项目" />
             <el-table-column prop="unitPrice" label="单价" width="120">
               <template #default="{ row }">
-                ¥{{ row.unitPrice.toLocaleString() }}
+                ¥{{ (row.unitPrice || 0).toLocaleString() }}
               </template>
             </el-table-column>
             <el-table-column prop="quantity" label="数量" width="100" />
             <el-table-column prop="amount" label="金额" width="120">
               <template #default="{ row }">
-                ¥{{ row.amount.toLocaleString() }}
+                ¥{{ (row.amount || 0).toLocaleString() }}
               </template>
             </el-table-column>
           </el-table>
@@ -284,7 +284,7 @@
             </div>
             <div class="bill-row amount-row">
               <span>缴费金额：</span>
-              <span class="amount-text">¥{{ payBill.amount.toLocaleString() }}</span>
+              <span class="amount-text">¥{{ (payBill.amount || 0).toLocaleString() }}</span>
             </div>
           </div>
         </div>
