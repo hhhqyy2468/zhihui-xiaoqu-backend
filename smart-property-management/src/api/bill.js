@@ -144,3 +144,11 @@ export function batchPayBills(data) {
     data
   })
 }
+
+// 获取我的账单统计数据（业主端）
+export function getMyBillStatistics() {
+  return request({
+    url: '/property/bill/my/statistics',
+    method: 'get'
+  })
+}

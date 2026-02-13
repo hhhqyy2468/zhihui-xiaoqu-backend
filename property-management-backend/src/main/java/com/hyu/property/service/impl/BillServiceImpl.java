@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hyu.common.utils.StringUtils;
 import com.hyu.property.domain.Bill;
+import com.hyu.property.domain.PaymentReceipt;
 import com.hyu.property.mapper.BillMapper;
 import com.hyu.property.service.IBillService;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +34,15 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill> implements IB
 
     @Autowired(required = false)
     private com.hyu.property.service.IParkingSpaceService parkingSpaceService;
+
+    @Autowired(required = false)
+    private com.hyu.property.service.IWalletService walletService;
+
+    @Autowired(required = false)
+    private com.hyu.property.service.IWalletTransactionService walletTransactionService;
+
+    @Autowired(required = false)
+    private com.hyu.property.service.IPaymentReceiptService paymentReceiptService;
 
     /**
      * 分页查询账单列表
@@ -427,6 +437,8 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill> implements IB
                 return result;
             }
 
+            String transactionNo = null; // 用于保存交易流水号
+
             // 检查缴费方式
             if ("wallet".equals(paymentMethod)) {
                 // 验证钱包支付密码
@@ -437,10 +449,27 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill> implements IB
                     return result;
                 }
 
-                // 调用钱包服务验证密码并扣款
-                // 这里需要调用WalletService的方法
-                // TODO: 实现钱包支付逻辑
-                log.info("用户{}使用钱包支付账单{}, 金额: {}", userId, billId, bill.getAmount());
+                // 验证支付密码
+                boolean passwordValid = walletService.verifyPayPassword(userId, payPassword);
+                if (!passwordValid) {
+                    Map<String, Object> result = new HashMap<>();
+                    result.put("code", 400);
+                    result.put("msg", "支付密码错误");
+                    return result;
+                }
+
+                // 调用钱包服务扣款
+                Map<String, Object> deductResult = walletService.deduct(userId, bill.getAmount(), billId, bill.getBillNo());
+                if ((Integer) deductResult.get("code") != 200) {
+                    return deductResult;
+                }
+
+                // 保存交易流水号用于生成收据
+                @SuppressWarnings("unchecked")
+                Map<String, Object> deductData = (Map<String, Object>) deductResult.get("data");
+                transactionNo = (String) deductData.get("transactionNo");
+
+                log.info("用户{}使用钱包支付账单{}成功，金额: {}, 交易流水: {}", userId, billId, bill.getAmount(), transactionNo);
             }
 
             // 更新账单状态
@@ -469,6 +498,15 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill> implements IB
                 } catch (Exception e) {
                     log.error("激活车位租赁合同失败", e);
                     // 激活失败不影响缴费结果，只记录日志
+                }
+
+                // 生成缴费收据
+                try {
+                    PaymentReceipt receipt = paymentReceiptService.generateReceipt(billId, transactionNo);
+                    log.info("生成缴费收据成功，收据编号: {}", receipt.getReceiptNo());
+                } catch (Exception e) {
+                    log.error("生成缴费收据失败", e);
+                    // 收据生成失败不影响缴费结果，只记录日志
                 }
 
                 Map<String, Object> response = new HashMap<>();
@@ -538,9 +576,31 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill> implements IB
                         .map(Bill::getAmount)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-                // 调用钱包服务验证密码并扣款
-                // TODO: 实现钱包支付逻辑
-                log.info("用户{}使用钱包批量支付{}个账单，总金额: {}", userId, validBills.size(), totalAmount);
+                // 验证支付密码
+                boolean passwordValid = walletService.verifyPayPassword(userId, payPassword);
+                if (!passwordValid) {
+                    Map<String, Object> result = new HashMap<>();
+                    result.put("code", 400);
+                    result.put("msg", "支付密码错误");
+                    return result;
+                }
+
+                // 调用钱包服务批量扣款（为每个账单分别扣款并创建交易记录）
+                List<String> transactionNos = new ArrayList<>();
+                for (Bill bill : validBills) {
+                    Map<String, Object> deductResult = walletService.deduct(userId, bill.getAmount(), bill.getBillId(), bill.getBillNo());
+                    if ((Integer) deductResult.get("code") != 200) {
+                        Map<String, Object> result = new HashMap<>();
+                        result.put("code", 500);
+                        result.put("msg", "扣款失败：" + deductResult.get("msg"));
+                        return result;
+                    }
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> data = (Map<String, Object>) deductResult.get("data");
+                    transactionNos.add((String) data.get("transactionNo"));
+                }
+
+                log.info("用户{}使用钱包批量支付{}个账单成功，总金额: {}, 交易流水: {}", userId, validBills.size(), totalAmount, transactionNos);
             }
 
             // 批量更新账单状态
@@ -605,6 +665,7 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill> implements IB
     /**
      * 检查并激活车位租赁合同
      * 当车位租赁账单付款后，将合同状态从"待付款"改为"进行中"，并占用车位
+     * 同时更新合同的已付金额
      */
     private void activateParkingContractIfNeeded(Bill bill) {
         if (parkingRentalContractService == null || parkingSpaceService == null) {
@@ -633,6 +694,10 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill> implements IB
                 if (contract != null) {
                     log.info("找到待付款合同，开始激活。合同ID: {}, 车位ID: {}", contract.getId(), contract.getParkingSpaceId());
 
+                    // 更新合同的已付金额
+                    BigDecimal currentPaidAmount = contract.getPaidAmount() != null ? contract.getPaidAmount() : BigDecimal.ZERO;
+                    contract.setPaidAmount(currentPaidAmount.add(bill.getAmount()));
+
                     // 更新合同状态为进行中
                     contract.setContractStatus(2); // 进行中
                     parkingRentalContractService.updateById(contract);
@@ -643,8 +708,9 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill> implements IB
                     parkingSpace.setSpaceStatus(2); // 已租
                     parkingSpaceService.updateById(parkingSpace);
 
-                    log.info("车位租赁合同已激活。合同ID: {}, 车位ID: {}, 车位编号: {}",
-                            contract.getId(), contract.getParkingSpaceId(), contract.getSpaceNo());
+                    log.info("车位租赁合同已激活，已付金额已更新。合同ID: {}, 车位ID: {}, 车位编号: {}, 本次支付: {}, 总已付: {}",
+                            contract.getId(), contract.getParkingSpaceId(), contract.getSpaceNo(),
+                            bill.getAmount(), contract.getPaidAmount());
                 } else {
                     log.warn("未找到待付款的车位租赁合同。用户ID: {}", bill.getUserId());
                 }
@@ -653,5 +719,80 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill> implements IB
             log.error("激活车位租赁合同时发生错误，账单ID: {}", bill.getBillId(), e);
             throw e;
         }
+    }
+
+    /**
+     * 获取我的账单统计数据
+     *
+     * @param userId 用户ID
+     * @return 统计数据（待缴金额、已缴金额、总账单数、逾期数）
+     */
+    @Override
+    public Map<String, Object> getMyBillStatistics(Long userId) {
+        Map<String, Object> statistics = new HashMap<>();
+
+        try {
+            // 查询该用户的所有账单
+            LambdaQueryWrapper<Bill> queryWrapper = new LambdaQueryWrapper<>();
+            queryWrapper.eq(Bill::getUserId, userId)
+                       .eq(Bill::getDeleted, 0);
+
+            List<Bill> allBills = list(queryWrapper);
+
+            // 初始化统计值
+            BigDecimal unpaidAmount = BigDecimal.ZERO;
+            BigDecimal paidAmount = BigDecimal.ZERO;
+            int totalBills = allBills.size();
+            int overdueCount = 0;
+
+            // 遍历所有账单进行统计
+            for (Bill bill : allBills) {
+                Integer status = bill.getBillStatus();
+                BigDecimal amount = bill.getAmount() != null ? bill.getAmount() : BigDecimal.ZERO;
+
+                if (status == null) {
+                    continue;
+                }
+
+                switch (status) {
+                    case 0: // 部分缴费
+                        BigDecimal paid = bill.getPaidAmount() != null ? bill.getPaidAmount() : BigDecimal.ZERO;
+                        paidAmount = paidAmount.add(paid);
+                        unpaidAmount = unpaidAmount.add(amount.subtract(paid));
+                        break;
+                    case 1: // 待缴费
+                        unpaidAmount = unpaidAmount.add(amount);
+                        break;
+                    case 2: // 已缴费
+                        BigDecimal paidAmt = bill.getPaidAmount() != null ? bill.getPaidAmount() : amount;
+                        paidAmount = paidAmount.add(paidAmt);
+                        break;
+                    case 3: // 已超期
+                        unpaidAmount = unpaidAmount.add(amount);
+                        overdueCount++;
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            statistics.put("unpaidAmount", unpaidAmount);
+            statistics.put("paidAmount", paidAmount);
+            statistics.put("totalBills", totalBills);
+            statistics.put("overdueCount", overdueCount);
+
+            log.debug("用户{}的账单统计：待缴{}，已缴{}，总数{}，逾期{}",
+                    userId, unpaidAmount, paidAmount, totalBills, overdueCount);
+
+        } catch (Exception e) {
+            log.error("获取用户{}的账单统计数据失败", userId, e);
+            // 返回默认值
+            statistics.put("unpaidAmount", BigDecimal.ZERO);
+            statistics.put("paidAmount", BigDecimal.ZERO);
+            statistics.put("totalBills", 0);
+            statistics.put("overdueCount", 0);
+        }
+
+        return statistics;
     }
 }

@@ -8,6 +8,8 @@ import com.hyu.property.domain.*;
 import com.hyu.property.mapper.ParkingRentalContractMapper;
 import com.hyu.property.service.*;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -23,10 +25,12 @@ import java.util.*;
  * @author system
  * @date 2025-01-31
  */
-@Slf4j
+//@Slf4j
 @Service
 public class ParkingRentalContractServiceImpl extends ServiceImpl<ParkingRentalContractMapper, ParkingRentalContract>
         implements IParkingRentalContractService {
+
+    private static final Logger log = LoggerFactory.getLogger(ParkingRentalContractServiceImpl.class);
 
     @Autowired
     private IParkingRentalApplicationService applicationService;
@@ -46,6 +50,12 @@ public class ParkingRentalContractServiceImpl extends ServiceImpl<ParkingRentalC
 
     @Autowired
     private IUserHouseService userHouseService;
+
+    @Autowired(required = false)
+    private com.hyu.property.service.IWalletService walletService;
+
+    @Autowired(required = false)
+    private com.hyu.property.service.IWalletTransactionService walletTransactionService;
 
     @Override
     public Page<ParkingRentalContract> selectContractPage(Page<ParkingRentalContract> page, ParkingRentalContract contract) {
@@ -139,7 +149,7 @@ public class ParkingRentalContractServiceImpl extends ServiceImpl<ParkingRentalC
         try {
             // 查询车位租赁费类型
             QueryWrapper<FeeType> wrapper = new QueryWrapper<>();
-            wrapper.eq("type_code", "PARKING_RENTAL_FEE");
+            wrapper.eq("type_code", "PARKING_FEE");
             FeeType feeType = feeTypeService.getOne(wrapper);
 
             if (feeType == null) {
@@ -191,10 +201,22 @@ public class ParkingRentalContractServiceImpl extends ServiceImpl<ParkingRentalC
             throw new RuntimeException("只能终止进行中的合同");
         }
 
+        // 计算退款金额
+        BigDecimal refundAmount = calculateRefundAmount(contract);
+        log.info("合同终止退款计算。合同编号：{}, 已付金额：{}, 退款金额：{}",
+                contract.getContractNo(), contract.getPaidAmount(), refundAmount);
+
         // 更新合同状态
         contract.setContractStatus(4); // 已终止
         contract.setTerminateDate(new Date());
         contract.setTerminateReason(terminateReason);
+
+        // 如果有退款，更新已付金额
+        if (refundAmount.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal currentPaidAmount = contract.getPaidAmount() != null ? contract.getPaidAmount() : BigDecimal.ZERO;
+            contract.setPaidAmount(currentPaidAmount.subtract(refundAmount));
+        }
+
         boolean result = this.updateById(contract);
 
         if (result) {
@@ -204,10 +226,186 @@ public class ParkingRentalContractServiceImpl extends ServiceImpl<ParkingRentalC
             parkingSpace.setSpaceStatus(1); // 空闲
             parkingSpaceService.updateById(parkingSpace);
 
-            log.info("终止合同成功，车位已释放。合同编号：{}", contract.getContractNo());
+            // 处理退款
+            if (refundAmount.compareTo(BigDecimal.ZERO) > 0) {
+                try {
+                    processRefund(contract, refundAmount);
+                    log.info("终止合同成功，车位已释放，退款已处理。合同编号：{}, 退款金额：{}",
+                            contract.getContractNo(), refundAmount);
+                } catch (Exception e) {
+                    log.error("处理退款失败，合同编号：{}, 退款金额：{}", contract.getContractNo(), refundAmount, e);
+                    throw new RuntimeException("退款处理失败：" + e.getMessage());
+                }
+            } else {
+                log.info("终止合同成功，车位已释放，无退款。合同编号：{}", contract.getContractNo());
+            }
         }
 
         return result;
+    }
+
+    /**
+     * 计算退款金额
+     * 公式：(未租天数 / 总租赁天数) × 已付金额
+     */
+    private BigDecimal calculateRefundAmount(ParkingRentalContract contract) {
+        BigDecimal paidAmount = contract.getPaidAmount() != null ? contract.getPaidAmount() : BigDecimal.ZERO;
+
+        // 如果没有已付金额，则不退款
+        if (paidAmount.compareTo(BigDecimal.ZERO) == 0) {
+            return BigDecimal.ZERO;
+        }
+
+        Date startDate = contract.getStartDate();
+        Date endDate = contract.getEndDate();
+        Date currentDate = new Date();
+
+        // 计算总租赁天数（毫秒转换为天）
+        long totalMillis = endDate.getTime() - startDate.getTime();
+        long totalDays = totalMillis / (1000 * 60 * 60 * 24);
+
+        // 计算未租天数（从当前日期到结束日期）
+        long remainingMillis = endDate.getTime() - currentDate.getTime();
+        long remainingDays = remainingMillis > 0 ? remainingMillis / (1000 * 60 * 60 * 24) : 0;
+
+        // 如果已经超过或等于结束日期，不退款
+        if (remainingDays <= 0) {
+            return BigDecimal.ZERO;
+        }
+
+        // 计算退款金额： (未租天数 / 总租赁天数) × 已付金额
+        BigDecimal refundAmount = paidAmount.multiply(new BigDecimal(remainingDays))
+                .divide(new BigDecimal(totalDays), 2, BigDecimal.ROUND_HALF_UP);
+
+        log.info("退款计算详情。合同编号：{}, 总天数：{}, 剩余天数：{}, 已付金额：{}, 退款金额：{}",
+                contract.getContractNo(), totalDays, remainingDays, paidAmount, refundAmount);
+
+        return refundAmount;
+    }
+
+    /**
+     * 处理退款到业主钱包
+     */
+    private void processRefund(ParkingRentalContract contract, BigDecimal refundAmount) {
+        Long ownerId = contract.getOwnerId();
+        String contractNo = contract.getContractNo();
+
+        // 1. 更新钱包余额（Wallet使用LocalDateTime）
+        com.hyu.property.domain.Wallet wallet = walletService.getByUserId(ownerId);
+        BigDecimal beforeBalance = wallet != null ? wallet.getBalance() : BigDecimal.ZERO;
+        BigDecimal afterBalance = beforeBalance.add(refundAmount);
+
+        java.time.LocalDateTime nowDateTime = java.time.LocalDateTime.now();
+        java.util.Date nowDate = new java.util.Date();
+
+        if (wallet == null) {
+            // 创建新钱包
+            wallet = new com.hyu.property.domain.Wallet();
+            wallet.setUserId(ownerId);
+            wallet.setBalance(afterBalance);
+            wallet.setTotalRecharge(refundAmount);
+            wallet.setTotalConsume(BigDecimal.ZERO);
+            wallet.setStatus(1);
+            wallet.setCreateTime(nowDateTime);
+            wallet.setUpdateTime(nowDateTime);
+            walletService.save(wallet);
+        } else {
+            // 更新现有钱包
+            wallet.setBalance(afterBalance);
+            wallet.setTotalRecharge(wallet.getTotalRecharge().add(refundAmount));
+            wallet.setUpdateTime(nowDateTime);
+            walletService.updateById(wallet);
+        }
+
+        // 2. 创建交易记录（WalletTransaction使用java.util.Date）
+        com.hyu.property.domain.WalletTransaction transaction = new com.hyu.property.domain.WalletTransaction();
+        transaction.setTransactionNo(generateTransactionNo());
+        transaction.setUserId(ownerId);
+        transaction.setWalletId(wallet.getId());
+        transaction.setTransactionType(3); // 退款
+        transaction.setAmount(refundAmount);
+        transaction.setBalanceBefore(beforeBalance);
+        transaction.setBalanceAfter(afterBalance);
+        transaction.setRelatedOrderNo(contractNo); // 关联合同编号
+        transaction.setTransactionStatus(1); // 成功
+        transaction.setRemark("车位租赁合同终止退款 - " + contractNo);
+        transaction.setCreateTime(nowDate);
+
+        walletTransactionService.save(transaction);
+        log.info("退款交易记录已创建。交易流水号：{}, 退款金额：{}", transaction.getTransactionNo(), refundAmount);
+
+        // 3. 创建退款账单（Bill记录）
+        createRefundBill(contract, refundAmount, ownerId, nowDate);
+    }
+
+    /**
+     * 创建退款账单
+     */
+    private void createRefundBill(ParkingRentalContract contract, BigDecimal refundAmount, Long ownerId, java.util.Date nowDate) {
+        if (billService == null) {
+            log.warn("BillService 未注入，跳过创建退款账单");
+            return;
+        }
+
+        try {
+            // 查询车位租赁费类型
+            com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.hyu.property.domain.FeeType> feeTypeWrapper =
+                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
+            feeTypeWrapper.eq("type_code", "PARKING_FEE");
+            com.hyu.property.domain.FeeType feeType = feeTypeService.getOne(feeTypeWrapper);
+
+            if (feeType == null) {
+                log.warn("未找到车位租赁费类型，无法创建退款账单");
+                return;
+            }
+
+            // 查询业主的房产ID
+            Long houseId = getOwnerDefaultHouse(ownerId);
+            if (houseId == null) {
+                log.warn("业主未绑定房产，无法创建退款账单。业主ID：{}", ownerId);
+                return;
+            }
+
+            // 生成退款账单编号
+            String refundBillNo = "REF" + System.currentTimeMillis();
+
+            // 创建退款账单
+            Bill bill = new Bill();
+            bill.setBillNo(refundBillNo);
+            bill.setUserId(ownerId);
+            bill.setHouseId(houseId);
+            bill.setFeeTypeId(feeType.getId());
+            bill.setFeeTypeName(feeType.getTypeName());
+
+            // 账期使用当前年月
+            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM");
+            bill.setBillPeriod(sdf.format(nowDate));
+
+            bill.setAmount(refundAmount);
+            bill.setPaidAmount(refundAmount); // 退款金额 = 已退金额
+            bill.setBillStatus(4); // 4=已退款
+            bill.setDueDate(nowDate);
+            bill.setPayMethod(4); // 钱包支付方式（退款退回钱包）
+            bill.setPaidTime(nowDate);
+            bill.setRemark("【退款】车位租赁合同终止退款 - " + contract.getContractNo());
+            bill.setDeleted(0);
+
+            int result = billService.insertBill(bill);
+            if (result > 0) {
+                log.info("退款账单已创建。账单编号：{}, 退款金额：{}", refundBillNo, refundAmount);
+            } else {
+                log.error("退款账单创建失败。合同编号：{}, 退款金额：{}", contract.getContractNo(), refundAmount);
+            }
+        } catch (Exception e) {
+            log.error("创建退款账单失败。合同编号：{}, 退款金额：{}", contract.getContractNo(), refundAmount, e);
+        }
+    }
+
+    /**
+     * 生成交易流水号
+     */
+    private String generateTransactionNo() {
+        return "REF" + System.currentTimeMillis() + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 
     @Override

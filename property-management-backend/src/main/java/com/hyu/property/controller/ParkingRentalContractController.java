@@ -39,15 +39,17 @@ public class ParkingRentalContractController {
                           @RequestParam(defaultValue = "10") Integer pageSize,
                           @RequestParam(required = false) String contractNo,
                           @RequestParam(required = false) String spaceNo,
+                          @RequestParam(required = false) Long parkingSpaceId,
                           @RequestParam(required = false) String ownerName,
                           @RequestParam(required = false) String vehicleNumber,
                           @RequestParam(required = false) Integer contractStatus) {
-        log.info("分页查询租赁合同列表, pageNum: {}, pageSize: {}", pageNum, pageSize);
+        log.info("分页查询租赁合同列表, pageNum: {}, pageSize: {}, parkingSpaceId: {}", pageNum, pageSize, parkingSpaceId);
 
         Page<ParkingRentalContract> page = new Page<>(pageNum, pageSize);
         ParkingRentalContract contract = new ParkingRentalContract();
         contract.setContractNo(contractNo);
         contract.setSpaceNo(spaceNo);
+        contract.setParkingSpaceId(parkingSpaceId);
         contract.setOwnerName(ownerName);
         contract.setVehicleNumber(vehicleNumber);
         contract.setContractStatus(contractStatus);

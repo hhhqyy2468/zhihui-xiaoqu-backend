@@ -58,3 +58,12 @@ export function getMyContracts() {
     method: 'get'
   })
 }
+
+// 根据车位编号查询租赁合同列表
+export function getParkingContractsBySpaceId(params) {
+  return request({
+    url: '/parking/rental/contract/list',
+    method: 'get',
+    params: params
+  })
+}

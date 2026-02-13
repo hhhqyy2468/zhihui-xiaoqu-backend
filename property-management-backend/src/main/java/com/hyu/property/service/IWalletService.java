@@ -8,6 +8,7 @@ import com.hyu.property.domain.dto.WalletSetPasswordDTO;
 import com.hyu.property.domain.dto.WalletChangePasswordDTO;
 
 import java.math.BigDecimal;
+import java.util.Map;
 
 /**
  * 钱包Service接口
@@ -141,4 +142,15 @@ public interface IWalletService extends IService<Wallet> {
      * @return 结果
      */
     boolean resetPayPassword(Long id);
+
+    /**
+     * 钱包扣款（用于缴费）
+     *
+     * @param userId 用户ID
+     * @param amount 扣款金额
+     * @param billId 账单ID
+     * @param billNo 账单编号
+     * @return 扣款结果
+     */
+    Map<String, Object> deduct(Long userId, BigDecimal amount, Long billId, String billNo);
 }

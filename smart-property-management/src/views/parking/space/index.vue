@@ -1,5 +1,5 @@
 <template>
-  <div class="log-container">
+  <div class="parking-space-container">
     <!-- 页面标题 -->
     <div class="page-header">
       <h2 class="page-title">车位管理</h2>
@@ -47,11 +47,9 @@
             </el-form-item>
             <el-form-item>
               <el-button type="primary" @click="handleSearch">
-                <el-icon><Search /></el-icon>
                 搜索
               </el-button>
               <el-button @click="handleReset">
-                <el-icon><Refresh /></el-icon>
                 重置
               </el-button>
             </el-form-item>
@@ -64,7 +62,6 @@
             type="success"
             @click="handleApply"
           >
-            <el-icon><Plus /></el-icon>
             申请新车位
           </el-button>
           <el-button
@@ -72,10 +69,9 @@
             :disabled="selectedSpaces.length === 0"
             @click="handleBatchDelete"
           >
-            <el-icon><Delete /></el-icon>
             批量删除
           </el-button>
-          </div>
+        </div>
 
         <!-- 车位表格 -->
         <div class="table-section">
@@ -99,7 +95,6 @@
                 ¥{{ row.monthlyRent }}
               </template>
             </el-table-column>
-            <el-table-column prop="currentTenant" label="使用人" width="120" />
             <el-table-column prop="createTime" label="创建时间" width="180">
               <template #default="{ row }">
                 {{ formatDateTime(row.createTime) }}
@@ -288,20 +283,57 @@
         <el-button type="primary" :loading="submitLoading" @click="submitApply">提交申请</el-button>
       </template>
     </el-dialog>
+
+    <!-- 租赁记录对话框 -->
+    <el-dialog
+      v-model="rentalDialogVisible"
+      title="租赁记录"
+      width="900px"
+    >
+      <div v-loading="rentalDialogLoading" style="min-height: 300px;">
+        <el-empty v-if="currentRentalRecords.length === 0" description="暂无租赁记录" />
+        <el-table v-else :data="currentRentalRecords" border>
+          <el-table-column prop="contractNo" label="合同编号" width="150" />
+          <el-table-column prop="ownerName" label="承租人" width="100" />
+          <el-table-column prop="contactPhone" label="联系电话" width="120" />
+          <el-table-column prop="vehicleNumber" label="车辆号码" width="120" />
+          <el-table-column prop="vehicleBrand" label="车辆品牌" width="120" />
+          <el-table-column prop="startDate" label="开始日期" width="110" />
+          <el-table-column prop="endDate" label="结束日期" width="110" />
+          <el-table-column prop="totalAmount" label="总金额" width="100">
+            <template #default="{ row }">
+              ¥{{ row.totalAmount }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="contractStatus" label="合同状态" width="100">
+            <template #default="{ row }">
+              <el-tag :type="getContractStatusTag(row.contractStatus)">
+                {{ getContractStatusName(row.contractStatus) }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="createTime" label="创建时间" width="160">
+            <template #default="{ row }">
+              {{ formatDateTime(row.createTime) }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="updateTime" label="更新时间" width="160">
+            <template #default="{ row }">
+              {{ formatDateTime(row.updateTime) }}
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+      <template #footer>
+        <el-button @click="rentalDialogVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import {
-  Search,
-  Refresh,
-  Plus,
-  Delete,
-  Upload,
-  Download
-} from '@element-plus/icons-vue'
 import {
   listParkingSpaces,
   getParkingSpace,
@@ -313,6 +345,7 @@ import {
 import {
   submitMyApplication as submitApplication
 } from '@/api/parking/rentalApplication'
+import { getParkingContractsBySpaceId } from '@/api/parking/rentalContract'
 
 // 响应式数据
 const activeTab = ref('list')
@@ -322,6 +355,12 @@ const dialogTitle = ref('新增车位')
 const applyDialogVisible = ref(false)
 const submitLoading = ref(false)
 const availableSpaces = ref([])
+
+// 租赁记录对话框
+const rentalDialogVisible = ref(false)
+const rentalDialogLoading = ref(false)
+const currentRentalRecords = ref([])
+const currentSpaceNo = ref('')
 
 // 表单数据
 const formRef = ref()
@@ -429,6 +468,28 @@ const getStatusColor = (status) => {
     3: 'danger'
   }
   return colorMap[status] || 'info'
+}
+
+// 获取合同状态名称
+const getContractStatusName = (status) => {
+  const statusMap = {
+    1: '待付款',
+    2: '进行中',
+    3: '已到期',
+    4: '已终止'
+  }
+  return statusMap[status] || '未知'
+}
+
+// 获取合同状态标签
+const getContractStatusTag = (status) => {
+  const tagMap = {
+    1: 'warning',
+    2: 'success',
+    3: 'info',
+    4: 'danger'
+  }
+  return tagMap[status] || 'info'
 }
 
 // 格式化日期时间
@@ -556,8 +617,35 @@ const handleBatchDelete = () => {
 }
 
 // 查看租赁记录
-const handleViewRentals = (row) => {
-  ElMessage.info(`查看车位 ${row.spaceNo} 的租赁记录`)
+const handleViewRentals = async (row) => {
+  currentSpaceNo.value = row.spaceNo
+  rentalDialogVisible.value = true
+  rentalDialogLoading.value = true
+
+  try {
+    // 复用 parking/rental 页面的查询参数，使用spaceNo筛选
+    const params = {
+      pageNum: 1,
+      pageSize: 1000, // 获取所有记录
+      spaceNo: row.spaceNo
+    }
+
+    const response = await getParkingContractsBySpaceId(params)
+    if (response.code === 200) {
+      // 兼容不同的后端数据结构
+      const records = response.data?.rows || response.data?.records || response.data || []
+      currentRentalRecords.value = Array.isArray(records) ? records : []
+    } else {
+      ElMessage.error(response.msg || '获取租赁记录失败')
+      currentRentalRecords.value = []
+    }
+  } catch (error) {
+    console.error('获取租赁记录错误:', error)
+    ElMessage.error('获取租赁记录失败')
+    currentRentalRecords.value = []
+  } finally {
+    rentalDialogLoading.value = false
+  }
 }
 
 
@@ -692,7 +780,7 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-.log-container {
+.parking-space-container {
   padding: 20px;
 }
 

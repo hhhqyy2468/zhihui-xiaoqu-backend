@@ -62,6 +62,14 @@
     <div class="filter-section">
       <el-card>
         <el-form :model="filterForm" inline>
+          <el-form-item label="账单编号">
+            <el-input
+              v-model="filterForm.billNo"
+              placeholder="请输入账单编号"
+              clearable
+              style="width: 200px"
+            />
+          </el-form-item>
           <el-form-item label="账单状态">
             <el-select v-model="filterForm.status" placeholder="全部状态" clearable style="width: 120px">
               <el-option label="全部" :value="null" />
@@ -132,7 +140,11 @@
           :loading="loading"
           @selection-change="handleSelectionChange"
         >
-          <el-table-column type="selection" width="55" />
+          <el-table-column
+            type="selection"
+            width="55"
+            :selectable="checkSelectable"
+          />
           <el-table-column prop="billNo" label="账单编号" width="200" show-overflow-tooltip />
           <el-table-column prop="feeName" label="账单类型" width="120" show-overflow-tooltip>
             <template #default="{ row }">
@@ -280,7 +292,7 @@
             </div>
             <div class="bill-row">
               <span>账单类型：</span>
-              <span>{{ getBillTypeName(payBill.billType) }}</span>
+              <span>{{ payBill.feeName || payBill.feeTypeName }}</span>
             </div>
             <div class="bill-row amount-row">
               <span>缴费金额：</span>
@@ -395,7 +407,7 @@ import {
   Document,
   Clock
 } from '@element-plus/icons-vue'
-import { getMyBillList, getMyBillDetail, payBill, batchPayBills } from '@/api/bill'
+import { getMyBillList, getMyBillDetail, payBill as payBillApi, batchPayBills, getMyBillStatistics } from '@/api/bill'
 import { getAllFeeTypes } from '@/api/feeType'
 import { getDictDataByType } from '@/api/dict'
 
@@ -411,6 +423,7 @@ const tableRef = ref()
 const currentBill = ref(null)
 const selectedBill = ref(null)
 const selectedBills = ref([])
+const payBill = ref(null)
 
 // 概览数据
 const overviewData = ref({
@@ -483,6 +496,7 @@ const loadBillStatusOptions = async () => {
 
 // 筛选表单
 const filterForm = reactive({
+  billNo: '',
   status: null,
   billType: null,
   dateRange: []
@@ -510,25 +524,12 @@ const batchPayForm = reactive({
   payPassword: ''
 })
 
-// 计算总金额
+// 计算总金额（只计算待缴费的账单）
 const totalAmount = computed(() => {
-  return selectedBills.value.reduce((sum, bill) => sum + bill.amount, 0)
+  return selectedBills.value
+    .filter(bill => bill.billStatus === 1)  // 只计算待缴费的账单
+    .reduce((sum, bill) => sum + bill.amount, 0)
 })
-
-// 更新概览数据
-const updateOverviewData = () => {
-  const bills = billsData.value || []
-  const unpaidBills = bills.filter(bill => bill.billStatus === 1)
-  const paidBills = bills.filter(bill => bill.billStatus === 2)
-  const overdueBills = bills.filter(bill => bill.billStatus === 3)
-
-  overviewData.value = {
-    unpaidAmount: unpaidBills.reduce((sum, bill) => sum + bill.amount, 0),
-    paidAmount: paidBills.reduce((sum, bill) => sum + bill.amount, 0),
-    totalBills: bills.length,
-    overdueCount: overdueBills.length
-  }
-}
 
 // 获取模拟数据
 const getMockBills = () => {
@@ -646,9 +647,6 @@ const fetchData = async () => {
     if (response.code === 200) {
       billsData.value = response.data.records || []
       pagination.total = response.data.total || 0
-
-      // 更新概览数据
-      updateOverviewData()
     } else {
       ElMessage.error(response.msg || '获取账单数据失败')
     }
@@ -660,15 +658,41 @@ const fetchData = async () => {
   }
 }
 
+// 获取统计数据
+const fetchStatistics = async () => {
+  try {
+    const response = await getMyBillStatistics()
+    if (response.code === 200 && response.data) {
+      overviewData.value = {
+        unpaidAmount: response.data.unpaidAmount || 0,
+        paidAmount: response.data.paidAmount || 0,
+        totalBills: response.data.totalBills || 0,
+        overdueCount: response.data.overdueCount || 0
+      }
+    }
+  } catch (error) {
+    console.error('获取统计数据失败:', error)
+    // 失败时使用默认值
+    overviewData.value = {
+      unpaidAmount: 0,
+      paidAmount: 0,
+      totalBills: pagination.total || 0,
+      overdueCount: 0
+    }
+  }
+}
+
 // 筛选
 const handleFilter = () => {
   pagination.current = 1
+  fetchStatistics()
   fetchData()
 }
 
 // 重置
 const handleReset = () => {
   Object.assign(filterForm, {
+    billNo: '',
     status: '',
     billType: '',
     dateRange: []
@@ -679,6 +703,11 @@ const handleReset = () => {
 // 选择变化
 const handleSelectionChange = (selection) => {
   selectedBills.value = selection
+}
+
+// 检查账单是否可选（只能选择待缴费的账单）
+const checkSelectable = (row) => {
+  return row.billStatus === 1  // 1=待缴费
 }
 
 // 分页大小变化
@@ -711,7 +740,7 @@ const handleViewDetail = async (row) => {
 
 // 缴费
 const handlePay = (row) => {
-  selectedBill.value = { ...row }
+  payBill.value = { ...row }
   payDialogVisible.value = true
 }
 
@@ -734,8 +763,8 @@ const handleSubmitPay = async () => {
   payLoading.value = true
 
   try {
-    const response = await payBill({
-      billId: selectedBill.value.billId,
+    const response = await payBillApi({
+      billId: payBill.value.billId,
       paymentMethod: payForm.paymentMethod,
       payPassword: payForm.password
     })
@@ -744,6 +773,10 @@ const handleSubmitPay = async () => {
       ElMessage.success('缴费成功')
       payDialogVisible.value = false
       payLoading.value = false
+      // 重置表单和数据
+      payForm.password = ''
+      payBill.value = null
+      fetchStatistics() // 刷新统计数据
       fetchData() // 刷新列表
     } else {
       ElMessage.error(response.msg || '缴费失败')
@@ -778,6 +811,7 @@ const handleSubmitBatchPay = async () => {
       batchPayDialogVisible.value = false
       batchPayLoading.value = false
       selectedBills.value = []
+      fetchStatistics() // 刷新统计数据
       fetchData() // 刷新列表
     } else {
       ElMessage.error(response.msg || '批量缴费失败')
@@ -802,9 +836,10 @@ const handleExport = () => {
 
 // 组件挂载
 onMounted(() => {
-  // 先加载费用类型和账单状态，再加载数据
+  // 先加载费用类型和账单状态，再加载数据和统计
   loadFeeTypeOptions()
   loadBillStatusOptions()
+  fetchStatistics()
   fetchData()
 })
 </script>

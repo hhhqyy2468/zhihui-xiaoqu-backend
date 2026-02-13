@@ -51,6 +51,9 @@
         <include refid="selectParkingRentalContractVo"/>
         <where>
             c.deleted = 0
+            <if test="parkingSpaceId != null">
+                and c.parking_space_id = #{parkingSpaceId}
+            </if>
             <if test="contractNo != null and contractNo != ''">
                 and c.contract_no like concat('%', #{contractNo}, '%')
             </if>

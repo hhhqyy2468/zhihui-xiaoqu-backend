@@ -464,6 +464,7 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus, Delete, Download, Promotion } from '@element-plus/icons-vue'
 import * as billApi from '@/api/bill'
+import { getAllFeeTypes } from '@/api/feeType'
 
 // 响应式数据
 const formRef = ref()
@@ -498,23 +499,29 @@ const pagination = reactive({
 })
 
 // 选项数据
-const feeTypeOptions = ref([
-  { label: '物业费', value: 1 },
-  { label: '停车费', value: 2 },
-  { label: '垃圾处理费', value: 3 },
-  { label: '电梯费', value: 4 },
-  { label: '公共照明费', value: 5 },
-  { label: '水费', value: 6 },
-  { label: '电费', value: 7 },
-  { label: '维修基金', value: 8 }
-])
+const feeTypeOptions = ref([])
+
+// 加载费用类型选项
+const loadFeeTypeOptions = async () => {
+  try {
+    const response = await getAllFeeTypes()
+    if (response.code === 200 && response.data) {
+      feeTypeOptions.value = response.data.map(item => ({
+        label: item.typeName || item.type_name,
+        value: item.id
+      }))
+    }
+  } catch (error) {
+    console.error('加载费用类型失败:', error)
+  }
+}
 
 const billStatusOptions = ref([
   { label: '待缴费', value: 1 },
   { label: '已缴费', value: 2 },
   { label: '部分缴费', value: 0 }, // 保持向后兼容
-  { label: '逾期', value: 3 },
-  { label: '已作废', value: 4 }
+  { label: '已超期', value: 3 },
+  { label: '已退款', value: 4 }
 ])
 
 const buildingOptions = ref([
@@ -628,8 +635,8 @@ const getBillStatusTag = (status) => {
     1: 'warning', // 待缴费
     2: 'success', // 已缴费
     0: 'info',    // 部分缴费（保持向后兼容）
-    3: 'danger',  // 逾期
-    4: 'info'     // 已作废
+    3: 'danger',  // 已超期
+    4: 'success'  // 已退款（绿色，表示钱已退回）
   }
   return tagMap[status] || 'info'
 }
@@ -982,6 +989,7 @@ const handleSelectionChange = (selection) => {
 
 // 初始化
 onMounted(() => {
+  loadFeeTypeOptions()
   loadBills()
 })
 </script>

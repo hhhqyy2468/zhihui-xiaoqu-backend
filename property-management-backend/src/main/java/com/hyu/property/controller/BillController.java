@@ -328,7 +328,21 @@ public class BillController {
         log.info("批量缴费, params: {}", params);
 
         try {
-            Long[] billIds = (Long[]) params.get("billIds");
+            // 处理 billIds 参数（可能是 List<Integer> 或 List<Long>）
+            Object billIdsObj = params.get("billIds");
+            List<?> billIdList = (List<?>) billIdsObj;
+            Long[] billIds = new Long[billIdList.size()];
+            for (int i = 0; i < billIdList.size(); i++) {
+                Object obj = billIdList.get(i);
+                if (obj instanceof Integer) {
+                    billIds[i] = ((Integer) obj).longValue();
+                } else if (obj instanceof Long) {
+                    billIds[i] = (Long) obj;
+                } else {
+                    billIds[i] = Long.parseLong(obj.toString());
+                }
+            }
+
             String paymentMethod = params.get("paymentMethod").toString();
             String payPassword = params.get("payPassword") != null ? params.get("payPassword").toString() : null;
 
@@ -344,6 +358,23 @@ public class BillController {
         } catch (Exception e) {
             log.error("批量缴费失败", e);
             return AjaxResult.error("批量缴费失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取我的账单统计数据（业主端）
+     */
+    @GetMapping("/my/statistics")
+    public AjaxResult getMyBillStatistics() {
+        log.info("获取我的账单统计数据");
+
+        try {
+            Long userId = getCurrentUserId();
+            Map<String, Object> statistics = billService.getMyBillStatistics(userId);
+            return AjaxResult.success(statistics);
+        } catch (Exception e) {
+            log.error("获取账单统计数据失败", e);
+            return AjaxResult.error("获取统计数据失败：" + e.getMessage());
         }
     }
 

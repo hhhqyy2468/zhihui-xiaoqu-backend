@@ -245,9 +245,10 @@ const terminateFormRef = ref()
 // 获取状态名称
 const getStatusName = (status) => {
   const statusMap = {
-    1: '进行中',
-    2: '已到期',
-    3: '已终止'
+    1: '待付款',
+    2: '进行中',
+    3: '已到期',
+    4: '已终止'
   }
   return statusMap[status] || '未知'
 }

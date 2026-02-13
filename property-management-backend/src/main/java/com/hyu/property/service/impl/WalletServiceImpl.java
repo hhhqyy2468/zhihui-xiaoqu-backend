@@ -20,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -530,6 +532,93 @@ public class WalletServiceImpl extends ServiceImpl<WalletMapper, Wallet> impleme
         }
 
         return result;
+    }
+
+    /**
+     * 钱包扣款（用于缴费）
+     *
+     * @param userId 用户ID
+     * @param amount 扣款金额
+     * @param billId 账单ID
+     * @param billNo 账单编号
+     * @return 扣款结果
+     */
+    @Override
+    @Transactional
+    public Map<String, Object> deduct(Long userId, BigDecimal amount, Long billId, String billNo) {
+        Map<String, Object> result = new HashMap<>();
+
+        try {
+            // 1. 获取钱包
+            Wallet wallet = getByUserId(userId);
+            if (wallet == null) {
+                result.put("code", 404);
+                result.put("msg", "钱包不存在，请先开通钱包服务");
+                return result;
+            }
+
+            // 2. 检查钱包状态
+            if (wallet.getStatus() != 1) {
+                result.put("code", 403);
+                result.put("msg", "钱包已被冻结，无法使用");
+                return result;
+            }
+
+            // 3. 检查余额
+            if (wallet.getBalance().compareTo(amount) < 0) {
+                result.put("code", 400);
+                result.put("msg", "钱包余额不足，当前余额：" + wallet.getBalance() + "元");
+                return result;
+            }
+
+            // 4. 扣款
+            BigDecimal beforeBalance = wallet.getBalance();
+            BigDecimal afterBalance = beforeBalance.subtract(amount);
+            wallet.setBalance(afterBalance);
+            wallet.setTotalConsume(wallet.getTotalConsume().add(amount));
+            wallet.setUpdateTime(LocalDateTime.now());
+
+            boolean updateResult = updateById(wallet);
+            if (!updateResult) {
+                throw new RuntimeException("扣款失败，更新钱包余额时出错");
+            }
+
+            // 5. 创建交易记录
+            WalletTransaction transaction = new WalletTransaction();
+            transaction.setWalletId(wallet.getId());
+            transaction.setUserId(userId);
+            transaction.setTransactionNo(generateTransactionNo());
+            transaction.setTransactionType(2); // 2:消费
+            transaction.setAmount(amount);
+            transaction.setBalanceBefore(beforeBalance);
+            transaction.setBalanceAfter(afterBalance);
+            transaction.setTransactionStatus(1); // 1:成功
+            transaction.setRemark("缴纳账单：" + billNo);
+            transaction.setRelatedBillId(billId);
+            transaction.setCreateTime(new java.util.Date());
+
+            walletTransactionService.insertTransaction(transaction);
+
+            log.info("钱包扣款成功，用户ID: {}, 扣款金额: {}, 账单编号: {}, 交易流水号: {}",
+                    userId, amount, billNo, transaction.getTransactionNo());
+
+            result.put("code", 200);
+            result.put("msg", "缴费成功");
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("transactionNo", transaction.getTransactionNo());
+            data.put("afterBalance", afterBalance);
+            result.put("data", data);
+
+            return result;
+
+        } catch (Exception e) {
+            log.error("钱包扣款失败，用户ID: {}, 金额: {}, 账单ID: {}, 错误: {}",
+                    userId, amount, billId, e.getMessage(), e);
+            result.put("code", 500);
+            result.put("msg", "扣款失败：" + e.getMessage());
+            return result;
+        }
     }
 
     /**

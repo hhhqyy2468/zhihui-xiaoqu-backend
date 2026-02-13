@@ -103,7 +103,7 @@ public class WalletTransactionServiceImpl extends ServiceImpl<WalletTransactionM
      */
     @Override
     public int insertTransaction(WalletTransaction transaction) {
-        return walletTransactionMapper.insertTransaction(transaction);
+        return walletTransactionMapper.insert(transaction);
     }
 
     /**

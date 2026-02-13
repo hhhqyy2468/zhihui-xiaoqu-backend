@@ -174,4 +174,12 @@ public interface IBillService extends IService<Bill> {
      * @return 缴费结果
      */
     Map<String, Object> batchPayBills(Long[] billIds, Long userId, String paymentMethod, String payPassword);
+
+    /**
+     * 获取我的账单统计数据
+     *
+     * @param userId 用户ID
+     * @return 统计数据（待缴金额、已缴金额、总账单数、逾期数）
+     */
+    Map<String, Object> getMyBillStatistics(Long userId);
 }

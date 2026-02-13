@@ -639,13 +639,15 @@ const handleChangePassword = async () => {
 
 // 格式化金额
 const formatAmount = (amount, type) => {
-  const prefix = type === 1 ? '+' : '-'
+  // type: 1=充值(+), 2=消费(-), 3=退款(+)
+  const prefix = (type === 1 || type === 3) ? '+' : '-'
   return `${prefix}¥${amount ? amount.toFixed(2) : '0.00'}`
 }
 
 // 获取金额样式类
+// type: 1=充值(绿色success), 2=消费(红色danger), 3=退款(绿色success)
 const getAmountClass = (type) => {
-  return type === 1 ? 'amount-success' : 'amount-danger'
+  return (type === 1 || type === 3) ? 'amount-success' : 'amount-danger'
 }
 
 // 获取交易类型名称
@@ -659,11 +661,12 @@ const getTransactionTypeName = (type) => {
 }
 
 // 获取交易类型颜色
+// type: 1=充值(绿色success), 2=消费(红色danger), 3=退款(绿色success)
 const getTransactionTypeColor = (type) => {
   const colorMap = {
     1: 'success',
     2: 'danger',
-    3: 'warning'
+    3: 'success'  // 退款显示为绿色
   }
   return colorMap[type] || 'info'
 }
