@@ -62,10 +62,6 @@
         <el-icon><Plus /></el-icon>
         新增角色
       </el-button>
-      <el-button @click="handleExport">
-        <el-icon><Download /></el-icon>
-        导出
-      </el-button>
     </div>
 
     <!-- 角色表格 -->
@@ -212,7 +208,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, Plus, Download } from '@element-plus/icons-vue'
+import { Search, Refresh, Plus } from '@element-plus/icons-vue'
 import * as systemApi from '@/api/system'
 
 // 响应式数据
@@ -488,100 +484,6 @@ const convertMenusToPermissionTree = (menus) => {
     label: menu.menuName,
     children: menu.children ? convertMenusToPermissionTree(menu.children) : []
   }))
-}
-
-// 导出Excel（纯前端方案）
-const handleExport = async () => {
-  try {
-    const loadingInstance = ElMessage({
-      message: '正在导出数据...',
-      type: 'info',
-      duration: 0
-    })
-
-    // 获取所有数据
-    const allParams = {
-      pageNum: 1,
-      pageSize: 10000,
-      ...searchForm
-    }
-
-    // 清理空值参数
-    Object.keys(allParams).forEach(key => {
-      if (allParams[key] === '' || allParams[key] === null || allParams[key] === undefined) {
-        delete allParams[key]
-      }
-    })
-
-    const response = await systemApi.listRoles(allParams)
-    loadingInstance.close()
-
-    if (response.code === 200 && response.data.rows) {
-      const roles = response.data.rows
-      if (roles.length === 0) {
-        ElMessage.warning('没有数据可导出')
-        return
-      }
-
-      // 导入xlsx库
-      const XLSX = await import('xlsx')
-      const { saveAs } = await import('file-saver')
-
-      // 准备导出数据
-      const exportData = roles.map(role => ({
-        '角色ID': role.roleId,
-        '角色名称': role.roleName,
-        '角色标识': role.roleKey,
-        '显示顺序': role.roleSort || 0,
-        '状态': role.status === 1 ? '启用' : '禁用',
-        '备注': role.remark || '',
-        '创建时间': role.createTime || '',
-        '更新时间': role.updateTime || ''
-      }))
-
-      // 创建工作簿
-      const wb = XLSX.utils.book_new()
-      const ws = XLSX.utils.json_to_sheet(exportData)
-
-      // 设置列宽
-      const colWidths = [
-        { wch: 10 }, // 角色ID
-        { wch: 15 }, // 角色名称
-        { wch: 15 }, // 角色标识
-        { wch: 12 }, // 显示顺序
-        { wch: 10 }, // 状态
-        { wch: 30 }, // 备注
-        { wch: 20 }, // 创建时间
-        { wch: 20 }  // 更新时间
-      ]
-      ws['!cols'] = colWidths
-
-      // 添加工作表
-      XLSX.utils.book_append_sheet(wb, ws, '角色数据')
-
-      // 导出文件
-      const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
-      const blob = new Blob([excelBuffer], {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-      })
-
-      // 生成文件名
-      const now = new Date()
-      const timestamp = now.getFullYear() +
-        String(now.getMonth() + 1).padStart(2, '0') +
-        String(now.getDate()).padStart(2, '0') + '_' +
-        String(now.getHours()).padStart(2, '0') +
-        String(now.getMinutes()).padStart(2, '0')
-
-      saveAs(blob, `角色数据_${timestamp}.xlsx`)
-      ElMessage.success(`成功导出 ${roles.length} 条角色数据`)
-    } else {
-      ElMessage.error('获取角色数据失败')
-    }
-  } catch (error) {
-    console.error('导出失败:', error)
-    ElMessage.error('导出失败：' + (error.message || '网络错误'))
-  }
 }
 
 // 提交表单
