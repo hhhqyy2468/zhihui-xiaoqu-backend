@@ -295,6 +295,9 @@ import { ElMessage } from 'element-plus'
 import { getMyWorkerOrders } from '@/api/repair'
 // 导入仪表盘API
 import { getAdminStats, getManagerStats } from '@/api/dashboard'
+import { listOperLog } from '@/api/log'
+import { getRepairOrderPage } from '@/api/repair'
+import { getComplaintPage } from '@/api/complaint'
 
 const userStore = useUserStore()
 
@@ -322,25 +325,9 @@ const workerStats = reactive({
   completedOrders: 0
 })
 
-// 模拟数据
-const recentLogs = ref([
-  { id: 1, time: '2025-01-09 14:30', user: '张三', action: '新增用户' },
-  { id: 2, time: '2025-01-09 14:15', user: '李四', action: '修改楼栋信息' },
-  { id: 3, time: '2025-01-09 14:00', user: '王五', action: '删除公告' },
-  { id: 4, time: '2025-01-09 13:45', user: '赵六', action: '生成账单' }
-])
-
-const pendingComplaints = ref([
-  { id: 1, priority: '紧急', title: '电梯故障', time: '2小时前' },
-  { id: 2, priority: '普通', title: '水管漏水', time: '4小时前' },
-  { id: 3, priority: '紧急', title: '门禁系统故障', time: '6小时前' }
-])
-
-const pendingRepairs = ref([
-  { id: 1, type: '水电', title: '业主家水龙头漏水', time: '1小时前' },
-  { id: 2, type: '门窗', title: '单元门无法关闭', time: '3小时前' },
-  { id: 3, type: '电梯', title: '电梯按钮失灵', time: '5小时前' }
-])
+const recentLogs = ref([])
+const pendingComplaints = ref([])
+const pendingRepairs = ref([])
 
 const recentOrders = ref([
   { id: 1, status: '待接单', title: '业主家水龙头漏水', location: '1号楼1单元101', time: '30分钟前' },
@@ -468,6 +455,57 @@ const updateWorkerStats = () => {
   workerStats.completedOrders = recentOrders.value.filter(order => order.status === '已完成').length
 }
 
+const loadRecentLogs = async () => {
+  try {
+    const res = await listOperLog({ pageNum: 1, pageSize: 5 })
+    if (res && res.data) {
+      const records = res.data.records || res.data.rows || []
+      recentLogs.value = records.map(log => ({
+        id: log.id,
+        time: log.operTime ? new Date(log.operTime).toLocaleString('zh-CN') : '-',
+        user: log.operName || '-',
+        action: log.title || '-'
+      }))
+    }
+  } catch (e) {
+    console.error('获取操作日志失败', e)
+  }
+}
+
+const loadPendingComplaints = async () => {
+  try {
+    const res = await getComplaintPage({ pageNum: 1, pageSize: 5, complaintStatus: 1 })
+    if (res && res.data) {
+      const records = res.data.records || res.data.rows || []
+      pendingComplaints.value = records.map(c => ({
+        id: c.id,
+        priority: c.urgencyLevel === 2 ? '紧急' : '普通',
+        title: c.complaintContent ? c.complaintContent.substring(0, 20) : '-',
+        time: formatRelativeTime(c.createTime)
+      }))
+    }
+  } catch (e) {
+    console.error('获取投诉数据失败', e)
+  }
+}
+
+const loadPendingRepairs = async () => {
+  try {
+    const res = await getRepairOrderPage({ pageNum: 1, pageSize: 5, orderStatus: 1 })
+    if (res && res.data) {
+      const records = res.data.records || res.data.rows || []
+      pendingRepairs.value = records.map(r => ({
+        id: r.id,
+        type: r.repairType || '其他',
+        title: r.faultDescription ? r.faultDescription.substring(0, 20) : '-',
+        time: formatRelativeTime(r.createTime)
+      }))
+    }
+  } catch (e) {
+    console.error('获取维修工单失败', e)
+  }
+}
+
 const loadAdminStats = async () => {
   try {
     const res = await getAdminStats()
@@ -504,8 +542,11 @@ const loadManagerStats = async () => {
 onMounted(() => {
   if (userStore.userType === 1) {
     loadAdminStats()
+    loadRecentLogs()
   } else if (userStore.userType === 2) {
     loadManagerStats()
+    loadPendingComplaints()
+    loadPendingRepairs()
   } else if (userStore.userType === 4) {
     loadWorkerData()
   }

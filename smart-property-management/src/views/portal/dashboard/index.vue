@@ -257,6 +257,7 @@ import { useUserStore } from '@/stores/user'
 import { getWalletByUserId, virtualRecharge } from '@/api/wallet'
 import { getMyBillList } from '@/api/bill'
 import { getUserNotices } from '@/api/notice'
+import { getHousesByUserId } from '@/api/userHouse'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -266,81 +267,41 @@ const rechargeDialogVisible = ref(false)
 
 // 用户信息
 const userInfo = ref({
-  realName: '张三',
-  houseInfo: '3号楼2单元501',
-  checkInDays: 365,
-  creditPoints: 95
+  realName: '',
+  houseInfo: '暂无房产信息',
+  checkInDays: 0,
+  creditPoints: 100
 })
 
 // 未缴账单数量
-const unpaidCount = ref(2)
+const unpaidCount = ref(0)
 
 // 未读公告数量
-const unreadNoticeCount = ref(3)
+const unreadNoticeCount = ref(0)
 
 // 钱包信息
 const wallet = ref({
-  balance: 2568.50
+  balance: 0
 })
 
 // 本月账单
 const monthlyBill = ref({
-  totalAmount: 1250.00,
-  status: 0, // 0-待缴费 1-已缴清
-  propertyFee: 850.00,
-  parkingFee: 300.00,
-  otherFee: 100.00
+  totalAmount: 0,
+  status: 1,
+  propertyFee: 0,
+  parkingFee: 0,
+  otherFee: 0
 })
 
-// 服务状态
+// 服务状态（静态展示，实际项目可扩展为接口）
 const serviceStatus = ref([
-  {
-    id: 1,
-    name: '网络服务',
-    description: '社区宽带网络正常运行',
-    status: 1, // 0-异常 1-正常
-    updateTime: '2024-11-09 10:00'
-  },
-  {
-    id: 2,
-    name: '电梯运行',
-    description: '1号楼电梯维护中，预计2小时后恢复',
-    status: 0,
-    updateTime: '2024-11-09 08:30'
-  },
-  {
-    id: 3,
-    name: '供水服务',
-    description: '二次供水系统运行正常',
-    status: 1,
-    updateTime: '2024-11-09 09:00'
-  }
+  { id: 1, name: '网络服务', description: '社区宽带网络正常运行', status: 1, updateTime: '' },
+  { id: 2, name: '供水服务', description: '二次供水系统运行正常', status: 1, updateTime: '' },
+  { id: 3, name: '电梯运行', description: '各楼栋电梯运行正常', status: 1, updateTime: '' }
 ])
 
-// 社区动态
-const communityUpdates = ref([
-  {
-    id: 1,
-    type: 'notice',
-    title: '电梯维护通知',
-    description: '1号楼电梯将于今日上午8:00-12:00进行维护保养',
-    publishTime: '2024-11-09 07:30'
-  },
-  {
-    id: 2,
-    type: 'activity',
-    title: '社区篮球赛报名',
-    description: '本周六下午3点社区篮球场举办友谊赛，欢迎报名参加',
-    publishTime: '2024-11-08 18:00'
-  },
-  {
-    id: 3,
-    type: 'maintenance',
-    title: '消防设施检查',
-    description: '物业将于下周一对各楼栋消防设施进行例行检查',
-    publishTime: '2024-11-08 15:00'
-  }
-])
+// 社区动态（从公告API加载）
+const communityUpdates = ref([])
 
 // 充值表单
 const rechargeForm = reactive({
@@ -418,15 +379,66 @@ const loadWallet = async () => {
   }
 }
 
-// 加载未缴账单数量
+// 加载未缴账单数量和本月账单统计
 const loadUnpaidCount = async () => {
   try {
-    const res = await getMyBillList({ pageNum: 1, pageSize: 1, billStatus: 0 })
+    const res = await getMyBillList({ pageNum: 1, pageSize: 100, billStatus: 1 })
     if (res && res.code === 200 && res.data) {
-      unpaidCount.value = res.data.total || 0
+      const bills = res.data.records || res.data.rows || []
+      unpaidCount.value = res.data.total || bills.length
+      // 统计本月账单
+      let total = 0, propertyFee = 0, parkingFee = 0, otherFee = 0
+      bills.forEach(b => {
+        const amt = parseFloat(b.amount) || 0
+        total += amt
+        const typeName = (b.feeTypeName || '').toLowerCase()
+        if (typeName.includes('物业')) propertyFee += amt
+        else if (typeName.includes('停车')) parkingFee += amt
+        else otherFee += amt
+      })
+      monthlyBill.value = { totalAmount: total, status: unpaidCount.value === 0 ? 1 : 0, propertyFee, parkingFee, otherFee }
     }
   } catch (e) {
     console.error('加载账单失败:', e)
+  }
+}
+
+// 加载社区动态（最新公告）
+const loadCommunityUpdates = async () => {
+  try {
+    const res = await getUserNotices({ pageNum: 1, pageSize: 5 })
+    if (res && res.code === 200 && res.data) {
+      const records = res.data.records || res.data.rows || []
+      communityUpdates.value = records.map(n => ({
+        id: n.id,
+        type: 'notice',
+        title: n.noticeTitle || n.title,
+        description: (n.noticeContent || n.content || '').substring(0, 50),
+        publishTime: n.publishTime || n.createTime
+      }))
+    }
+  } catch (e) {
+    console.error('加载公告失败:', e)
+  }
+}
+
+// 加载房产信息
+const loadHouseInfo = async () => {
+  try {
+    const res = await getHousesByUserId(userStore.userId)
+    if (res && res.code === 200 && res.data) {
+      const houses = Array.isArray(res.data) ? res.data : (res.data.records || [])
+      if (houses.length > 0) {
+        const h = houses[0]
+        userInfo.value.houseInfo = h.houseNo || h.house_no || '已关联房产'
+        if (h.checkInDate || h.check_in_date) {
+          const days = Math.floor((Date.now() - new Date(h.checkInDate || h.check_in_date)) / 86400000)
+          userInfo.value.checkInDays = days > 0 ? days : 0
+        }
+      }
+    }
+  } catch (e) {
+    console.error('加载房产失败:', e)
   }
 }
 
@@ -444,13 +456,12 @@ const loadUnreadNoticeCount = async () => {
 
 // 组件挂载
 onMounted(() => {
-  userInfo.value = {
-    ...userInfo.value,
-    realName: userStore.realName || userStore.username || '用户'
-  }
+  userInfo.value.realName = userStore.realName || userStore.username || '用户'
   loadWallet()
   loadUnpaidCount()
   loadUnreadNoticeCount()
+  loadCommunityUpdates()
+  loadHouseInfo()
 })
 </script>
 

@@ -296,25 +296,25 @@ const routes = [
       {
         path: 'pending',
         name: 'WorkPending',
-        component: () => import('@/views/property/repair/index.vue'),
+        component: () => import('@/views/work/index.vue'),
         meta: { title: '待接单', icon: 'Tools' }
       },
       {
         path: 'processing',
         name: 'WorkProcessing',
-        component: () => import('@/views/property/repair/index.vue'),
+        component: () => import('@/views/work/index.vue'),
         meta: { title: '进行中', icon: 'Tools' }
       },
       {
         path: 'pending-accept',
         name: 'WorkPendingAccept',
-        component: () => import('@/views/property/repair/index.vue'),
+        component: () => import('@/views/work/index.vue'),
         meta: { title: '待验收', icon: 'Tools' }
       },
       {
         path: 'completed',
         name: 'WorkCompleted',
-        component: () => import('@/views/property/repair/index.vue'),
+        component: () => import('@/views/work/index.vue'),
         meta: { title: '已完成', icon: 'Tools' }
       }
     ]

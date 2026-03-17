@@ -30,6 +30,21 @@ public class PermissionService {
             return true;
         }
 
+        // 物业管理员（userType=2）对物业相关权限放行
+        com.hyu.common.domain.LoginUser loginUser = SecurityUtils.getLoginUser();
+        if (loginUser != null && loginUser.getUserType() != null && loginUser.getUserType() == 2) {
+            String perm = StringUtils.trim(permission);
+            if (perm != null && (
+                perm.startsWith("property:") ||
+                perm.startsWith("finance:") ||
+                perm.startsWith("service:") ||
+                perm.startsWith("parking:") ||
+                perm.startsWith("notice:")
+            )) {
+                return true;
+            }
+        }
+
         Set<String> permissions = SecurityUtils.getLoginUser().getPermissions();
         if (StringUtils.isEmpty(permissions)) {
             return false;

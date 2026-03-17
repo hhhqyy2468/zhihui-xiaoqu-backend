@@ -383,6 +383,7 @@ public class BillController {
     /**
      * 获取我的账单统计数据（业主端）
      */
+    @ApiOperation("获取我的账单统计数据")
     @GetMapping("/my/statistics")
     public AjaxResult getMyBillStatistics() {
         log.info("获取我的账单统计数据");
