@@ -1,6 +1,8 @@
 package com.hyu.property.controller;
 
 import com.hyu.common.core.domain.AjaxResult;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import com.hyu.property.domain.WalletTransaction;
 import com.hyu.property.service.IWalletTransactionService;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +22,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/property/wallet/transaction")
 @Validated
+@Api(tags = "钱包交易记录管理")
 public class WalletTransactionController {
 
     @Autowired
@@ -28,6 +31,7 @@ public class WalletTransactionController {
     /**
      * 分页查询交易记录列表
      */
+    @ApiOperation("分页查询交易记录列表")
     @GetMapping("/page")
     @PreAuthorize("@ss.hasPermi('property:transaction:list')")
     public AjaxResult list(@RequestParam(defaultValue = "1") Integer page,
@@ -43,6 +47,7 @@ public class WalletTransactionController {
     /**
      * 查询交易记录列表
      */
+    @ApiOperation("查询交易记录列表")
     @GetMapping("/list")
     @PreAuthorize("@ss.hasPermi('property:transaction:list')")
     public AjaxResult listAll(WalletTransaction transaction) {
@@ -53,6 +58,7 @@ public class WalletTransactionController {
     /**
      * 获取交易记录详细信息
      */
+    @ApiOperation("获取交易记录详细信息")
     @GetMapping("/{transactionId}")
     @PreAuthorize("@ss.hasPermi('property:transaction:query')")
     public AjaxResult getInfo(@PathVariable("transactionId") Long transactionId) {
@@ -63,6 +69,7 @@ public class WalletTransactionController {
     /**
      * 根据流水号查询交易记录
      */
+    @ApiOperation("根据流水号查询交易记录")
     @GetMapping("/no/{transactionNo}")
     @PreAuthorize("@ss.hasPermi('property:transaction:query')")
     public AjaxResult getInfoByNo(@PathVariable("transactionNo") String transactionNo) {
@@ -76,6 +83,7 @@ public class WalletTransactionController {
     /**
      * 根据业主ID查询交易记录
      */
+    @ApiOperation("根据业主ID查询交易记录")
     @GetMapping("/owner/{ownerId}")
     @PreAuthorize("@ss.hasPermi('property:transaction:query')")
     public AjaxResult getInfoByOwnerId(@PathVariable("ownerId") Long ownerId) {
@@ -86,6 +94,7 @@ public class WalletTransactionController {
     /**
      * 新增交易记录
      */
+    @ApiOperation("新增交易记录")
     @PostMapping
     @PreAuthorize("@ss.hasPermi('property:transaction:add')")
     public AjaxResult add(@Validated @RequestBody WalletTransaction transaction) {
@@ -96,6 +105,7 @@ public class WalletTransactionController {
     /**
      * 修改交易记录
      */
+    @ApiOperation("修改交易记录")
     @PutMapping
     @PreAuthorize("@ss.hasPermi('property:transaction:edit')")
     public AjaxResult edit(@Validated @RequestBody WalletTransaction transaction) {
@@ -106,6 +116,7 @@ public class WalletTransactionController {
     /**
      * 删除交易记录
      */
+    @ApiOperation("删除交易记录")
     @DeleteMapping("/{transactionIds}")
     @PreAuthorize("@ss.hasPermi('property:transaction:remove')")
     public AjaxResult remove(@PathVariable Long[] transactionIds) {

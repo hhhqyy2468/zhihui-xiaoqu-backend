@@ -1,6 +1,9 @@
 package com.hyu.property.service.impl;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.hyu.common.core.domain.PageResult;
 import com.hyu.property.domain.SysOperLog;
 import com.hyu.property.domain.vo.SysOperLogVO;
 import com.hyu.property.mapper.SysOperLogMapper;
@@ -41,9 +44,13 @@ public class SysOperLogServiceImpl extends ServiceImpl<SysOperLogMapper, SysOper
      * 分页查询操作日志列表
      */
     @Override
-    public List<SysOperLogVO> selectOperLogList(SysOperLog sysOperLog, Integer pageNum, Integer pageSize) {
-        // 这里可以添加分页逻辑
-        return sysOperLogMapper.selectOperLogList(sysOperLog);
+    public PageResult<SysOperLogVO> selectOperLogList(SysOperLog sysOperLog, Integer pageNum, Integer pageSize) {
+        List<SysOperLogVO> all = sysOperLogMapper.selectOperLogList(sysOperLog);
+        int total = all.size();
+        int fromIndex = (pageNum - 1) * pageSize;
+        int toIndex = Math.min(fromIndex + pageSize, total);
+        List<SysOperLogVO> rows = fromIndex >= total ? java.util.Collections.emptyList() : all.subList(fromIndex, toIndex);
+        return PageResult.build(rows, (long) total);
     }
 
     /**

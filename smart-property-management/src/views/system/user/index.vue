@@ -93,10 +93,6 @@
         <el-icon><Delete /></el-icon>
         批量删除
       </el-button>
-      <el-button @click="handleExport">
-        <el-icon><Download /></el-icon>
-        导出
-      </el-button>
     </div>
 
     <!-- 用户表格 -->
@@ -260,10 +256,8 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, Plus, Delete, Download } from '@element-plus/icons-vue'
+import { Search, Refresh, Plus, Delete } from '@element-plus/icons-vue'
 import * as systemApi from '@/api/system'
-import * as XLSX from 'xlsx'
-import { saveAs } from 'file-saver'
 
 // 响应式数据
 const formRef = ref()
@@ -600,93 +594,6 @@ const handleAssignRole = async (row) => {
   // 延迟打开对话框，确保数据已设置
   await new Promise(resolve => setTimeout(resolve, 100))
   roleDialogVisible.value = true
-}
-
-// 导出Excel（纯前端方案）
-const handleExport = async () => {
-  try {
-    // 显示加载状态
-    const loadingInstance = ElMessage({
-      message: '正在导出数据...',
-      type: 'info',
-      duration: 0 // 不自动关闭
-    })
-
-    // 获取当前表格中的所有数据（不分页）
-    const allParams = {
-      pageNum: 1,
-      pageSize: 10000 // 获取大量数据用于导出
-    }
-
-    // 调用API获取所有用户数据
-    const response = await systemApi.listUsers(allParams)
-
-    // 关闭加载提示
-    loadingInstance.close()
-
-    if (response.code === 200 && response.data.rows) {
-      const users = response.data.rows
-
-      if (users.length === 0) {
-        ElMessage.warning('没有数据可导出')
-        return
-      }
-
-      // 转换数据格式
-      const exportData = users.map(user => ({
-        '用户ID': user.userId,
-        '用户名': user.username,
-        '真实姓名': user.realName,
-        '手机号': user.phone || '',
-        '邮箱': user.email || '',
-        '用户类型': getUserTypeName(user.userType),
-        '状态': user.status === 1 ? '启用' : '禁用',
-        '创建时间': user.createTime || '',
-        '更新时间': user.updateTime || ''
-      }))
-
-      // 创建工作簿
-      const wb = XLSX.utils.book_new()
-      const ws = XLSX.utils.json_to_sheet(exportData)
-
-      // 设置列宽
-      const colWidths = [
-        { wch: 10 }, // 用户ID
-        { wch: 15 }, // 用户名
-        { wch: 15 }, // 真实姓名
-        { wch: 15 }, // 手机号
-        { wch: 25 }, // 邮箱
-        { wch: 12 }, // 用户类型
-        { wch: 8 },  // 状态
-        { wch: 20 }, // 创建时间
-        { wch: 20 }  // 更新时间
-      ]
-      ws['!cols'] = colWidths
-
-      // 将工作表添加到工作簿
-      XLSX.utils.book_append_sheet(wb, ws, '用户数据')
-
-      // 生成Excel文件并下载
-      const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
-      const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-
-      // 生成文件名（包含时间戳）
-      const now = new Date()
-      const timestamp = now.getFullYear() +
-                      String(now.getMonth() + 1).padStart(2, '0') +
-                      String(now.getDate()).padStart(2, '0') + '_' +
-                      String(now.getHours()).padStart(2, '0') +
-                      String(now.getMinutes()).padStart(2, '0')
-
-      saveAs(blob, `用户数据_${timestamp}.xlsx`)
-      ElMessage.success(`成功导出 ${users.length} 条用户数据`)
-    } else {
-      ElMessage.error('获取用户数据失败')
-    }
-  } catch (error) {
-    console.error('导出失败:', error)
-    ElMessage.error('导出失败：' + (error.message || '网络错误'))
-  }
 }
 
 // 提交表单

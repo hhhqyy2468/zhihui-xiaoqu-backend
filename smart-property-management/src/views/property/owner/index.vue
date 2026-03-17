@@ -594,7 +594,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus, Delete } from '@element-plus/icons-vue'
 import { listOwners, getOwner, addOwner, updateOwner, deleteOwners, resetPassword, changeStatus } from '@/api/owner'
-import { removeHouseByUsername } from '@/api/house'
+import { removeHouseByUsername, getAvailableHouses, assignHouses } from '@/api/house'
 
 // 响应式数据
 const loading = ref(false)
@@ -955,16 +955,10 @@ const handleAssignProperty = async (row) => {
     propertyOwner.value = row
 
     // 获取可分配的房产列表（空置状态的房产）
-    const response = await fetch(`/api/v1/property/house/available?userId=${row.userId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
-    })
+    const response = await getAvailableHouses(row.userId)
 
-    if (response.ok) {
-      const result = await response.json()
-      availableHouses.value = result.data || []
+    if (response.code === 200) {
+      availableHouses.value = response.data || []
       selectedHouses.value = []
 
       // 重置表单
@@ -1015,16 +1009,9 @@ const handleConfirmAssign = async () => {
       isCurrent: assignForm.isCurrent
     }
 
-    const response = await fetch('/api/v1/property/house/assign', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify(assignData)
-    })
+    const response = await assignHouses(assignData)
 
-    if (response.ok) {
+    if (response.code === 200) {
       ElMessage.success(`成功分配 ${houseIds.length} 套房产`)
       assignPropertyDialogVisible.value = false
 

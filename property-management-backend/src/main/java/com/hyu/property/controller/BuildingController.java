@@ -7,6 +7,8 @@ import com.hyu.common.exception.BusinessException;
 import com.hyu.common.utils.SecurityUtils;
 import com.hyu.property.domain.Building;
 import com.hyu.property.service.IBuildingService;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -25,6 +27,7 @@ import javax.validation.constraints.NotNull;
 @RestController
 @RequestMapping("/api/v1/property/building")
 @Validated
+@Api(tags = "楼栋管理")
 public class BuildingController {
 
     @Autowired
@@ -33,6 +36,7 @@ public class BuildingController {
     /**
      * 分页查询楼栋列表
      */
+    @ApiOperation("分页查询楼栋列表")
     @GetMapping("/list")
     // @PreAuthorize("@ss.hasPermi('property:building:list')")  // 临时移除权限验证进行测试
     public AjaxResult list(@RequestParam(defaultValue = "1") Integer pageNum,
@@ -56,6 +60,7 @@ public class BuildingController {
     /**
      * 获取楼栋详细信息
      */
+    @ApiOperation("获取楼栋详细信息")
     @GetMapping(value = "/{id}")
     @PreAuthorize("@ss.hasPermi('property:building:list')")
     public AjaxResult getInfo(@NotNull(message = "楼栋ID不能为空") @PathVariable Long id) {
@@ -66,6 +71,7 @@ public class BuildingController {
     /**
      * 新增楼栋
      */
+    @ApiOperation("新增楼栋")
     @PostMapping
     @PreAuthorize("@ss.hasPermi('property:building:add')")
     public AjaxResult add(@Valid @RequestBody Building building) {
@@ -80,6 +86,7 @@ public class BuildingController {
     /**
      * 修改保存楼栋
      */
+    @ApiOperation("修改楼栋")
     @PutMapping
     @PreAuthorize("@ss.hasPermi('property:building:edit')")
     public AjaxResult edit(@Valid @RequestBody Building building) {
@@ -94,6 +101,7 @@ public class BuildingController {
     /**
      * 删除楼栋
      */
+    @ApiOperation("删除楼栋")
     @DeleteMapping("/{ids}")
     @PreAuthorize("@ss.hasPermi('property:building:delete')")
     public AjaxResult remove(@NotNull(message = "楼栋ID不能为空") @PathVariable Long[] ids) {
@@ -104,6 +112,7 @@ public class BuildingController {
     /**
      * 获取楼栋下的单元列表
      */
+    @ApiOperation("获取楼栋下的单元列表")
     @GetMapping("/{id}/units")
     @PreAuthorize("@ss.hasPermi('property:building:list')")
     public AjaxResult getBuildingUnits(@NotNull(message = "楼栋ID不能为空") @PathVariable Long id) {

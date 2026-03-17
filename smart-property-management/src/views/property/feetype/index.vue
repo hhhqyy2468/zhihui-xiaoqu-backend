@@ -70,10 +70,6 @@
         <el-icon><Delete /></el-icon>
         批量删除
       </el-button>
-      <el-button @click="handleExport">
-        <el-icon><Download /></el-icon>
-        导出
-      </el-button>
     </div>
 
     <!-- 费用类型表格 -->
@@ -234,7 +230,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, Plus, Delete, Download } from '@element-plus/icons-vue'
+import { Search, Refresh, Plus, Delete } from '@element-plus/icons-vue'
 import {
   getFeeTypePage,
   getFeeTypeList,
@@ -617,12 +613,7 @@ const handleBatchDelete = async () => {
 
 // 查看账单
 const handleViewBills = (row) => {
-  ElMessage.info(`查看费用类型"${row.feeName}"的账单记录`)
-}
-
-// 导出
-const handleExport = () => {
-  ElMessage.success('导出成功')
+  ElMessage.info(`查看费用类型"${row.typeName}"的账单记录`)
 }
 
 // 提交表单

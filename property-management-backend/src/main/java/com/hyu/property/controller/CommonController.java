@@ -1,5 +1,7 @@
 package com.hyu.property.controller;
 
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import com.hyu.property.domain.dto.SystemConfigDTO;
 import com.hyu.property.domain.dto.UploadResultDTO;
 import com.hyu.property.domain.vo.FileInfoVO;
@@ -20,6 +22,7 @@ import java.util.Map;
  * @author system
  * @date 2025-11-11
  */
+@Api(tags = "通用接口")
 public class CommonController {
 
     private static final Logger log = LoggerFactory.getLogger(CommonController.class);
@@ -32,6 +35,7 @@ public class CommonController {
     /**
      * 文件上传
      */
+    @ApiOperation("文件上传")
     @PostMapping("/upload")
     public Map<String, Object> uploadFile(@RequestParam("file") MultipartFile file,
                                           @RequestParam(required = false) String businessType,
@@ -59,6 +63,7 @@ public class CommonController {
     /**
      * 批量文件上传
      */
+    @ApiOperation("批量文件上传")
     @PostMapping("/upload/batch")
     public Map<String, Object> uploadFiles(@RequestParam("files") MultipartFile[] files,
                                            @RequestParam(required = false) String businessType,
@@ -90,6 +95,7 @@ public class CommonController {
     /**
      * 获取文件信息
      */
+    @ApiOperation("获取文件信息")
     @GetMapping("/file/{fileId}")
     public Map<String, Object> getFileInfo(@PathVariable Long fileId) {
         Map<String, Object> result = new HashMap<>();
@@ -114,6 +120,7 @@ public class CommonController {
     /**
      * 删除文件
      */
+    @ApiOperation("删除文件")
     @DeleteMapping("/file/{fileId}")
     public Map<String, Object> deleteFile(@PathVariable Long fileId) {
         Map<String, Object> result = new HashMap<>();
@@ -137,6 +144,7 @@ public class CommonController {
     /**
      * 获取字典类型列表
      */
+    @ApiOperation("获取字典类型列表")
     @GetMapping("/dict/types")
     public Map<String, Object> getDictTypes() {
         Map<String, Object> result = new HashMap<>();
@@ -156,6 +164,7 @@ public class CommonController {
     /**
      * 根据字典类型获取字典数据
      */
+    @ApiOperation("根据字典类型获取字典数据")
     @GetMapping("/dict/data/{dictType}")
     public Map<String, Object> getDictDataByType(@PathVariable String dictType) {
         Map<String, Object> result = new HashMap<>();
@@ -175,6 +184,7 @@ public class CommonController {
     /**
      * 获取系统配置
      */
+    @ApiOperation("获取系统配置")
     @GetMapping("/system/config")
     public Map<String, Object> getSystemConfig() {
         Map<String, Object> result = new HashMap<>();
@@ -194,6 +204,7 @@ public class CommonController {
     /**
      * 文件下载
      */
+    @ApiOperation("文件下载")
     @GetMapping("/file/{fileId}/download")
     public Map<String, Object> downloadFile(@PathVariable Long fileId) {
         Map<String, Object> result = new HashMap<>();
@@ -215,6 +226,7 @@ public class CommonController {
     /**
      * 获取文件预览URL
      */
+    @ApiOperation("获取文件预览URL")
     @GetMapping("/file/{fileId}/preview")
     public Map<String, Object> getFilePreviewUrl(@PathVariable Long fileId) {
         Map<String, Object> result = new HashMap<>();

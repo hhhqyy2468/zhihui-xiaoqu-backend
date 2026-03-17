@@ -6,6 +6,8 @@ import com.hyu.common.core.domain.PageResult;
 import com.hyu.property.domain.House;
 import com.hyu.property.domain.vo.HouseVO;
 import com.hyu.property.service.IHouseService;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -31,6 +33,7 @@ import com.hyu.system.service.ISysUserService;
 @RestController
 @RequestMapping("/api/v1/property/house")
 @Validated
+@Api(tags = "房产管理")
 public class HouseController {
 
     @Autowired
@@ -45,6 +48,7 @@ public class HouseController {
     /**
      * 分页查询房产列表
      */
+    @ApiOperation("分页查询房产列表")
     @GetMapping("/list")
     @PreAuthorize("@ss.hasPermi('property:house:list')")
     public AjaxResult list(@RequestParam(defaultValue = "1") Integer pageNum,
@@ -72,6 +76,7 @@ public class HouseController {
     /**
      * 获取房产详细信息
      */
+    @ApiOperation("获取房产详细信息")
     @GetMapping(value = "/{id}")
     @PreAuthorize("@ss.hasPermi('property:house:list')")
     public AjaxResult getInfo(@NotNull(message = "房产ID不能为空") @PathVariable Long id) {
@@ -82,6 +87,7 @@ public class HouseController {
     /**
      * 新增房产
      */
+    @ApiOperation("新增房产")
     @PostMapping
     @PreAuthorize("@ss.hasPermi('property:house:add')")
     public AjaxResult add(@Valid @RequestBody House house) {
@@ -96,6 +102,7 @@ public class HouseController {
     /**
      * 修改保存房产
      */
+    @ApiOperation("修改房产")
     @PutMapping
     @PreAuthorize("@ss.hasPermi('property:house:edit')")
     public AjaxResult edit(@Valid @RequestBody House house) {
@@ -110,6 +117,7 @@ public class HouseController {
     /**
      * 删除房产
      */
+    @ApiOperation("删除房产")
     @DeleteMapping("/{ids}")
     @PreAuthorize("@ss.hasPermi('property:house:delete')")
     public AjaxResult remove(@NotNull(message = "房产ID不能为空") @PathVariable Long[] ids) {
@@ -120,6 +128,7 @@ public class HouseController {
     /**
      * 获取可分配的房产列表
      */
+    @ApiOperation("获取可分配的房产列表")
     @GetMapping("/available")
     @PreAuthorize("@ss.hasPermi('property:house:list')")
     public AjaxResult getAvailableHouses(@RequestParam Long userId) {
@@ -131,6 +140,7 @@ public class HouseController {
     /**
      * 分配房产给用户
      */
+    @ApiOperation("分配房产给用户")
     @PostMapping("/assign")
     @PreAuthorize("@ss.hasPermi('property:house:assign')")
     public AjaxResult assignHouses(@RequestBody AssignHouseRequest request) {
@@ -156,6 +166,7 @@ public class HouseController {
     /**
      * 根据用户名分配房产给用户
      */
+    @ApiOperation("根据用户名分配房产给用户")
     @PostMapping("/assign-by-username")
     @PreAuthorize("@ss.hasPermi('property:house:assign')")
     public AjaxResult assignHouseByUsername(@RequestBody AssignHouseByUsernameRequest request) {
@@ -186,6 +197,7 @@ public class HouseController {
     /**
      * 移除用户的房产
      */
+    @ApiOperation("移除用户的房产")
     @PostMapping("/remove-by-username")
     @PreAuthorize("@ss.hasPermi('property:house:assign')")
     public AjaxResult removeHouseByUsername(@RequestBody RemoveHouseByUsernameRequest request) {
@@ -211,6 +223,7 @@ public class HouseController {
     /**
      * 获取房产的住户信息
      */
+    @ApiOperation("获取房产的住户信息")
     @GetMapping("/{id}/residents")
     @PreAuthorize("@ss.hasPermi('property:house:query')")
     public AjaxResult getHouseResidents(@PathVariable Long id) {

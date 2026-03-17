@@ -7,6 +7,8 @@ import com.hyu.common.utils.SecurityUtils;
 import com.hyu.common.utils.StringUtils;
 import com.hyu.property.domain.vo.OwnerVO;
 import com.hyu.property.service.IOwnerService;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -26,6 +28,7 @@ import java.util.*;
 @RestController
 @RequestMapping("/api/v1/property/owner")
 @Validated
+@Api(tags = "业主管理")
 public class OwnerController {
 
     @Autowired
@@ -34,6 +37,7 @@ public class OwnerController {
     /**
      * 分页查询业主列表
      */
+    @ApiOperation("分页查询业主列表")
     @GetMapping("/list")
     @PreAuthorize("@ss.hasPermi('property:owner:list')")
     public AjaxResult list(@RequestParam(defaultValue = "1") Integer pageNum,
@@ -63,6 +67,7 @@ public class OwnerController {
     /**
      * 获取业主详细信息
      */
+    @ApiOperation("获取业主详细信息")
     @GetMapping(value = "/{id}")
     @PreAuthorize("@ss.hasPermi('property:owner:list')")
     public AjaxResult getInfo(@NotNull(message = "业主ID不能为空") @PathVariable Long id) {
@@ -73,6 +78,7 @@ public class OwnerController {
     /**
      * 新增业主
      */
+    @ApiOperation("新增业主")
     @PostMapping
     @PreAuthorize("@ss.hasPermi('property:owner:add')")
     public AjaxResult add(@Valid @RequestBody OwnerVO owner) {
@@ -90,6 +96,7 @@ public class OwnerController {
     /**
      * 修改保存业主
      */
+    @ApiOperation("修改业主")
     @PutMapping
     @PreAuthorize("@ss.hasPermi('property:owner:edit')")
     public AjaxResult edit(@Valid @RequestBody OwnerVO owner) {
@@ -107,6 +114,7 @@ public class OwnerController {
     /**
      * 删除业主
      */
+    @ApiOperation("删除业主")
     @DeleteMapping("/{ids}")
     @PreAuthorize("@ss.hasPermi('property:owner:delete')")
     public AjaxResult remove(@NotNull(message = "业主ID不能为空") @PathVariable Long[] ids) {
@@ -117,6 +125,7 @@ public class OwnerController {
     /**
      * 重置业主密码
      */
+    @ApiOperation("重置业主密码")
     @PutMapping("/reset-password")
     @PreAuthorize("@ss.hasPermi('property:owner:edit')")
     public AjaxResult resetPassword(@RequestBody OwnerVO owner) {
@@ -128,6 +137,7 @@ public class OwnerController {
     /**
      * 修改业主状态
      */
+    @ApiOperation("修改业主状态")
     @PutMapping("/change-status")
     @PreAuthorize("@ss.hasPermi('property:owner:edit')")
     public AjaxResult changeStatus(@RequestBody OwnerVO owner) {
@@ -139,6 +149,7 @@ public class OwnerController {
     /**
      * 根据房产ID获取业主列表
      */
+    @ApiOperation("根据房产ID获取业主列表")
     @GetMapping("/by-house/{houseId}")
     @PreAuthorize("@ss.hasPermi('property:owner:list')")
     public AjaxResult getOwnersByHouseId(@NotNull(message = "房产ID不能为空") @PathVariable Long houseId) {

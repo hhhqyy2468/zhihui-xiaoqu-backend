@@ -104,15 +104,19 @@
                 <div class="expand-content">
                   <div class="expand-item">
                     <span class="label">请求方法：</span>
-                    <span class="value">{{ row.method || 'GET' }}</span>
+                    <span class="value">{{ row.requestMethod || row.method || 'GET' }}</span>
+                  </div>
+                  <div class="expand-item">
+                    <span class="label">请求URL：</span>
+                    <span class="value">{{ row.operUrl || '-' }}</span>
                   </div>
                   <div class="expand-item">
                     <span class="label">请求参数：</span>
-                    <pre class="json-content">{{ row.requestParam || '{}' }}</pre>
+                    <pre class="json-content">{{ row.operParam || '{}' }}</pre>
                   </div>
                   <div class="expand-item">
                     <span class="label">响应结果：</span>
-                    <pre class="json-content">{{ row.responseResult || '{}' }}</pre>
+                    <pre class="json-content">{{ row.jsonResult || '{}' }}</pre>
                   </div>
                   <div class="expand-item">
                     <span class="label">异常信息：</span>
@@ -121,24 +125,23 @@
                 </div>
               </template>
             </el-table-column>
-            <el-table-column prop="logId" label="日志编号" width="100" />
+            <el-table-column prop="id" label="日志编号" width="100" />
             <el-table-column prop="title" label="操作模块" />
             <el-table-column prop="businessType" label="操作类型" width="100">
               <template #default="{ row }">
                 <el-tag :type="getBusinessTypeColor(row.businessType)">
-                  {{ getBusinessTypeName(row.businessType) }}
+                  {{ row.businessTypeName || getBusinessTypeName(row.businessType) }}
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="method" label="请求方式" width="100" />
-            <el-table-column prop="operator" label="操作人员" width="120" />
-            <el-table-column prop="deptName" label="部门名称" width="120" />
+            <el-table-column prop="requestMethod" label="请求方式" width="100" />
+            <el-table-column prop="operName" label="操作人员" width="120" />
             <el-table-column prop="operIp" label="操作地址" width="140" />
             <el-table-column prop="operLocation" label="操作地点" width="140" />
             <el-table-column prop="status" label="操作状态" width="100">
               <template #default="{ row }">
-                <el-tag :type="row.status === 1 ? 'success' : 'danger'">
-                  {{ row.status === 1 ? '成功' : '失败' }}
+                <el-tag :type="row.status === 0 ? 'success' : 'danger'">
+                  {{ row.statusName || (row.status === 0 ? '成功' : '失败') }}
                 </el-tag>
               </template>
             </el-table-column>
@@ -243,16 +246,17 @@
         <!-- 登录日志表格 -->
         <div class="table-section">
           <el-table v-loading="loginLoading" :data="loginLogList">
-            <el-table-column prop="infoId" label="访问编号" width="100" />
+            <el-table-column prop="id" label="访问编号" width="100" />
             <el-table-column prop="username" label="登录账号" width="150" />
+            <el-table-column prop="userName" label="用户姓名" width="120" />
             <el-table-column prop="ipaddr" label="登录IP" width="140" />
             <el-table-column prop="loginLocation" label="登录地点" width="150" />
             <el-table-column prop="browser" label="浏览器" width="120" />
             <el-table-column prop="os" label="操作系统" width="120" />
             <el-table-column prop="status" label="登录状态" width="100">
               <template #default="{ row }">
-                <el-tag :type="row.status === 1 ? 'success' : 'danger'">
-                  {{ row.status === 1 ? '成功' : '失败' }}
+                <el-tag :type="row.status === 0 ? 'success' : 'danger'">
+                  {{ row.statusName || (row.status === 0 ? '成功' : '失败') }}
                 </el-tag>
               </template>
             </el-table-column>
@@ -298,21 +302,21 @@
     >
       <div class="detail-content">
         <el-descriptions :column="2" border>
-          <el-descriptions-item label="日志编号">{{ operationDetail.logId }}</el-descriptions-item>
+          <el-descriptions-item label="日志编号">{{ operationDetail.id }}</el-descriptions-item>
           <el-descriptions-item label="操作模块">{{ operationDetail.title }}</el-descriptions-item>
           <el-descriptions-item label="操作类型">
             <el-tag :type="getBusinessTypeColor(operationDetail.businessType)">
-              {{ getBusinessTypeName(operationDetail.businessType) }}
+              {{ operationDetail.businessTypeName || getBusinessTypeName(operationDetail.businessType) }}
             </el-tag>
           </el-descriptions-item>
-          <el-descriptions-item label="请求方式">{{ operationDetail.method }}</el-descriptions-item>
-          <el-descriptions-item label="操作人员">{{ operationDetail.operator }}</el-descriptions-item>
-          <el-descriptions-item label="部门名称">{{ operationDetail.deptName }}</el-descriptions-item>
+          <el-descriptions-item label="请求方式">{{ operationDetail.requestMethod || operationDetail.method }}</el-descriptions-item>
+          <el-descriptions-item label="操作人员">{{ operationDetail.operName }}</el-descriptions-item>
+          <el-descriptions-item label="请求URL" :span="2">{{ operationDetail.operUrl }}</el-descriptions-item>
           <el-descriptions-item label="操作地址">{{ operationDetail.operIp }}</el-descriptions-item>
           <el-descriptions-item label="操作地点">{{ operationDetail.operLocation }}</el-descriptions-item>
           <el-descriptions-item label="操作状态">
-            <el-tag :type="operationDetail.status === 1 ? 'success' : 'danger'">
-              {{ operationDetail.status === 1 ? '成功' : '失败' }}
+            <el-tag :type="operationDetail.status === 0 ? 'success' : 'danger'">
+              {{ operationDetail.statusName || (operationDetail.status === 0 ? '成功' : '失败') }}
             </el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="操作时间">{{ formatDateTime(operationDetail.operTime) }}</el-descriptions-item>
@@ -320,12 +324,12 @@
 
         <div class="detail-section">
           <h4>请求参数</h4>
-          <pre class="json-content">{{ operationDetail.requestParam || '{}' }}</pre>
+          <pre class="json-content">{{ operationDetail.operParam || '{}' }}</pre>
         </div>
 
         <div class="detail-section">
           <h4>响应结果</h4>
-          <pre class="json-content">{{ operationDetail.responseResult || '{}' }}</pre>
+          <pre class="json-content">{{ operationDetail.jsonResult || '{}' }}</pre>
         </div>
 
         <div class="detail-section" v-if="operationDetail.errorMsg">
@@ -343,15 +347,16 @@
     >
       <div class="detail-content">
         <el-descriptions :column="1" border>
-          <el-descriptions-item label="访问编号">{{ loginDetail.infoId }}</el-descriptions-item>
+          <el-descriptions-item label="访问编号">{{ loginDetail.id }}</el-descriptions-item>
           <el-descriptions-item label="登录账号">{{ loginDetail.username }}</el-descriptions-item>
+          <el-descriptions-item label="用户姓名">{{ loginDetail.userName }}</el-descriptions-item>
           <el-descriptions-item label="登录IP">{{ loginDetail.ipaddr }}</el-descriptions-item>
           <el-descriptions-item label="登录地点">{{ loginDetail.loginLocation }}</el-descriptions-item>
           <el-descriptions-item label="浏览器">{{ loginDetail.browser }}</el-descriptions-item>
           <el-descriptions-item label="操作系统">{{ loginDetail.os }}</el-descriptions-item>
           <el-descriptions-item label="登录状态">
-            <el-tag :type="loginDetail.status === 1 ? 'success' : 'danger'">
-              {{ loginDetail.status === 1 ? '成功' : '失败' }}
+            <el-tag :type="loginDetail.status === 0 ? 'success' : 'danger'">
+              {{ loginDetail.statusName || (loginDetail.status === 0 ? '成功' : '失败') }}
             </el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="操作信息">{{ loginDetail.msg }}</el-descriptions-item>
@@ -367,6 +372,10 @@ import { ref, reactive, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Delete, Download } from '@element-plus/icons-vue'
+import {
+  listOperLog, delOperLog, cleanOperLog,
+  listLoginLog, delLoginLog, cleanLoginLog
+} from '@/api/log'
 
 // Router
 const router = useRouter()
@@ -408,115 +417,106 @@ const loginCurrentPage = ref(1)
 const loginPageSize = ref(10)
 const loginTotal = ref(0)
 
-// 获取操作类型名称
+// 获取操作类型名称（businessTypeName后端已返回，保留本地映射作兜底）
 const getBusinessTypeName = (type) => {
-  const typeMap = {
-    1: '新增',
-    2: '修改',
-    3: '删除',
-    4: '查询',
-    5: '导入',
-    6: '导出'
-  }
+  const typeMap = { 0: '其他', 1: '新增', 2: '修改', 3: '删除', 4: '查询', 5: '导入', 6: '导出' }
   return typeMap[type] || '其他'
 }
 
-// 获取操作类型颜色
 const getBusinessTypeColor = (type) => {
-  const colorMap = {
-    1: 'success',
-    2: 'warning',
-    3: 'danger',
-    4: 'info',
-    5: 'primary',
-    6: 'success'
-  }
+  const colorMap = { 0: 'info', 1: 'success', 2: 'warning', 3: 'danger', 4: 'info', 5: 'primary', 6: 'success' }
   return colorMap[type] || 'info'
 }
 
 // 格式化日期时间
 const formatDateTime = (dateTime) => {
+  if (!dateTime) return '-'
   return new Date(dateTime).toLocaleString('zh-CN')
 }
 
-// 生成模拟操作日志数据
-const generateMockOperationLogs = () => {
-  const logs = []
-  const modules = ['用户管理', '角色管理', '菜单管理', '字典管理', '楼栋管理', '房产管理', '账单管理', '投诉管理']
-  const operators = ['系统管理员', '物业经理', '张三', '李四']
-  const departments = ['系统管理部', '物业管理部', '财务部', '客服部']
-  const locations = ['北京市朝阳区', '上海市浦东新区', '广州市天河区', '深圳市南山区']
-
-  for (let i = 1; i <= 50; i++) {
-    logs.push({
-      logId: i,
-      title: modules[Math.floor(Math.random() * modules.length)],
-      businessType: Math.floor(Math.random() * 6) + 1,
-      method: ['GET', 'POST', 'PUT', 'DELETE'][Math.floor(Math.random() * 4)],
-      operator: operators[Math.floor(Math.random() * operators.length)],
-      deptName: departments[Math.floor(Math.random() * departments.length)],
-      operIp: `192.168.1.${Math.floor(Math.random() * 255)}`,
-      operLocation: locations[Math.floor(Math.random() * locations.length)],
-      status: Math.random() > 0.1 ? 1 : 0,
-      operTime: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000),
-      requestParam: JSON.stringify({ id: Math.floor(Math.random() * 1000), name: '测试数据' }),
-      responseResult: JSON.stringify({ code: 200, msg: '操作成功', data: {} }),
-      errorMsg: Math.random() > 0.9 ? '模拟异常信息：数据库连接失败' : ''
-    })
-  }
-
-  // 模拟分页数据
-  const start = (operationCurrentPage.value - 1) * operationPageSize.value
-  const end = start + operationPageSize.value
-  operationTotal.value = logs.length
-  return logs.slice(start, end)
-}
-
-// 生成模拟登录日志数据
-const generateMockLoginLogs = () => {
-  const logs = []
-  const users = ['admin', 'manager', 'owner', 'worker']
-  const browsers = ['Chrome', 'Firefox', 'Safari', 'Edge']
-  const os = ['Windows 10', 'Windows 11', 'macOS', 'Linux']
-  const locations = ['北京市朝阳区', '上海市浦东新区', '广州市天河区', '深圳市南山区']
-
-  for (let i = 1; i <= 30; i++) {
-    logs.push({
-      infoId: i,
-      username: users[Math.floor(Math.random() * users.length)],
-      ipaddr: `192.168.1.${Math.floor(Math.random() * 255)}`,
-      loginLocation: locations[Math.floor(Math.random() * locations.length)],
-      browser: browsers[Math.floor(Math.random() * browsers.length)],
-      os: os[Math.floor(Math.random() * os.length)],
-      status: Math.random() > 0.2 ? 1 : 0,
-      msg: Math.random() > 0.2 ? '登录成功' : '用户名或密码错误',
-      loginTime: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000)
-    })
-  }
-
-  // 模拟分页数据
-  const start = (loginCurrentPage.value - 1) * loginPageSize.value
-  const end = start + loginPageSize.value
-  loginTotal.value = logs.length
-  return logs.slice(start, end)
-}
-
-// 加载操作日志
-const loadOperationLogs = () => {
+// 加载操作日志（对接真实API）
+// 后端status: 0=成功 1=失败
+const loadOperationLogs = async () => {
   operationLoading.value = true
-  setTimeout(() => {
-    operationLogList.value = generateMockOperationLogs()
+  try {
+    const params = {
+      pageNum: operationCurrentPage.value,
+      pageSize: operationPageSize.value
+    }
+    if (operationSearchForm.operator) params.username = operationSearchForm.operator
+    if (operationSearchForm.status !== '') params.status = Number(operationSearchForm.status) === 1 ? 0 : (Number(operationSearchForm.status) === 0 ? 1 : '')
+    if (operationSearchForm.dateRange && operationSearchForm.dateRange.length === 2) {
+      params.beginTime = formatDateTimeParam(operationSearchForm.dateRange[0])
+      params.endTime = formatDateTimeParam(operationSearchForm.dateRange[1])
+    }
+    const res = await listOperLog(params)
+    if (res && res.data) {
+      const data = res.data
+      if (Array.isArray(data)) {
+        operationLogList.value = data
+        operationTotal.value = data.length
+      } else if (data.rows) {
+        operationLogList.value = data.rows
+        operationTotal.value = data.total || data.rows.length
+      } else if (data.records) {
+        operationLogList.value = data.records
+        operationTotal.value = data.total || data.records.length
+      } else {
+        operationLogList.value = Array.isArray(data) ? data : []
+        operationTotal.value = operationLogList.value.length
+      }
+    }
+  } catch (e) {
+    ElMessage.error('操作日志加载失败：' + (e.message || '未知错误'))
+  } finally {
     operationLoading.value = false
-  }, 500)
+  }
 }
 
-// 加载登录日志
-const loadLoginLogs = () => {
+// 加载登录日志（对接真实API）
+// 后端status: 0=成功 1=失败
+const loadLoginLogs = async () => {
   loginLoading.value = true
-  setTimeout(() => {
-    loginLogList.value = generateMockLoginLogs()
+  try {
+    const params = {
+      pageNum: loginCurrentPage.value,
+      pageSize: loginPageSize.value
+    }
+    if (loginSearchForm.username) params.username = loginSearchForm.username
+    if (loginSearchForm.status !== '') params.status = Number(loginSearchForm.status) === 1 ? 0 : (Number(loginSearchForm.status) === 0 ? 1 : '')
+    if (loginSearchForm.dateRange && loginSearchForm.dateRange.length === 2) {
+      params.beginTime = formatDateTimeParam(loginSearchForm.dateRange[0])
+      params.endTime = formatDateTimeParam(loginSearchForm.dateRange[1])
+    }
+    const res = await listLoginLog(params)
+    if (res && res.data) {
+      const data = res.data
+      if (Array.isArray(data)) {
+        loginLogList.value = data
+        loginTotal.value = data.length
+      } else if (data.rows) {
+        loginLogList.value = data.rows
+        loginTotal.value = data.total || data.rows.length
+      } else if (data.records) {
+        loginLogList.value = data.records
+        loginTotal.value = data.total || data.records.length
+      } else {
+        loginLogList.value = []
+        loginTotal.value = 0
+      }
+    }
+  } catch (e) {
+    ElMessage.error('登录日志加载失败：' + (e.message || '未知错误'))
+  } finally {
     loginLoading.value = false
-  }, 500)
+  }
+}
+
+// 日期时间格式化为后端接受的字符串
+const formatDateTimeParam = (date) => {
+  if (!date) return ''
+  const d = new Date(date)
+  return d.toISOString().slice(0, 19).replace('T', ' ')
 }
 
 // 标签页切换
@@ -538,12 +538,7 @@ const handleOperationSearch = () => {
 
 // 操作日志重置
 const handleOperationReset = () => {
-  Object.assign(operationSearchForm, {
-    operator: '',
-    operationType: '',
-    status: '',
-    dateRange: []
-  })
+  Object.assign(operationSearchForm, { operator: '', operationType: '', status: '', dateRange: [] })
   handleOperationSearch()
 }
 
@@ -555,11 +550,7 @@ const handleLoginSearch = () => {
 
 // 登录日志重置
 const handleLoginReset = () => {
-  Object.assign(loginSearchForm, {
-    username: '',
-    status: '',
-    dateRange: []
-  })
+  Object.assign(loginSearchForm, { username: '', status: '', dateRange: [] })
   handleLoginSearch()
 }
 
@@ -577,25 +568,27 @@ const handleLoginDetail = (row) => {
 
 // 操作日志展开
 const handleOperationExpand = (row, expandedRows) => {
-  // 展开时可以加载更多详细信息
-  console.log('展开行:', row, expandedRows)
+  // 展开行不需要额外操作，数据已在row中
 }
 
-// 清空操作日志
+// 清空操作日志（调用后端clean接口，按时间清理）
 const handleOperationClear = () => {
   ElMessageBox.confirm(
     '确定要清空所有操作日志吗？此操作不可恢复！',
     '警告',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
+    { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
+  ).then(async () => {
+    try {
+      // 清理1年前的日志
+      const beforeTime = new Date(Date.now() - 365 * 24 * 3600 * 1000).toISOString().slice(0, 19)
+      await cleanOperLog(beforeTime)
+      operationCurrentPage.value = 1
+      await loadOperationLogs()
+      ElMessage.success('操作日志清空成功')
+    } catch (e) {
+      ElMessage.error('清空失败：' + (e.message || '未知错误'))
     }
-  ).then(() => {
-    operationLogList.value = []
-    operationTotal.value = 0
-    ElMessage.success('操作日志清空成功')
-  })
+  }).catch(() => {})
 }
 
 // 清空登录日志
@@ -603,26 +596,28 @@ const handleLoginClear = () => {
   ElMessageBox.confirm(
     '确定要清空所有登录日志吗？此操作不可恢复！',
     '警告',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
+    { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
+  ).then(async () => {
+    try {
+      const beforeTime = new Date(Date.now() - 365 * 24 * 3600 * 1000).toISOString().slice(0, 19)
+      await cleanLoginLog(beforeTime)
+      loginCurrentPage.value = 1
+      await loadLoginLogs()
+      ElMessage.success('登录日志清空成功')
+    } catch (e) {
+      ElMessage.error('清空失败：' + (e.message || '未知错误'))
     }
-  ).then(() => {
-    loginLogList.value = []
-    loginTotal.value = 0
-    ElMessage.success('登录日志清空成功')
-  })
+  }).catch(() => {})
 }
 
-// 导出操作日志
+// 导出操作日志（提示，暂无后端导出接口）
 const handleOperationExport = () => {
-  ElMessage.success('操作日志导出成功')
+  ElMessage.info('导出功能暂未开放')
 }
 
 // 导出登录日志
 const handleLoginExport = () => {
-  ElMessage.success('登录日志导出成功')
+  ElMessage.info('导出功能暂未开放')
 }
 
 // 分页处理
@@ -630,47 +625,36 @@ const handleOperationSizeChange = (val) => {
   operationPageSize.value = val
   loadOperationLogs()
 }
-
 const handleOperationCurrentChange = (val) => {
   operationCurrentPage.value = val
   loadOperationLogs()
 }
-
 const handleLoginSizeChange = (val) => {
   loginPageSize.value = val
   loadLoginLogs()
 }
-
 const handleLoginCurrentChange = (val) => {
   loginCurrentPage.value = val
   loadLoginLogs()
 }
 
-// 初始化设置活动标签页
+// 初始化
 const initializeActiveTab = () => {
   const path = route.path
-  if (path.includes('/log/operation')) {
-    activeTab.value = 'operation'
-    loadOperationLogs()
-  } else if (path.includes('/log/login')) {
+  if (path.includes('/log/login')) {
     activeTab.value = 'login'
     loadLoginLogs()
   } else {
-    // 默认加载操作日志
     activeTab.value = 'operation'
     loadOperationLogs()
   }
 }
 
-// 监听路由变化
 watch(
   () => route.path,
   (newPath) => {
-    if (newPath.includes('/log/operation')) {
-      activeTab.value = 'operation'
-    } else if (newPath.includes('/log/login')) {
-      activeTab.value = 'login'
-    }
+    if (newPath.includes('/log/login')) activeTab.value = 'login'
+    else if (newPath.includes('/log/operation')) activeTab.value = 'operation'
   }
 )
 

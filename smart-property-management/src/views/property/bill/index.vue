@@ -122,7 +122,7 @@
         <el-icon><Download /></el-icon>
         批量导出
       </el-button>
-      </div>
+    </div>
 
     <!-- 账单表格 -->
     <div class="table-section">
@@ -178,7 +178,7 @@
               编辑
             </el-button>
             <el-button
-              v-if="row.billStatus === 0"
+              v-if="row.billStatus === 1 || row.billStatus === 0"
               link
               type="success"
               @click="handlePay(row)"
@@ -871,7 +871,7 @@ const handlePay = (row) => {
   Object.assign(payForm, {
     billId: row.billId,
     billNo: row.billNo,
-    feeName: row.feeName,
+    feeName: row.feeTypeName || row.feeName,
     amount: row.amount,
     paymentMethod: 'cash'
   })

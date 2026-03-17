@@ -5,6 +5,8 @@ import com.hyu.common.utils.excel.BillExcelUtil;
 import com.hyu.common.utils.print.BillPrintUtil;
 import com.hyu.property.domain.Bill;
 import com.hyu.property.service.IBillService;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -26,6 +28,7 @@ import javax.servlet.http.HttpServletResponse;
 @RestController
 @RequestMapping("/api/v1/property/bill")
 @Validated
+@Api(tags = "账单管理")
 public class BillController {
 
     @Autowired
@@ -34,6 +37,7 @@ public class BillController {
     /**
      * 分页查询账单列表
      */
+    @ApiOperation("分页查询账单列表")
     @GetMapping("/page")
     @PreAuthorize("@ss.hasPermi('property:bill:list')")
     public AjaxResult list(@RequestParam(defaultValue = "1") Integer page,
@@ -49,6 +53,7 @@ public class BillController {
     /**
      * 查询账单列表
      */
+    @ApiOperation("查询账单列表")
     @GetMapping("/list")
     @PreAuthorize("@ss.hasPermi('property:bill:list')")
     public AjaxResult listAll(Bill bill) {
@@ -59,6 +64,7 @@ public class BillController {
     /**
      * 获取账单详细信息
      */
+    @ApiOperation("获取账单详细信息")
     @GetMapping("/{billId}")
     @PreAuthorize("@ss.hasPermi('property:bill:query')")
     public AjaxResult getInfo(@PathVariable("billId") Long billId) {
@@ -69,6 +75,7 @@ public class BillController {
     /**
      * 新增账单
      */
+    @ApiOperation("新增账单")
     @PostMapping
     @PreAuthorize("@ss.hasPermi('property:bill:add')")
     public AjaxResult add(@RequestBody Bill bill) {
@@ -79,6 +86,7 @@ public class BillController {
     /**
      * 修改账单
      */
+    @ApiOperation("修改账单")
     @PutMapping
     @PreAuthorize("@ss.hasPermi('property:bill:edit')")
     public AjaxResult edit(@RequestBody Bill bill) {
@@ -89,6 +97,7 @@ public class BillController {
     /**
      * 删除账单
      */
+    @ApiOperation("删除账单")
     @DeleteMapping("/{billIds}")
     @PreAuthorize("@ss.hasPermi('property:bill:remove')")
     public AjaxResult remove(@PathVariable Long[] billIds) {
@@ -99,6 +108,7 @@ public class BillController {
     /**
      * 生成账单
      */
+    @ApiOperation("生成账单")
     @PostMapping("/generate")
     @PreAuthorize("@ss.hasPermi('property:bill:generate')")
     public AjaxResult generateBills(@RequestBody Map<String, Object> params) {
@@ -121,6 +131,7 @@ public class BillController {
     /**
      * 在线缴费
      */
+    @ApiOperation("在线缴费")
     @PostMapping("/pay")
     @PreAuthorize("@ss.hasPermi('property:bill:pay')")
     public AjaxResult payBills(@RequestBody Map<String, Object> params) {
@@ -139,6 +150,7 @@ public class BillController {
     /**
      * 更新超期账单状态
      */
+    @ApiOperation("更新超期账单状态")
     @PostMapping("/overdue")
     @PreAuthorize("@ss.hasPermi('property:bill:overdue')")
     public AjaxResult updateOverdueBills() {
@@ -149,6 +161,7 @@ public class BillController {
     /**
      * 导出账单列表到Excel
      */
+    @ApiOperation("导出账单列表到Excel")
     @GetMapping("/export")
     @PreAuthorize("@ss.hasPermi('property:bill:export')")
     public void exportBillsToExcel(Bill bill, HttpServletResponse response) {
@@ -173,6 +186,7 @@ public class BillController {
     /**
      * 批量导出账单到Excel
      */
+    @ApiOperation("批量导出账单到Excel")
     @PostMapping("/export/batch")
     @PreAuthorize("@ss.hasPermi('property:bill:export')")
     public void exportBillsBatchToExcel(@RequestBody Map<String, Object> params, HttpServletResponse response) {
@@ -203,6 +217,7 @@ public class BillController {
     /**
      * 批量打印账单
      */
+    @ApiOperation("批量打印账单")
     @PostMapping("/print/batch")
     @PreAuthorize("@ss.hasPermi('property:bill:print')")
     public AjaxResult batchPrintBills(@RequestBody Map<String, Object> params) {
@@ -251,6 +266,7 @@ public class BillController {
     /**
      * 获取我的账单列表
      */
+    @ApiOperation("获取我的账单列表")
     @GetMapping("/my/list")
     public AjaxResult getMyBillList(@RequestParam(defaultValue = "1") Integer page,
                                            @RequestParam(defaultValue = "10") Integer size,
@@ -279,6 +295,7 @@ public class BillController {
     /**
      * 获取我的账单详情
      */
+    @ApiOperation("获取我的账单详情")
     @GetMapping("/my/{billId}")
     public AjaxResult getMyBillDetail(@PathVariable Long billId) {
         log.info("获取我的账单详情, billId: {}", billId);
@@ -296,6 +313,7 @@ public class BillController {
     /**
      * 在线缴费（业主端）
      */
+    @ApiOperation("在线缴费（业主端）")
     @PostMapping("/owner/pay")
     public AjaxResult payBill(@RequestBody Map<String, Object> params) {
         log.info("在线缴费, params: {}", params);
@@ -323,6 +341,7 @@ public class BillController {
     /**
      * 批量缴费（业主端）
      */
+    @ApiOperation("批量缴费（业主端）")
     @PostMapping("/owner/pay/batch")
     public AjaxResult batchPayBills(@RequestBody Map<String, Object> params) {
         log.info("批量缴费, params: {}", params);

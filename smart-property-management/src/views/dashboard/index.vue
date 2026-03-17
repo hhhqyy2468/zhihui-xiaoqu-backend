@@ -293,6 +293,8 @@ import { ElMessage } from 'element-plus'
 
 // 导入维修工单API
 import { getMyWorkerOrders } from '@/api/repair'
+// 导入仪表盘API
+import { getAdminStats, getManagerStats } from '@/api/dashboard'
 
 const userStore = useUserStore()
 
@@ -466,23 +468,45 @@ const updateWorkerStats = () => {
   workerStats.completedOrders = recentOrders.value.filter(order => order.status === '已完成').length
 }
 
+const loadAdminStats = async () => {
+  try {
+    const res = await getAdminStats()
+    if (res.code === 200 && res.data) {
+      Object.assign(adminStats, {
+        buildingCount: res.data.buildingCount || 0,
+        houseCount: res.data.houseCount || 0,
+        userCount: res.data.userCount || 0,
+        logCount: res.data.logCount || 0,
+        pendingTasks: res.data.pendingRepairs || 0
+      })
+    }
+  } catch (e) {
+    console.error('获取管理员统计数据失败', e)
+  }
+}
+
+const loadManagerStats = async () => {
+  try {
+    const res = await getManagerStats()
+    if (res.code === 200 && res.data) {
+      Object.assign(managerStats, {
+        houseCount: res.data.houseCount || 0,
+        ownerCount: res.data.ownerCount || 0,
+        unpaidBills: res.data.unpaidBills || 0,
+        pendingTasks: res.data.pendingRepairs || 0
+      })
+    }
+  } catch (e) {
+    console.error('获取物业管理员统计数据失败', e)
+  }
+}
+
 onMounted(() => {
-  // 根据不同角色加载不同的统计数据
   if (userStore.userType === 1) {
-    // 系统管理员数据
-    adminStats.buildingCount = 12
-    adminStats.houseCount = 486
-    adminStats.userCount = 520
-    adminStats.logCount = 1250
-    adminStats.pendingTasks = 8
+    loadAdminStats()
   } else if (userStore.userType === 2) {
-    // 物业管理员数据
-    managerStats.houseCount = 486
-    managerStats.ownerCount = 352
-    managerStats.unpaidBills = 28
-    managerStats.pendingTasks = 15
+    loadManagerStats()
   } else if (userStore.userType === 4) {
-    // 维修人员数据 - 加载真实API数据
     loadWorkerData()
   }
 })

@@ -6,6 +6,8 @@ import com.hyu.common.core.domain.AjaxResult;
 import com.hyu.common.utils.JwtUtils;
 import com.hyu.system.domain.SysUser;
 import com.hyu.system.service.IAuthService;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -22,6 +24,7 @@ import java.util.Map;
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/auth")
+@Api(tags = "认证管理")
 public class AuthController {
 
     @Autowired
@@ -36,6 +39,7 @@ public class AuthController {
     /**
      * 用户登录
      */
+    @ApiOperation("用户登录")
     @PostMapping("/login")
     public AjaxResult login(@Valid @RequestBody LoginBody loginBody) {
         log.info("用户登录：{}", loginBody.getUsername());
@@ -45,6 +49,7 @@ public class AuthController {
     /**
      * 用户注册
      */
+    @ApiOperation("用户注册")
     @PostMapping("/register")
     public AjaxResult register(@Valid @RequestBody RegisterBody registerBody) {
         log.info("用户注册：{}", registerBody.getUsername());
@@ -54,6 +59,7 @@ public class AuthController {
     /**
      * 刷新Token
      */
+    @ApiOperation("刷新Token")
     @PostMapping("/refresh")
     public AjaxResult refreshToken(@RequestBody Map<String, String> params) {
         String refreshToken = params.get("refreshToken");
@@ -64,6 +70,7 @@ public class AuthController {
     /**
      * 用户登出
      */
+    @ApiOperation("用户登出")
     @PostMapping("/logout")
     public AjaxResult logout() {
         log.info("用户登出");
@@ -73,6 +80,7 @@ public class AuthController {
     /**
      * 获取当前用户信息
      */
+    @ApiOperation("获取当前用户信息")
     @GetMapping("/info")
     public AjaxResult getUserInfo() {
         log.info("获取用户信息");
@@ -82,6 +90,7 @@ public class AuthController {
     /**
      * 修改密码
      */
+    @ApiOperation("修改密码")
     @PutMapping("/password")
     public AjaxResult updatePassword(@RequestBody Map<String, String> params) {
         String oldPassword = params.get("oldPassword");
@@ -95,6 +104,7 @@ public class AuthController {
     /**
      * 修改个人信息
      */
+    @ApiOperation("修改个人信息")
     @PutMapping("/profile")
     public AjaxResult updateProfile(@RequestBody SysUser user) {
         log.info("修改个人信息");
@@ -104,6 +114,7 @@ public class AuthController {
     /**
      * 获取验证码
      */
+    @ApiOperation("获取验证码")
     @GetMapping("/captcha")
     public AjaxResult getCaptcha() {
         log.info("获取验证码");
@@ -113,6 +124,7 @@ public class AuthController {
     /**
      * 验证token有效性
      */
+    @ApiOperation("验证Token有效性")
     @GetMapping("/verify")
     public AjaxResult verifyToken(@RequestHeader("Authorization") String authorization) {
         String token = null;
@@ -127,6 +139,7 @@ public class AuthController {
     /**
      * 测试接口
      */
+    @ApiOperation("认证测试接口")
     @GetMapping("/test")
     public AjaxResult test() {
         log.info("认证测试接口");

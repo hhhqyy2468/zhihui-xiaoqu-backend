@@ -6,6 +6,8 @@ import com.hyu.common.core.domain.PageResult;
 import com.hyu.common.utils.SecurityUtils;
 import com.hyu.property.domain.Notice;
 import com.hyu.property.service.INoticeService;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -27,6 +29,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/property/notice")
 @Validated
+@Api(tags = "公告管理")
 public class NoticeController {
 
     @Autowired
@@ -35,6 +38,7 @@ public class NoticeController {
     /**
      * 分页查询公告列表
      */
+    @ApiOperation("分页查询公告列表")
     @GetMapping("/list")
     @PreAuthorize("@ss.hasPermi('property:notice:list')")
     public AjaxResult list(@RequestParam(defaultValue = "1") Integer pageNum,
@@ -66,6 +70,7 @@ public class NoticeController {
     /**
      * 获取公告详细信息
      */
+    @ApiOperation("获取公告详细信息")
     @GetMapping(value = "/{id}")
     @PreAuthorize("@ss.hasPermi('property:notice:list')")
     public AjaxResult getInfo(@NotNull(message = "公告ID不能为空") @PathVariable Long id) {
@@ -76,6 +81,7 @@ public class NoticeController {
     /**
      * 新增公告
      */
+    @ApiOperation("新增公告")
     @PostMapping
     @PreAuthorize("@ss.hasPermi('property:notice:add')")
     public AjaxResult add(@Valid @RequestBody Notice notice) {
@@ -89,6 +95,7 @@ public class NoticeController {
     /**
      * 修改保存公告
      */
+    @ApiOperation("修改公告")
     @PutMapping
     @PreAuthorize("@ss.hasPermi('property:notice:edit')")
     public AjaxResult edit(@Valid @RequestBody Notice notice) {
@@ -100,6 +107,7 @@ public class NoticeController {
     /**
      * 删除公告
      */
+    @ApiOperation("删除公告")
     @DeleteMapping("/{ids}")
     @PreAuthorize("@ss.hasPermi('property:notice:delete')")
     public AjaxResult remove(@NotNull(message = "公告ID不能为空") @PathVariable Long[] ids) {
@@ -110,6 +118,7 @@ public class NoticeController {
     /**
      * 发布公告
      */
+    @ApiOperation("发布公告")
     @PutMapping("/{id}/publish")
     @PreAuthorize("@ss.hasPermi('property:notice:edit')")
     public AjaxResult publish(@NotNull(message = "公告ID不能为空") @PathVariable Long id) {
@@ -120,6 +129,7 @@ public class NoticeController {
     /**
      * 置顶公告
      */
+    @ApiOperation("置顶公告")
     @PutMapping("/{id}/top")
     @PreAuthorize("@ss.hasPermi('property:notice:edit')")
     public AjaxResult setTop(@NotNull(message = "公告ID不能为空") @PathVariable Long id,
@@ -131,6 +141,7 @@ public class NoticeController {
     /**
      * 撤回公告
      */
+    @ApiOperation("撤回公告")
     @PutMapping("/{id}/withdraw")
     @PreAuthorize("@ss.hasPermi('property:notice:edit')")
     public AjaxResult withdraw(@NotNull(message = "公告ID不能为空") @PathVariable Long id) {
@@ -141,6 +152,7 @@ public class NoticeController {
     /**
      * 获取用户可见的公告列表
      */
+    @ApiOperation("获取用户可见的公告列表")
     @GetMapping("/user")
     @PreAuthorize("@ss.hasPermi('property:notice:list')")
     public AjaxResult getUserNotices(@RequestParam(required = false) Long buildingId,
@@ -152,6 +164,7 @@ public class NoticeController {
     /**
      * 标记公告已读
      */
+    @ApiOperation("标记公告已读")
     @PostMapping("/{id}/read")
     @PreAuthorize("@ss.hasPermi('property:notice:list')")
     public AjaxResult markAsRead(@NotNull(message = "公告ID不能为空") @PathVariable Long id) {
@@ -162,6 +175,7 @@ public class NoticeController {
     /**
      * 获取公告统计信息
      */
+    @ApiOperation("获取公告统计信息")
     @GetMapping("/{id}/stats")
     @PreAuthorize("@ss.hasPermi('property:notice:list')")
     public AjaxResult getNoticeStats(@NotNull(message = "公告ID不能为空") @PathVariable Long id) {
@@ -172,6 +186,7 @@ public class NoticeController {
     /**
      * 获取公告概览统计
      */
+    @ApiOperation("获取公告概览统计")
     @GetMapping("/stats/overview")
     @PreAuthorize("@ss.hasPermi('property:notice:list')")
     public AjaxResult getOverviewStats() {
@@ -182,6 +197,7 @@ public class NoticeController {
     /**
      * 获取公告管理统计页面数据
      */
+    @ApiOperation("获取公告管理统计页面数据")
     @GetMapping("/statistics")
     @PreAuthorize("@ss.hasPermi('property:notice:list')")
     public AjaxResult getStatistics() {

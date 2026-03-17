@@ -113,4 +113,9 @@ public interface IRepairOrderService extends IService<RepairOrder> {
      * @return 结果
      */
     boolean batchArchiveOrders(List<Long> ids);
+
+    /**
+     * 重新派工（验收不合格后）
+     */
+    boolean reassignOrder(Long id, Map<String, Object> params);
 }

@@ -1,6 +1,7 @@
 package com.hyu.property.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.hyu.common.core.domain.PageResult;
 import com.hyu.property.domain.SysLoginLog;
 import com.hyu.property.domain.vo.SysLoginLogVO;
 import com.hyu.property.mapper.SysLoginLogMapper;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,9 +43,13 @@ public class SysLoginLogServiceImpl extends ServiceImpl<SysLoginLogMapper, SysLo
      * 分页查询登录日志列表
      */
     @Override
-    public List<SysLoginLogVO> selectLoginLogList(SysLoginLog sysLoginLog, Integer pageNum, Integer pageSize) {
-        // 这里可以添加分页逻辑
-        return sysLoginLogMapper.selectLoginLogList(sysLoginLog);
+    public PageResult<SysLoginLogVO> selectLoginLogList(SysLoginLog sysLoginLog, Integer pageNum, Integer pageSize) {
+        List<SysLoginLogVO> all = sysLoginLogMapper.selectLoginLogList(sysLoginLog);
+        int total = all.size();
+        int fromIndex = (pageNum - 1) * pageSize;
+        int toIndex = Math.min(fromIndex + pageSize, total);
+        List<SysLoginLogVO> rows = fromIndex >= total ? Collections.emptyList() : all.subList(fromIndex, toIndex);
+        return PageResult.build(rows, (long) total);
     }
 
     /**

@@ -123,6 +123,13 @@
             <version>5.2.4</version>
         </dependency>
 
+        <!-- Knife4j API文档 -->
+        <dependency>
+            <groupId>com.github.xiaoymin</groupId>
+            <artifactId>knife4j-openapi2-spring-boot-starter</artifactId>
+            <version>4.4.0</version>
+        </dependency>
+
       <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>

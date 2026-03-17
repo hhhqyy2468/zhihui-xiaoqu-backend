@@ -4,6 +4,8 @@ import com.hyu.common.core.domain.AjaxResult;
 import com.hyu.common.utils.SecurityUtils;
 import com.hyu.system.domain.SysMenu;
 import com.hyu.system.service.ISysMenuService;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -24,6 +26,7 @@ import java.util.Set;
 @RestController
 @RequestMapping("/api/v1/system/menu")
 @Validated
+@Api(tags = "菜单管理")
 public class SysMenuController {
 
     @Autowired
@@ -32,6 +35,7 @@ public class SysMenuController {
     /**
      * 获取菜单列表
      */
+    @ApiOperation("获取菜单列表")
     @GetMapping("/list")
     @PreAuthorize("@ss.hasPermi('system:menu:list')")
     public AjaxResult list(SysMenu menu) {
@@ -44,6 +48,7 @@ public class SysMenuController {
     /**
      * 根据菜单编号获取详细信息
      */
+    @ApiOperation("根据菜单ID获取详细信息")
     @GetMapping(value = "/{menuId}")
     @PreAuthorize("@ss.hasPermi('system:menu:query')")
     public AjaxResult getInfo(@NotNull(message = "菜单ID不能为空") @PathVariable Long menuId) {
@@ -54,6 +59,7 @@ public class SysMenuController {
     /**
      * 获取菜单下拉树列表
      */
+    @ApiOperation("获取菜单下拉树列表")
     @GetMapping("/treeselect")
     @PreAuthorize("@ss.hasPermi('system:menu:query')")
     public AjaxResult treeselect(SysMenu menu) {
@@ -66,6 +72,7 @@ public class SysMenuController {
     /**
      * 加载对应角色菜单列表树
      */
+    @ApiOperation("加载对应角色菜单列表树")
     @GetMapping(value = "/roleMenuTreeselect/{roleId}")
     @PreAuthorize("@ss.hasPermi('system:menu:query')")
     public AjaxResult roleMenuTreeselect(@NotNull(message = "角色ID不能为空") @PathVariable Long roleId) {
@@ -84,6 +91,7 @@ public class SysMenuController {
     /**
      * 新增菜单
      */
+    @ApiOperation("新增菜单")
     @PostMapping
     @PreAuthorize("@ss.hasPermi('system:menu:add')")
     public AjaxResult add(@Valid @RequestBody SysMenu menu) {
@@ -98,6 +106,7 @@ public class SysMenuController {
     /**
      * 修改菜单
      */
+    @ApiOperation("修改菜单")
     @PutMapping
     @PreAuthorize("@ss.hasPermi('system:menu:edit')")
     public AjaxResult edit(@Valid @RequestBody SysMenu menu) {
@@ -112,6 +121,7 @@ public class SysMenuController {
     /**
      * 删除菜单
      */
+    @ApiOperation("删除菜单")
     @DeleteMapping("/{menuId}")
     @PreAuthorize("@ss.hasPermi('system:menu:remove')")
     public AjaxResult remove(@NotNull(message = "菜单ID不能为空") @PathVariable Long menuId) {
@@ -128,6 +138,7 @@ public class SysMenuController {
     /**
      * 获取用户菜单权限标识
      */
+    @ApiOperation("获取用户菜单权限标识")
     @GetMapping("/perms/{userId}")
     @PreAuthorize("@ss.hasPermi('system:menu:list')")
     public AjaxResult getPerms(@NotNull(message = "用户ID不能为空") @PathVariable Long userId) {
@@ -139,6 +150,7 @@ public class SysMenuController {
     /**
      * 获取当前用户菜单权限标识
      */
+    @ApiOperation("获取当前用户菜单权限标识")
     @GetMapping("/currentPerms")
     public AjaxResult getCurrentPerms() {
         log.info("获取当前用户菜单权限标识");
@@ -150,6 +162,7 @@ public class SysMenuController {
     /**
      * 获取当前用户菜单列表
      */
+    @ApiOperation("获取当前用户菜单列表")
     @GetMapping("/currentMenus")
     public AjaxResult getCurrentMenus() {
         log.info("获取当前用户菜单列表");

@@ -1,6 +1,7 @@
 package com.hyu.property.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.hyu.common.core.domain.PageResult;
 import com.hyu.property.domain.SysOperLog;
 import com.hyu.property.domain.vo.SysOperLogVO;
 
@@ -32,7 +33,7 @@ public interface ISysOperLogService extends IService<SysOperLog> {
      * @param pageSize 每页条数
      * @return 操作日志集合
      */
-    public List<SysOperLogVO> selectOperLogList(SysOperLog sysOperLog, Integer pageNum, Integer pageSize);
+    public PageResult<SysOperLogVO> selectOperLogList(SysOperLog sysOperLog, Integer pageNum, Integer pageSize);
 
     /**
      * 删除操作日志

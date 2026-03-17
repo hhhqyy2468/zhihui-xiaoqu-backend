@@ -8,6 +8,8 @@ import com.hyu.common.utils.StringUtils;
 import com.hyu.system.domain.SysUser;
 import com.hyu.system.service.ISysUserService;
 import com.hyu.property.service.IWalletService;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -39,6 +41,7 @@ import java.math.BigDecimal;
 @RestController
 @RequestMapping("/api/v1/system/user")
 @Validated
+@Api(tags = "用户管理")
 public class SysUserController {
 
     @Autowired
@@ -50,6 +53,7 @@ public class SysUserController {
     /**
      * 分页查询用户列表
      */
+    @ApiOperation("分页查询用户列表")
     @GetMapping("/list")
     @PreAuthorize("@ss.hasPermi('system:user:list')")
     public AjaxResult list(@RequestParam(defaultValue = "1") Integer pageNum,
@@ -95,6 +99,7 @@ public class SysUserController {
     /**
      * 获取用户详细信息
      */
+    @ApiOperation("获取用户详细信息")
     @GetMapping(value = "/{userId}")
     @PreAuthorize("@ss.hasPermi('system:user:query')")
     public AjaxResult getInfo(@NotNull(message = "用户ID不能为空") @PathVariable Long userId) {
@@ -105,6 +110,7 @@ public class SysUserController {
     /**
      * 新增用户
      */
+    @ApiOperation("新增用户")
     @PostMapping
     @PreAuthorize("@ss.hasPermi('system:user:add')")
     public AjaxResult add(@Valid @RequestBody SysUser user) {
@@ -144,6 +150,7 @@ public class SysUserController {
     /**
      * 修改用户
      */
+    @ApiOperation("修改用户")
     @PutMapping
     @PreAuthorize("@ss.hasPermi('system:user:edit')")
     public AjaxResult edit(@Valid @RequestBody SysUser user) {
@@ -166,6 +173,7 @@ public class SysUserController {
     /**
      * 删除用户
      */
+    @ApiOperation("删除用户")
     @DeleteMapping("/{userIds}")
     @PreAuthorize("@ss.hasPermi('system:user:remove')")
     public AjaxResult remove(@NotNull(message = "用户ID不能为空") @PathVariable Long[] userIds) {
@@ -176,6 +184,7 @@ public class SysUserController {
     /**
      * 重置用户密码
      */
+    @ApiOperation("重置用户密码")
     @PutMapping("/resetPwd")
     @PreAuthorize("@ss.hasPermi('system:user:resetPwd')")
     public AjaxResult resetPwd(@RequestBody SysUser user) {
@@ -187,6 +196,7 @@ public class SysUserController {
     /**
      * 状态修改
      */
+    @ApiOperation("修改用户状态")
     @PutMapping("/changeStatus")
     @PreAuthorize("@ss.hasPermi('system:user:edit')")
     public AjaxResult changeStatus(@RequestBody SysUser user) {
@@ -198,6 +208,7 @@ public class SysUserController {
     /**
      * 根据用户名获取用户信息
      */
+    @ApiOperation("根据用户名获取用户信息")
     @GetMapping("/username/{username}")
     @PreAuthorize("@ss.hasPermi('system:user:query')")
     public AjaxResult getUserByUsername(@PathVariable String username) {
@@ -208,6 +219,7 @@ public class SysUserController {
     /**
      * 根据手机号获取用户信息
      */
+    @ApiOperation("根据手机号获取用户信息")
     @GetMapping("/phone/{phone}")
     @PreAuthorize("@ss.hasPermi('system:user:query')")
     public AjaxResult getUserByPhone(@PathVariable String phone) {
@@ -218,6 +230,7 @@ public class SysUserController {
     /**
      * 根据邮箱获取用户信息
      */
+    @ApiOperation("根据邮箱获取用户信息")
     @GetMapping("/email/{email}")
     @PreAuthorize("@ss.hasPermi('system:user:query')")
     public AjaxResult getUserByEmail(@PathVariable String email) {
@@ -228,6 +241,7 @@ public class SysUserController {
     /**
      * 统一用户操作接口（新增、修改、删除、角色分配等）
      */
+    @ApiOperation("统一用户操作接口")
     @PostMapping("/operation")
     @PreAuthorize("@ss.hasPermi('system:user:edit')")
     public AjaxResult operation(@RequestBody UserOperationRequest request) {
@@ -254,6 +268,7 @@ public class SysUserController {
     /**
      * 获取用户的角色ID列表
      */
+    @ApiOperation("获取用户的角色ID列表")
     @GetMapping("/{userId}/roles")
     @PreAuthorize("@ss.hasPermi('system:user:query')")
     public AjaxResult getUserRoles(@NotNull(message = "用户ID不能为空") @PathVariable Long userId) {
@@ -264,6 +279,7 @@ public class SysUserController {
     /**
      * 导出用户Excel
      */
+    @ApiOperation("导出用户Excel")
     @GetMapping("/export")
     @PreAuthorize("@ss.hasPermi('system:user:export')")
     public void exportUsers(HttpServletResponse response,

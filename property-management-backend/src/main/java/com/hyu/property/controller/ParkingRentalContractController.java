@@ -3,6 +3,8 @@ package com.hyu.property.controller;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.hyu.common.core.domain.AjaxResult;
 import com.hyu.common.utils.SecurityUtils;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import com.hyu.property.domain.ParkingRentalContract;
 import com.hyu.property.service.IParkingRentalContractService;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +27,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/parking/rental/contract")
 @Validated
+@Api(tags = "车位租赁合同管理")
 public class ParkingRentalContractController {
 
     @Autowired
@@ -33,6 +36,7 @@ public class ParkingRentalContractController {
     /**
      * 分页查询合同列表
      */
+    @ApiOperation("分页查询合同列表")
     @GetMapping("/list")
     @PreAuthorize("@ss.hasPermi('parking:contract:list')")
     public AjaxResult list(@RequestParam(defaultValue = "1") Integer pageNum,
@@ -62,6 +66,7 @@ public class ParkingRentalContractController {
     /**
      * 获取合同详细信息
      */
+    @ApiOperation("获取合同详细信息")
     @GetMapping("/{id}")
     @PreAuthorize("@ss.hasPermi('parking:contract:query')")
     public AjaxResult getInfo(@NotNull(message = "合同ID不能为空") @PathVariable Long id) {
@@ -73,6 +78,7 @@ public class ParkingRentalContractController {
     /**
      * 根据申请ID生成合同
      */
+    @ApiOperation("根据申请ID生成合同")
     @PostMapping("/generate/{applicationId}")
     @PreAuthorize("@ss.hasPermi('parking:contract:add')")
     public AjaxResult generate(@NotNull(message = "申请ID不能为空") @PathVariable Long applicationId) {
@@ -85,6 +91,7 @@ public class ParkingRentalContractController {
     /**
      * 终止合同
      */
+    @ApiOperation("终止合同")
     @PutMapping("/terminate/{id}")
     @PreAuthorize("@ss.hasPermi('parking:contract:terminate')")
     public AjaxResult terminate(@NotNull(message = "合同ID不能为空") @PathVariable Long id,
@@ -98,6 +105,7 @@ public class ParkingRentalContractController {
     /**
      * 获取合同统计数据
      */
+    @ApiOperation("获取合同统计数据")
     @GetMapping("/statistics")
     @PreAuthorize("@ss.hasPermi('parking:contract:list')")
     public AjaxResult getStatistics() {
@@ -109,6 +117,7 @@ public class ParkingRentalContractController {
     /**
      * 查询即将到期的合同
      */
+    @ApiOperation("查询即将到期的合同")
     @GetMapping("/expiring")
     @PreAuthorize("@ss.hasPermi('parking:contract:list')")
     public AjaxResult getExpiringContracts(@RequestParam(defaultValue = "7") Integer days) {
@@ -120,6 +129,7 @@ public class ParkingRentalContractController {
     /**
      * 查询当前用户的车位租赁合同（我的车位）
      */
+    @ApiOperation("查询我的车位租赁合同")
     @GetMapping("/my")
     public AjaxResult getMyContracts() {
         Long currentUserId = SecurityUtils.getUserId();

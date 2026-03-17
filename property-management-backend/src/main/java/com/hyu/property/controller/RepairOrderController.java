@@ -12,6 +12,8 @@ import com.hyu.property.service.IUserHouseService;
 import com.hyu.property.domain.UserHouse;
 import com.hyu.system.domain.SysUser;
 import com.hyu.system.service.ISysUserService;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -49,6 +51,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/property/repair")
 @Validated
+@Api(tags = "维修工单管理")
 public class RepairOrderController {
 
     @Autowired
@@ -66,6 +69,7 @@ public class RepairOrderController {
     /**
      * 分页查询维修工单列表
      */
+    @ApiOperation("分页查询维修工单列表")
     @GetMapping("/list")
     @PreAuthorize("@ss.hasPermi('property:repair:list')")
     public AjaxResult list(@RequestParam(defaultValue = "1") Integer pageNum,
@@ -143,6 +147,7 @@ public class RepairOrderController {
     /**
      * 获取维修工单详细信息
      */
+    @ApiOperation("获取维修工单详细信息")
     @GetMapping(value = "/{id}")
     @PreAuthorize("@ss.hasPermi('property:repair:list')")
     public AjaxResult getInfo(@NotNull(message = "维修工单ID不能为空") @PathVariable Long id) {
@@ -153,6 +158,7 @@ public class RepairOrderController {
     /**
      * 新增维修工单
      */
+    @ApiOperation("新增维修工单")
     @PostMapping
     @PreAuthorize("@ss.hasPermi('property:repair:add')")
     public AjaxResult add(@Valid @RequestBody RepairOrder repairOrder) {
@@ -171,6 +177,7 @@ public class RepairOrderController {
     /**
      * 修改保存维修工单
      */
+    @ApiOperation("修改维修工单")
     @PutMapping
     @PreAuthorize("@ss.hasPermi('property:repair:edit')")
     public AjaxResult edit(@Valid @RequestBody RepairOrder repairOrder) {
@@ -185,6 +192,7 @@ public class RepairOrderController {
     /**
      * 获取维修人员列表
      */
+    @ApiOperation("获取维修人员列表")
     @GetMapping("/repairers")
     @PreAuthorize("@ss.hasPermi('property:repair:list')")
     public AjaxResult getRepairers() {
@@ -196,6 +204,7 @@ public class RepairOrderController {
     /**
      * 维修人员查看分配给自己的工单
      */
+    @ApiOperation("维修人员查看分配给自己的工单")
     @GetMapping("/worker/my-orders")
     @PreAuthorize("@ss.hasPermi('property:repair:accept')")
     public AjaxResult getMyWorkerOrders(@RequestParam(defaultValue = "1") Integer pageNum,
@@ -252,6 +261,7 @@ public class RepairOrderController {
     /**
      * 系统管理员派工
      */
+    @ApiOperation("系统管理员派工")
     @PutMapping("/assign/{id}")
     @PreAuthorize("@ss.hasPermi('property:repair:assign')")
     public AjaxResult assign(@NotNull(message = "维修工单ID不能为空") @PathVariable Long id,
@@ -263,6 +273,7 @@ public class RepairOrderController {
     /**
      * 维修师傅接单
      */
+    @ApiOperation("维修师傅接单")
     @PutMapping("/accept/{id}")
     @PreAuthorize("@ss.hasPermi('property:repair:accept')")
     public AjaxResult accept(@NotNull(message = "维修工单ID不能为空") @PathVariable Long id) {
@@ -273,6 +284,7 @@ public class RepairOrderController {
     /**
      * 完成维修
      */
+    @ApiOperation("完成维修")
     @PutMapping("/complete/{id}")
     @PreAuthorize("@ss.hasPermi('property:repair:complete')")
     public AjaxResult complete(@NotNull(message = "维修工单ID不能为空") @PathVariable Long id,
@@ -284,6 +296,7 @@ public class RepairOrderController {
     /**
      * 维修师傅提交维修记录
      */
+    @ApiOperation("维修师傅提交维修记录")
     @PutMapping("/handle/{id}")
     @PreAuthorize("@ss.hasPermi('property:repair:handle')")
     public AjaxResult handle(@NotNull(message = "维修工单ID不能为空") @PathVariable Long id,
@@ -293,8 +306,21 @@ public class RepairOrderController {
     }
 
     /**
+     * 重新派工（验收不合格）
+     */
+    @ApiOperation("重新派工")
+    @PutMapping("/reassign/{id}")
+    @PreAuthorize("@ss.hasPermi('property:repair:assign')")
+    public AjaxResult reassign(@NotNull(message = "维修工单ID不能为空") @PathVariable Long id,
+                              @RequestBody(required = false) Map<String, Object> params) {
+        log.info("重新派工, id: {}", id);
+        return toAjax(repairOrderService.reassignOrder(id, params != null ? params : new java.util.HashMap<>()));
+    }
+
+    /**
      * 验收维修
      */
+    @ApiOperation("验收维修")
     @PutMapping("/inspect/{id}")
     @PreAuthorize("@ss.hasPermi('property:repair:inspect')")
     public AjaxResult inspect(@NotNull(message = "维修工单ID不能为空") @PathVariable Long id,
@@ -306,6 +332,7 @@ public class RepairOrderController {
     /**
      * 删除维修工单
      */
+    @ApiOperation("删除维修工单")
     @DeleteMapping("/{ids}")
     @PreAuthorize("@ss.hasPermi('property:repair:delete')")
     public AjaxResult remove(@NotNull(message = "维修工单ID不能为空") @PathVariable Long[] ids) {
@@ -316,6 +343,7 @@ public class RepairOrderController {
     /**
      * 业主报修 - 创建维修工单
      */
+    @ApiOperation("业主报修")
     @PostMapping("/owner")
     public AjaxResult ownerReport(@Valid @RequestBody RepairOrder repairOrder) {
         log.info("业主报修, repairOrder: {}", repairOrder);
@@ -368,6 +396,7 @@ public class RepairOrderController {
     /**
      * 业主查看我的报修
      */
+    @ApiOperation("业主查看我的报修")
     @GetMapping("/owner/my-repairs")
     public AjaxResult getMyRepairs(@RequestParam(defaultValue = "1") Integer pageNum,
                                    @RequestParam(defaultValue = "10") Integer pageSize,
@@ -394,6 +423,7 @@ public class RepairOrderController {
     /**
      * 业主删除自己的报修工单（仅限待派工状态）
      */
+    @ApiOperation("业主删除报修工单")
     @DeleteMapping("/owner/{id}")
     public AjaxResult ownerDelete(@NotNull(message = "维修工单ID不能为空") @PathVariable Long id) {
         log.info("业主删除报修工单, id: {}", id);
@@ -423,6 +453,7 @@ public class RepairOrderController {
     /**
      * 上传维修图片
      */
+    @ApiOperation("上传维修图片")
     @PostMapping("/upload-images")
     public AjaxResult uploadImages(@RequestParam("files") MultipartFile[] files) {
         try {
@@ -490,6 +521,7 @@ public class RepairOrderController {
      * 注意：Spring Boot会自动提供static目录下的静态资源访问
      * 前端可以直接通过 /images/filename.jpg 访问图片
      */
+    @ApiOperation("检查维修图片是否存在")
     @GetMapping("/images/check/{filename:.+}")
     public AjaxResult checkImage(@PathVariable String filename) {
         try {
@@ -529,6 +561,7 @@ public class RepairOrderController {
     /**
      * 业主评价维修工单
      */
+    @ApiOperation("业主评价维修工单")
     @PutMapping("/rate/{id}")
     @PreAuthorize("@ss.hasPermi('property:repair:rate')")
     public AjaxResult rate(@NotNull(message = "维修工单ID不能为空") @PathVariable Long id,
@@ -540,6 +573,7 @@ public class RepairOrderController {
     /**
      * 系统管理员归档维修工单
      */
+    @ApiOperation("归档维修工单")
     @PutMapping("/archive/{id}")
     @PreAuthorize("@ss.hasPermi('property:repair:archive')")
     public AjaxResult archive(@NotNull(message = "维修工单ID不能为空") @PathVariable Long id) {
@@ -550,6 +584,7 @@ public class RepairOrderController {
     /**
      * 批量归档维修工单
      */
+    @ApiOperation("批量归档维修工单")
     @PutMapping("/archive/batch")
     @PreAuthorize("@ss.hasPermi('property:repair:archive')")
     public AjaxResult batchArchive(@RequestBody Long[] ids) {
@@ -560,6 +595,7 @@ public class RepairOrderController {
     /**
      * 获取归档维修工单列表
      */
+    @ApiOperation("获取归档维修工单列表")
     @GetMapping("/archive/list")
     @PreAuthorize("@ss.hasPermi('property:repair:list')")
     public AjaxResult getArchivedList(@RequestParam(defaultValue = "1") Integer pageNum,

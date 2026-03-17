@@ -1,6 +1,9 @@
 package com.hyu.property.controller;
 
 import com.hyu.common.core.domain.AjaxResult;
+import com.hyu.common.core.domain.PageResult;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import com.hyu.property.domain.SysLoginLog;
 import com.hyu.property.domain.vo.SysLoginLogVO;
 import com.hyu.property.service.ISysLoginLogService;
@@ -21,6 +24,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/system/log/login")
 @RequiredArgsConstructor
+@Api(tags = "登录日志")
 public class SysLoginLogController {
 
     private final ISysLoginLogService sysLoginLogService;
@@ -28,6 +32,7 @@ public class SysLoginLogController {
     /**
      * 分页查询登录日志
      */
+    @ApiOperation("分页查询登录日志")
     @GetMapping("/list")
     public AjaxResult list(@RequestParam(defaultValue = "1") Integer pageNum,
                           @RequestParam(defaultValue = "10") Integer pageSize,
@@ -39,13 +44,14 @@ public class SysLoginLogController {
         sysLoginLog.setUsername(username);
         sysLoginLog.setStatus(status);
 
-        List<SysLoginLogVO> list = sysLoginLogService.selectLoginLogList(sysLoginLog, pageNum, pageSize);
-        return AjaxResult.success(list);
+        PageResult<SysLoginLogVO> page = sysLoginLogService.selectLoginLogList(sysLoginLog, pageNum, pageSize);
+        return AjaxResult.success(page);
     }
 
     /**
      * 获取登录日志详细信息
      */
+    @ApiOperation("获取登录日志详细信息")
     @GetMapping("/{id}")
     public AjaxResult getInfo(@PathVariable Long id) {
         return AjaxResult.success(sysLoginLogService.selectSysLoginLogById(id));
@@ -54,6 +60,7 @@ public class SysLoginLogController {
     /**
      * 删除登录日志
      */
+    @ApiOperation("删除登录日志")
     @DeleteMapping("/{ids}")
     public AjaxResult remove(@PathVariable Long[] ids) {
         return toAjax(sysLoginLogService.deleteSysLoginLogByIds(ids));
@@ -62,6 +69,7 @@ public class SysLoginLogController {
     /**
      * 获取登录日志统计信息
      */
+    @ApiOperation("获取登录日志统计信息")
     @GetMapping("/statistics")
     public AjaxResult getStatistics() {
         Map<String, Object> stats = sysLoginLogService.getLoginLogStatistics();
@@ -71,6 +79,7 @@ public class SysLoginLogController {
     /**
      * 获取今日登录统计
      */
+    @ApiOperation("获取今日登录统计")
     @GetMapping("/today")
     public AjaxResult getTodayStatistics() {
         Map<String, Object> stats = sysLoginLogService.getTodayLoginStatistics();
@@ -80,6 +89,7 @@ public class SysLoginLogController {
     /**
      * 清理登录日志
      */
+    @ApiOperation("清理登录日志")
     @DeleteMapping("/clean")
     public AjaxResult clean(@RequestParam String beforeTime) {
         LocalDateTime cleanTime = LocalDateTime.parse(beforeTime);
@@ -90,6 +100,7 @@ public class SysLoginLogController {
     /**
      * 查询指定用户的登录日志
      */
+    @ApiOperation("查询指定用户的登录日志")
     @GetMapping("/user/{userId}")
     public AjaxResult getUserLoginLogs(@PathVariable Long userId,
                                      @RequestParam(defaultValue = "1") Integer pageNum,
@@ -101,6 +112,7 @@ public class SysLoginLogController {
     /**
      * 查询失败登录日志
      */
+    @ApiOperation("查询失败登录日志")
     @GetMapping("/failed")
     public AjaxResult getFailedLoginLogs(@RequestParam(defaultValue = "1") Integer pageNum,
                                         @RequestParam(defaultValue = "10") Integer pageSize) {
@@ -111,6 +123,7 @@ public class SysLoginLogController {
     /**
      * 查询异常登录日志
      */
+    @ApiOperation("查询异常登录日志")
     @GetMapping("/abnormal")
     public AjaxResult getAbnormalLoginLogs(@RequestParam(defaultValue = "1") Integer pageNum,
                                          @RequestParam(defaultValue = "10") Integer pageSize) {
@@ -121,6 +134,7 @@ public class SysLoginLogController {
     /**
      * 记录登录日志（系统内部使用）
      */
+    @ApiOperation("记录登录日志")
     @PostMapping("/record")
     public AjaxResult recordLoginLog(@RequestBody Map<String, Object> params) {
         String username = (String) params.get("username");

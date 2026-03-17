@@ -1,6 +1,7 @@
 package com.hyu.property.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.hyu.common.core.domain.PageResult;
 import com.hyu.property.domain.SysLoginLog;
 import com.hyu.property.domain.vo.SysLoginLogVO;
 
@@ -32,7 +33,7 @@ public interface ISysLoginLogService extends IService<SysLoginLog> {
      * @param pageSize 每页条数
      * @return 登录日志集合
      */
-    public List<SysLoginLogVO> selectLoginLogList(SysLoginLog sysLoginLog, Integer pageNum, Integer pageSize);
+    public PageResult<SysLoginLogVO> selectLoginLogList(SysLoginLog sysLoginLog, Integer pageNum, Integer pageSize);
 
     /**
      * 删除登录日志

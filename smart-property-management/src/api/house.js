@@ -78,6 +78,24 @@ export function updateHouseStatus(data) {
 }
 
 
+// 获取可分配房产列表
+export function getAvailableHouses(userId) {
+  return request({
+    url: '/property/house/available',
+    method: 'get',
+    params: { userId }
+  })
+}
+
+// 分配房产给业主
+export function assignHouses(data) {
+  return request({
+    url: '/property/house/assign',
+    method: 'post',
+    data
+  })
+}
+
 // 根据用户名分配房产
 export function assignHouseByUsername(data) {
   return request({

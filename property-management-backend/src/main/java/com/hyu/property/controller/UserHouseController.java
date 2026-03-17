@@ -6,6 +6,8 @@ import com.hyu.common.core.domain.PageResult;
 import com.hyu.common.utils.SecurityUtils;
 import com.hyu.property.domain.UserHouse;
 import com.hyu.property.service.IUserHouseService;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -25,6 +27,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/property/user-house")
 @Validated
+@Api(tags = "用户房产关联管理")
 public class UserHouseController {
 
     @Autowired
@@ -68,6 +71,7 @@ public class UserHouseController {
     /**
      * 根据用户ID查询房产列表
      */
+    @ApiOperation("根据用户ID查询房产列表")
     @GetMapping("/user/{userId}")
     @PreAuthorize("@ss.hasPermi('property:owner:list')")
     public AjaxResult getHousesByUserId(@NotNull(message = "用户ID不能为空") @PathVariable Long userId) {
@@ -79,6 +83,7 @@ public class UserHouseController {
     /**
      * 根据房产ID查询用户列表
      */
+    @ApiOperation("根据房产ID查询用户列表")
     @GetMapping("/house/{houseId}")
     @PreAuthorize("@ss.hasPermi('property:house:list')")
     public AjaxResult getUsersByHouseId(@NotNull(message = "房产ID不能为空") @PathVariable Long houseId) {
@@ -90,6 +95,7 @@ public class UserHouseController {
     /**
      * 分配房产给用户
      */
+    @ApiOperation("分配房产给用户")
     @PostMapping("/assign")
     @PreAuthorize("@ss.hasPermi('property:owner:edit')")
     public AjaxResult assignHouse(@RequestParam Long userId,
@@ -108,6 +114,7 @@ public class UserHouseController {
     /**
      * 取消用户房产关联
      */
+    @ApiOperation("取消用户房产关联")
     @DeleteMapping("/unassign")
     @PreAuthorize("@ss.hasPermi('property:owner:edit')")
     public AjaxResult unassignHouse(@RequestParam Long userId, @RequestParam Long houseId) {
@@ -124,6 +131,7 @@ public class UserHouseController {
     /**
      * 新增用户房产关联
      */
+    @ApiOperation("新增用户房产关联")
     @PostMapping
     @PreAuthorize("@ss.hasPermi('property:owner:add')")
     public AjaxResult add(@Valid @RequestBody UserHouse userHouse) {
@@ -135,6 +143,7 @@ public class UserHouseController {
     /**
      * 修改保存用户房产关联
      */
+    @ApiOperation("修改用户房产关联")
     @PutMapping
     @PreAuthorize("@ss.hasPermi('property:owner:edit')")
     public AjaxResult edit(@Valid @RequestBody UserHouse userHouse) {
@@ -146,6 +155,7 @@ public class UserHouseController {
     /**
      * 删除用户房产关联
      */
+    @ApiOperation("删除用户房产关联")
     @DeleteMapping("/{ids}")
     @PreAuthorize("@ss.hasPermi('property:owner:delete')")
     public AjaxResult remove(@NotNull(message = "关联ID不能为空") @PathVariable Long[] ids) {

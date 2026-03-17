@@ -10,6 +10,8 @@ import com.hyu.property.domain.Complaint;
 import com.hyu.property.service.IComplaintService;
 import com.hyu.property.service.IUserHouseService;
 import com.hyu.property.domain.UserHouse;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,6 +46,7 @@ import java.util.*;
 @RestController
 @RequestMapping("/api/v1/property/complaint")
 @Validated
+@Api(tags = "投诉管理")
 public class ComplaintController {
 
     @Autowired
@@ -58,6 +61,7 @@ public class ComplaintController {
     /**
      * 分页查询投诉列表
      */
+    @ApiOperation("分页查询投诉列表")
     @GetMapping("/list")
     @PreAuthorize("@ss.hasPermi('property:complaint:list')")
     public AjaxResult list(@RequestParam(defaultValue = "1") Integer pageNum,
@@ -114,6 +118,7 @@ public class ComplaintController {
     /**
      * 查询投诉详情
      */
+    @ApiOperation("查询投诉详情")
     @GetMapping("/{id}")
     @PreAuthorize("@ss.hasPermi('property:complaint:query')")
     public AjaxResult getInfo(@NotNull(message = "投诉ID不能为空") @PathVariable Long id) {
@@ -125,6 +130,7 @@ public class ComplaintController {
     /**
      * 新增投诉
      */
+    @ApiOperation("新增投诉")
     @PostMapping
     @PreAuthorize("@ss.hasPermi('property:complaint:add')")
     public AjaxResult add(@Valid @RequestBody Complaint complaint) {
@@ -147,6 +153,7 @@ public class ComplaintController {
     /**
      * 修改投诉
      */
+    @ApiOperation("修改投诉")
     @PutMapping
     @PreAuthorize("@ss.hasPermi('property:complaint:edit')")
     public AjaxResult edit(@Valid @RequestBody Complaint complaint) {
@@ -166,6 +173,7 @@ public class ComplaintController {
     /**
      * 删除投诉
      */
+    @ApiOperation("删除投诉")
     @DeleteMapping("/{ids}")
     @PreAuthorize("@ss.hasPermi('property:complaint:remove')")
     public AjaxResult remove(@NotNull(message = "投诉ID不能为空") @PathVariable Long[] ids) {
@@ -176,6 +184,7 @@ public class ComplaintController {
     /**
      * 派单处理
      */
+    @ApiOperation("派单处理")
     @PutMapping("/assign/{id}")
     @PreAuthorize("@ss.hasPermi('property:complaint:assign')")
     public AjaxResult assign(@NotNull(message = "投诉ID不能为空") @PathVariable Long id,
@@ -191,6 +200,7 @@ public class ComplaintController {
     /**
      * 处理投诉
      */
+    @ApiOperation("处理投诉")
     @PutMapping("/handle/{id}")
     @PreAuthorize("@ss.hasPermi('property:complaint:handle')")
     public AjaxResult handle(@NotNull(message = "投诉ID不能为空") @PathVariable Long id,
@@ -203,6 +213,7 @@ public class ComplaintController {
     /**
      * 评价投诉
      */
+    @ApiOperation("评价投诉")
     @PutMapping("/rate/{id}")
     @PreAuthorize("@ss.hasPermi('property:complaint:rate')")
     public AjaxResult rate(@NotNull(message = "投诉ID不能为空") @PathVariable Long id,
@@ -215,6 +226,7 @@ public class ComplaintController {
     /**
      * 关闭投诉
      */
+    @ApiOperation("关闭投诉")
     @PutMapping("/close/{id}")
     @PreAuthorize("@ss.hasPermi('property:complaint:close')")
     public AjaxResult close(@NotNull(message = "投诉ID不能为空") @PathVariable Long id) {
@@ -226,6 +238,7 @@ public class ComplaintController {
     /**
      * 获取我的投诉列表
      */
+    @ApiOperation("获取我的投诉列表")
     @GetMapping("/my")
     @PreAuthorize("@ss.hasPermi('property:complaint:my')")
     public AjaxResult getMyComplaints(@RequestParam(defaultValue = "1") Integer pageNum,
@@ -261,6 +274,7 @@ public class ComplaintController {
     /**
      * 上传投诉图片
      */
+    @ApiOperation("上传投诉图片")
     @PostMapping("/upload")
     @PreAuthorize("@ss.hasPermi('property:complaint:upload')")
     public AjaxResult upload(@RequestParam("file") MultipartFile file) throws IOException {
@@ -307,6 +321,7 @@ public class ComplaintController {
     /**
      * 获取投诉图片
      */
+    @ApiOperation("获取投诉图片")
     @GetMapping("/image/**")
     public ResponseEntity<Resource> getImage(@RequestParam String path) {
         try {
@@ -341,6 +356,7 @@ public class ComplaintController {
     /**
      * 获取投诉统计信息
      */
+    @ApiOperation("获取投诉统计信息")
     @GetMapping("/stats")
     @PreAuthorize("@ss.hasPermi('property:complaint:list')")
     public AjaxResult getStats(@RequestParam(required = false) Long userId) {
@@ -356,6 +372,7 @@ public class ComplaintController {
     /**
      * 获取可用的处理人列表（物业管理员）
      */
+    @ApiOperation("获取可用的投诉处理人列表")
     @GetMapping("/handlers")
     @PreAuthorize("@ss.hasPermi('property:complaint:assign')")
     public AjaxResult getAvailableHandlers() {

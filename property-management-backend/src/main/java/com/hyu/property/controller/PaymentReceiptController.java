@@ -2,6 +2,8 @@ package com.hyu.property.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.hyu.common.core.domain.AjaxResult;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import com.hyu.property.domain.PaymentReceipt;
 import com.hyu.property.service.IPaymentReceiptService;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +21,7 @@ import java.util.List;
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/property/payment-receipt")
+@Api(tags = "缴费收据管理")
 public class PaymentReceiptController {
 
     @Autowired
@@ -27,6 +30,7 @@ public class PaymentReceiptController {
     /**
      * 查询缴费收据列表
      */
+    @ApiOperation("分页查询缴费收据列表")
     @GetMapping("/page")
     @PreAuthorize("@ss.hasPermi('property:receipt:list')")
     public AjaxResult page(@RequestParam(defaultValue = "1") Integer page,
@@ -40,6 +44,7 @@ public class PaymentReceiptController {
     /**
      * 查询缴费收据列表（不分页）
      */
+    @ApiOperation("查询缴费收据列表")
     @GetMapping("/list")
     @PreAuthorize("@ss.hasPermi('property:receipt:list')")
     public AjaxResult list(PaymentReceipt receipt) {
@@ -50,6 +55,7 @@ public class PaymentReceiptController {
     /**
      * 获取缴费收据详细信息
      */
+    @ApiOperation("获取缴费收据详细信息")
     @GetMapping("/{receiptId}")
     @PreAuthorize("@ss.hasPermi('property:receipt:query')")
     public AjaxResult getInfo(@PathVariable Long receiptId) {
@@ -60,6 +66,7 @@ public class PaymentReceiptController {
     /**
      * 根据账单ID查询收据
      */
+    @ApiOperation("根据账单ID查询收据")
     @GetMapping("/bill/{billId}")
     @PreAuthorize("@ss.hasPermi('property:receipt:query')")
     public AjaxResult getByBillId(@PathVariable Long billId) {
@@ -70,6 +77,7 @@ public class PaymentReceiptController {
     /**
      * 业主端API - 获取我的缴费收据列表
      */
+    @ApiOperation("获取我的缴费收据列表")
     @GetMapping("/my/list")
     public AjaxResult getMyReceiptList(@RequestParam(defaultValue = "1") Integer page,
                                       @RequestParam(defaultValue = "10") Integer size) {

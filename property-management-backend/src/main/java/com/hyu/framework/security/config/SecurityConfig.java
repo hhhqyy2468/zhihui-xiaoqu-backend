@@ -110,10 +110,14 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                     "/api/v1/auth/captcha",
                     "/api/v1/auth/refresh",
                     "/doc.html",
+                    "/doc.html/**",
                     "/webjars/**",
                     "/swagger-resources/**",
                     "/v2/api-docs",
+                    "/v3/api-docs",
+                    "/v3/api-docs/**",
                     "/swagger-ui/**",
+                    "/swagger-ui.html",
                     "/images/**",
                     "/static/**"
                 ).permitAll()

@@ -12,6 +12,7 @@ import com.hyu.common.utils.JwtUtils;
 import com.hyu.common.utils.PasswordUtils;
 import com.hyu.common.utils.RedisUtils;
 import com.hyu.system.domain.SysUser;
+import com.hyu.property.service.ISysLoginLogService;
 import com.hyu.system.service.IAuthService;
 import com.hyu.system.service.ISysUserService;
 import lombok.extern.slf4j.Slf4j;
@@ -55,9 +56,14 @@ public class AuthServiceImpl implements IAuthService {
     @Autowired
     private HttpServletRequest request;
 
+    @Autowired
+    private ISysLoginLogService loginLogService;
+
     /**
      * Redis前缀
      */
+    private static final String LOGIN_SUCCESS = "登录成功";
+    private static final String LOGIN_FAIL = "登录失败";
     private static final String CAPTCHA_PREFIX = "captcha:";
     private static final String TOKEN_BLACKLIST_PREFIX = "token:blacklist:";
     private static final String REFRESH_TOKEN_PREFIX = "refresh_token:";
@@ -69,6 +75,11 @@ public class AuthServiceImpl implements IAuthService {
             validateCaptcha(loginBody.getCaptcha());
         }
 
+        String clientIp = getClientIP();
+        String userAgent = request.getHeader("User-Agent");
+        String browser = parseBrowser(userAgent);
+        String os = parseOs(userAgent);
+
         // 用户认证
         Authentication authentication;
         try {
@@ -79,9 +90,12 @@ public class AuthServiceImpl implements IAuthService {
                     )
             );
         } catch (BadCredentialsException e) {
+            // 记录失败登录日志
+            loginLogService.recordLoginLog(loginBody.getUsername(), null, 1, LOGIN_FAIL + ": 用户名或密码错误", clientIp, browser, os);
             throw new BusinessException("用户名或密码错误", 1001);
         } catch (Exception e) {
             log.error("用户认证失败", e);
+            loginLogService.recordLoginLog(loginBody.getUsername(), null, 1, LOGIN_FAIL + ": " + e.getMessage(), clientIp, browser, os);
             throw new BusinessException("认证失败", 1001);
         }
 
@@ -90,6 +104,7 @@ public class AuthServiceImpl implements IAuthService {
         SysUser user = userService.getById(loginUser.getUserId());
 
         if (user.getStatus() == 0) {
+            loginLogService.recordLoginLog(loginBody.getUsername(), user.getUserId(), 1, LOGIN_FAIL + ": 账号已被禁用", clientIp, browser, os);
             throw new BusinessException("账号已被禁用", 1002);
         }
 
@@ -108,10 +123,8 @@ public class AuthServiceImpl implements IAuthService {
         // 存储刷新token到Redis
         redisUtils.set(REFRESH_TOKEN_PREFIX + user.getUserId(), refreshToken, 7 * 24 * 60 * 60);
 
-        // 更新最后登录信息 - 数据库中不存在这些字段，暂时注释掉
-        // user.setLastLoginTime(LocalDateTime.now());
-        // user.setLastLoginIp(getClientIP());
-        // userService.updateById(user);
+        // 记录成功登录日志
+        loginLogService.recordLoginLog(user.getUsername(), user.getUserId(), 0, LOGIN_SUCCESS, clientIp, browser, os);
 
         // 构建返回结果
         Map<String, Object> result = new HashMap<>();
@@ -643,6 +656,26 @@ public class AuthServiceImpl implements IAuthService {
             ip = request.getRemoteAddr();
         }
         return ip;
+    }
+
+    private String parseBrowser(String userAgent) {
+        if (userAgent == null) return "Unknown";
+        if (userAgent.contains("Edge")) return "Edge";
+        if (userAgent.contains("Chrome")) return "Chrome";
+        if (userAgent.contains("Firefox")) return "Firefox";
+        if (userAgent.contains("Safari")) return "Safari";
+        if (userAgent.contains("MSIE") || userAgent.contains("Trident")) return "IE";
+        return "Unknown";
+    }
+
+    private String parseOs(String userAgent) {
+        if (userAgent == null) return "Unknown";
+        if (userAgent.contains("Windows")) return "Windows";
+        if (userAgent.contains("Mac OS")) return "Mac OS";
+        if (userAgent.contains("Linux")) return "Linux";
+        if (userAgent.contains("Android")) return "Android";
+        if (userAgent.contains("iPhone") || userAgent.contains("iPad")) return "iOS";
+        return "Unknown";
     }
 
     /**

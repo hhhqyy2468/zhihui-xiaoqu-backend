@@ -1,6 +1,9 @@
 package com.hyu.property.controller;
 
 import com.hyu.common.core.domain.AjaxResult;
+import com.hyu.common.core.domain.PageResult;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import com.hyu.property.domain.SysOperLog;
 import com.hyu.property.domain.vo.SysOperLogVO;
 import com.hyu.property.service.ISysOperLogService;
@@ -21,6 +24,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/system/log/operation")
 @RequiredArgsConstructor
+@Api(tags = "操作日志")
 public class SysOperLogController {
 
     private final ISysOperLogService sysOperLogService;
@@ -28,6 +32,7 @@ public class SysOperLogController {
     /**
      * 分页查询操作日志
      */
+    @ApiOperation("分页查询操作日志")
     @GetMapping("/list")
     public AjaxResult list(@RequestParam(defaultValue = "1") Integer pageNum,
                           @RequestParam(defaultValue = "10") Integer pageSize,
@@ -40,13 +45,14 @@ public class SysOperLogController {
         sysOperLog.setOperName(username);
         sysOperLog.setStatus(status);
 
-        List<SysOperLogVO> list = sysOperLogService.selectOperLogList(sysOperLog, pageNum, pageSize);
-        return AjaxResult.success(list);
+        PageResult<SysOperLogVO> page = sysOperLogService.selectOperLogList(sysOperLog, pageNum, pageSize);
+        return AjaxResult.success(page);
     }
 
     /**
      * 获取操作日志详细信息
      */
+    @ApiOperation("获取操作日志详细信息")
     @GetMapping("/{operId}")
     public AjaxResult getInfo(@PathVariable Long operId) {
         return AjaxResult.success(sysOperLogService.selectSysOperLogById(operId));
@@ -55,6 +61,7 @@ public class SysOperLogController {
     /**
      * 删除操作日志
      */
+    @ApiOperation("删除操作日志")
     @DeleteMapping("/{operIds}")
     public AjaxResult remove(@PathVariable Long[] operIds) {
         return toAjax(sysOperLogService.deleteSysOperLogByIds(operIds));
@@ -63,6 +70,7 @@ public class SysOperLogController {
     /**
      * 获取操作日志统计信息
      */
+    @ApiOperation("获取操作日志统计信息")
     @GetMapping("/statistics")
     public AjaxResult getStatistics() {
         Map<String, Object> stats = sysOperLogService.getOperLogStatistics();
@@ -72,6 +80,7 @@ public class SysOperLogController {
     /**
      * 清理操作日志
      */
+    @ApiOperation("清理操作日志")
     @DeleteMapping("/clean")
     public AjaxResult clean(@RequestParam String beforeTime) {
         LocalDateTime cleanTime = LocalDateTime.parse(beforeTime);
@@ -82,6 +91,7 @@ public class SysOperLogController {
     /**
      * 查询指定用户的操作日志
      */
+    @ApiOperation("查询指定用户的操作日志")
     @GetMapping("/user/{userId}")
     public AjaxResult getUserOperLogs(@PathVariable Long userId,
                                     @RequestParam(defaultValue = "1") Integer pageNum,
@@ -93,6 +103,7 @@ public class SysOperLogController {
     /**
      * 查询异常操作日志
      */
+    @ApiOperation("查询异常操作日志")
     @GetMapping("/abnormal")
     public AjaxResult getAbnormalOperLogs(@RequestParam(defaultValue = "1") Integer pageNum,
                                         @RequestParam(defaultValue = "10") Integer pageSize) {
@@ -103,6 +114,7 @@ public class SysOperLogController {
     /**
      * 记录操作日志（系统内部使用）
      */
+    @ApiOperation("记录操作日志")
     @PostMapping("/record")
     public AjaxResult recordOperLog(@RequestBody Map<String, Object> params) {
         String title = (String) params.get("title");

@@ -353,7 +353,7 @@ public class RepairOrderServiceImpl extends ServiceImpl<RepairOrderMapper, Repai
         repairOrder.setAcceptanceRating(Integer.valueOf(params.get("acceptanceRating").toString()));
         repairOrder.setAcceptanceComment((String) params.get("acceptanceComment"));
         repairOrder.setAcceptanceTime(LocalDateTime.now());
-        repairOrder.setOrderStatus(4); // 状态改为已完成
+        repairOrder.setOrderStatus(5); // 状态改为已完成
         repairOrder.setUpdateBy(SecurityUtils.getUsername());
 
         // 验收通过且维修费用大于0时，自动生成账单
@@ -445,6 +445,36 @@ public class RepairOrderServiceImpl extends ServiceImpl<RepairOrderMapper, Repai
             return updateById(repairOrder);
         } catch (Exception e) {
             log.error("归档维修工单失败: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * 重新派工（验收不合格后回退到待派工或进行中）
+     */
+    @Override
+    public boolean reassignOrder(Long id, Map<String, Object> params) {
+        RepairOrder repairOrder = getById(id);
+        if (repairOrder == null) {
+            log.warn("维修工单不存在，无法重新派工: {}", id);
+            return false;
+        }
+        try {
+            String remark = params != null && params.get("remark") != null ? params.get("remark").toString() : "";
+            boolean sameWorker = params != null && Boolean.TRUE.equals(params.get("sameWorker"));
+            if (sameWorker) {
+                // 同一维修人员返工，状态回到进行中
+                repairOrder.setOrderStatus(3);
+            } else {
+                // 重新派工，状态回到待派工
+                repairOrder.setWorkerId(null);
+                repairOrder.setWorkerName(null);
+                repairOrder.setOrderStatus(1);
+            }
+            repairOrder.setUpdateBy(SecurityUtils.getUsername());
+            return updateById(repairOrder);
+        } catch (Exception e) {
+            log.error("重新派工失败: {}", e.getMessage(), e);
             return false;
         }
     }

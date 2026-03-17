@@ -9,6 +9,8 @@ import com.hyu.system.domain.SysRole;
 import com.hyu.system.service.ISysRoleService;
 import com.hyu.system.service.ISysMenuService;
 import com.hyu.system.domain.SysMenu;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,6 +30,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/system/role")
 @Validated
+@Api(tags = "角色管理")
 public class SysRoleController {
 
     @Autowired
@@ -39,6 +42,7 @@ public class SysRoleController {
     /**
      * 分页查询角色列表
      */
+    @ApiOperation("分页查询角色列表")
     @GetMapping("/list")
     @PreAuthorize("@ss.hasPermi('system:role:view')")
     public AjaxResult list(@RequestParam(defaultValue = "1") Integer pageNum,
@@ -59,6 +63,7 @@ public class SysRoleController {
     /**
      * 获取角色详细信息
      */
+    @ApiOperation("获取角色详细信息")
     @GetMapping(value = "/{roleId}")
     @PreAuthorize("@ss.hasPermi('system:role:view')")
     public AjaxResult getInfo(@NotNull(message = "角色ID不能为空") @PathVariable Long roleId) {
@@ -69,6 +74,7 @@ public class SysRoleController {
     /**
      * 新增角色
      */
+    @ApiOperation("新增角色")
     @PostMapping
     @PreAuthorize("@ss.hasPermi('system:role:add')")
     public AjaxResult add(@Valid @RequestBody SysRole role) {
@@ -86,6 +92,7 @@ public class SysRoleController {
     /**
      * 修改保存角色
      */
+    @ApiOperation("修改角色")
     @PutMapping
     @PreAuthorize("@ss.hasPermi('system:role:edit')")
     public AjaxResult edit(@Valid @RequestBody SysRole role) {
@@ -107,6 +114,7 @@ public class SysRoleController {
     /**
      * 修改保存数据权限
      */
+    @ApiOperation("修改角色数据权限")
     @PutMapping("/dataScope")
     @PreAuthorize("@ss.hasPermi('system:role:edit')")
     public AjaxResult dataScope(@RequestBody SysRole role) {
@@ -119,6 +127,7 @@ public class SysRoleController {
     /**
      * 状态修改
      */
+    @ApiOperation("修改角色状态")
     @PutMapping("/changeStatus")
     @PreAuthorize("@ss.hasPermi('system:role:edit')")
     public AjaxResult changeStatus(@RequestBody SysRole role) {
@@ -131,6 +140,7 @@ public class SysRoleController {
     /**
      * 删除角色
      */
+    @ApiOperation("删除角色")
     @DeleteMapping("/{roleIds}")
     @PreAuthorize("@ss.hasPermi('system:role:delete')")
     public AjaxResult remove(@NotNull(message = "角色ID不能为空") @PathVariable Long[] roleIds) {
@@ -141,6 +151,7 @@ public class SysRoleController {
     /**
      * 获取角色选择框列表
      */
+    @ApiOperation("获取角色选择框列表")
     @GetMapping("/optionselect")
     public AjaxResult optionselect() {
         log.info("获取角色选择框列表");
@@ -150,6 +161,7 @@ public class SysRoleController {
     /**
      * 查询已分配用户角色列表
      */
+    @ApiOperation("查询已分配用户角色列表")
     @GetMapping("/authUser/allocatedList")
     @PreAuthorize("@ss.hasPermi('system:role:list')")
     public AjaxResult allocatedList(@RequestParam(defaultValue = "1") Integer pageNum,
@@ -164,6 +176,7 @@ public class SysRoleController {
     /**
      * 查询未分配用户角色列表
      */
+    @ApiOperation("查询未分配用户角色列表")
     @GetMapping("/authUser/unallocatedList")
     @PreAuthorize("@ss.hasPermi('system:role:list')")
     public AjaxResult unallocatedList(@RequestParam(defaultValue = "1") Integer pageNum,
@@ -178,6 +191,7 @@ public class SysRoleController {
     /**
      * 取消授权用户
      */
+    @ApiOperation("取消授权用户")
     @PutMapping("/authUser/cancel")
     @PreAuthorize("@ss.hasPermi('system:role:edit')")
     public AjaxResult cancelAuthUser(@RequestBody SysRole userRole) {
@@ -188,6 +202,7 @@ public class SysRoleController {
     /**
      * 批量取消授权用户
      */
+    @ApiOperation("批量取消授权用户")
     @PutMapping("/authUser/cancelAll")
     @PreAuthorize("@ss.hasPermi('system:role:edit')")
     public AjaxResult cancelAuthUserAll(Long roleId, Long[] userIds) {
@@ -198,6 +213,7 @@ public class SysRoleController {
     /**
      * 批量选择用户授权
      */
+    @ApiOperation("批量选择用户授权")
     @PutMapping("/authUser/selectAll")
     @PreAuthorize("@ss.hasPermi('system:role:edit')")
     public AjaxResult selectAuthUserAll(Long roleId, Long[] userIds) {
@@ -209,6 +225,7 @@ public class SysRoleController {
     /**
      * 获取角色菜单列表
      */
+    @ApiOperation("获取角色菜单列表")
     @GetMapping("/{roleId}/menus")
     @PreAuthorize("@ss.hasPermi('system:role:query')")
     public AjaxResult getRoleMenus(@NotNull(message = "角色ID不能为空") @PathVariable Long roleId) {
@@ -227,6 +244,7 @@ public class SysRoleController {
     /**
      * 分配角色菜单权限
      */
+    @ApiOperation("分配角色菜单权限")
     @PostMapping("/{roleId}/menus")
     @PreAuthorize("@ss.hasPermi('system:role:edit')")
     public AjaxResult assignRoleMenus(@NotNull(message = "角色ID不能为空") @PathVariable Long roleId,

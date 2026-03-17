@@ -1559,14 +1559,30 @@ const handleAssignSubmit = async () => {
   }
 }
 
-// 处理工单
+// 处理工单（打开维修记录填写对话框）
 const handleProcess = (row) => {
-  ElMessage.info(`处理工单 ${row.orderNo}`)
+  Object.assign(repairForm, {
+    orderId: row.id,
+    orderNo: row.orderNo,
+    faultReason: '',
+    partsUsed: '',
+    beforeImages: [],
+    afterImages: []
+  })
+  repairDialogVisible.value = true
 }
 
-// 验收工单
+// 验收工单（打开验收对话框）
 const handleAccept = (row) => {
-  ElMessage.info(`验收工单 ${row.orderNo}`)
+  Object.assign(inspectForm, {
+    orderId: row.id,
+    orderNo: row.orderNo,
+    repairContent: row.repairContent || '',
+    result: 1,
+    rating: 5,
+    comment: ''
+  })
+  inspectDialogVisible.value = true
 }
 
 
@@ -1664,18 +1680,23 @@ const handleViewInspectResult = (row) => {
 
 
 // 重新派工
-const handleReassign = (row) => {
-  ElMessageBox.confirm(
-    `验收不合格，确定要重新派工吗？\n不合格原因：${row.comment || '无'}`,
-    '重新派工',
-    { type: 'warning' }
-  ).then(() => {
-    // 状态回退到"进行中"
-    ElMessage.success('已重新派工，状态回退到进行中')
-    loadOrders()
-  }).catch(() => {
-    // 用户取消
-  })
+const handleReassign = async (row) => {
+  try {
+    await ElMessageBox.confirm(
+      `验收不合格，确定要重新派工吗？\n不合格原因：${row.comment || '无'}`,
+      '重新派工',
+      { type: 'warning' }
+    )
+    const res = await reassignRepairOrder(row.id, { remark: row.comment || '' })
+    if (res.code === 200) {
+      ElMessage.success('已重新派工')
+      loadOrders()
+    } else {
+      ElMessage.error(res.msg || '重新派工失败')
+    }
+  } catch (e) {
+    if (e !== 'cancel') console.error('重新派工失败:', e)
+  }
 }
 
 // 查看维修统计
@@ -1795,37 +1816,43 @@ const handleFinalProcess = (row) => {
     `确定要进行处理吗？`,
     '验收处理',
     { type: 'warning' }
-  ).then(() => {
+  ).then(async () => {
     if (row.inspectResult === 1) {
-      // 合格：更新状态、归档、统计工作量
-      ElMessage.success('验收合格，已更新状态为"已完成"并归档')
-
-      // 模拟更新状态和归档
-      row.orderStatus = 4 // 已完成
-      handleArchive(row) // 执行归档
-
+      // 合格：归档
+      const res = await archiveRepairOrder(row.id)
+      if (res && res.code === 200) {
+        ElMessage.success('验收合格，已归档')
+        loadOrders()
+      } else {
+        ElMessage.error((res && res.msg) || '归档失败')
+      }
     } else {
-      // 不合格：重新派工，状态回退到"进行中"
-      ElMessageBox.confirm(
-        `验收不合格，原因：${row.comment || '无'}\n\n选择处理方式：`,
-        '重新派工',
-        {
-          distinguishCancelAndClose: true,
-          confirmButtonText: '重新派工（其他人员）',
-          cancelButtonText: '返工（同一人员）',
-          type: 'warning'
+      // 不合格：重新派工
+      try {
+        await ElMessageBox.confirm(
+          `验收不合格，原因：${row.comment || '无'}\n\n选择处理方式：`,
+          '重新派工',
+          {
+            distinguishCancelAndClose: true,
+            confirmButtonText: '重新派工（其他人员）',
+            cancelButtonText: '返工（同一人员）',
+            type: 'warning'
+          }
+        )
+        const res = await reassignRepairOrder(row.id, { remark: row.comment || '' })
+        if (res && res.code === 200) {
+          ElMessage.success('已重新派工')
+          loadOrders()
         }
-      ).then(() => {
-        // 重新派工给其他人员
-        ElMessage.success('已重新派工，状态回退到"进行中"')
-        row.orderStatus = 2 // 进行中
-      }).catch((action) => {
+      } catch (action) {
         if (action === 'cancel') {
-          // 返工给同一人员
-          ElMessage.success('已指派同一人员返工，状态回退到"进行中"')
-          row.orderStatus = 2 // 进行中
+          const res = await reassignRepairOrder(row.id, { remark: row.comment || '', sameWorker: true })
+          if (res && res.code === 200) {
+            ElMessage.success('已指派同一人员返工')
+            loadOrders()
+          }
         }
-      })
+      }
     }
   }).catch(() => {
     // 用户取消

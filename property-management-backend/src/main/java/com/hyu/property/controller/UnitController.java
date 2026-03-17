@@ -6,6 +6,8 @@ import com.hyu.common.core.domain.PageResult;
 import com.hyu.common.utils.SecurityUtils;
 import com.hyu.property.domain.Unit;
 import com.hyu.property.service.IUnitService;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -24,6 +26,7 @@ import javax.validation.constraints.NotNull;
 @RestController
 @RequestMapping("/api/v1/property/unit")
 @Validated
+@Api(tags = "单元管理")
 public class UnitController {
 
     @Autowired
@@ -32,6 +35,7 @@ public class UnitController {
     /**
      * 分页查询单元列表
      */
+    @ApiOperation("分页查询单元列表")
     @GetMapping("/list")
     @PreAuthorize("@ss.hasPermi('property:unit:list')")
     public AjaxResult list(@RequestParam(defaultValue = "1") Integer pageNum,
@@ -55,6 +59,7 @@ public class UnitController {
     /**
      * 获取单元详细信息
      */
+    @ApiOperation("获取单元详细信息")
     @GetMapping(value = "/{id}")
     @PreAuthorize("@ss.hasPermi('property:unit:list')")
     public AjaxResult getInfo(@NotNull(message = "单元ID不能为空") @PathVariable Long id) {
@@ -65,6 +70,7 @@ public class UnitController {
     /**
      * 新增单元
      */
+    @ApiOperation("新增单元")
     @PostMapping
     @PreAuthorize("@ss.hasPermi('property:unit:add')")
     public AjaxResult add(@Valid @RequestBody Unit unit) {
@@ -76,6 +82,7 @@ public class UnitController {
     /**
      * 修改保存单元
      */
+    @ApiOperation("修改单元")
     @PutMapping
     @PreAuthorize("@ss.hasPermi('property:unit:edit')")
     public AjaxResult edit(@Valid @RequestBody Unit unit) {
@@ -87,6 +94,7 @@ public class UnitController {
     /**
      * 删除单元
      */
+    @ApiOperation("删除单元")
     @DeleteMapping("/{ids}")
     @PreAuthorize("@ss.hasPermi('property:unit:delete')")
     public AjaxResult remove(@NotNull(message = "单元ID不能为空") @PathVariable Long[] ids) {
@@ -97,6 +105,7 @@ public class UnitController {
     /**
      * 根据楼栋ID获取单元列表
      */
+    @ApiOperation("根据楼栋ID获取单元列表")
     @GetMapping("/by-building/{buildingId}")
     @PreAuthorize("@ss.hasPermi('property:unit:list')")
     public AjaxResult getUnitsByBuildingId(@NotNull(message = "楼栋ID不能为空") @PathVariable Long buildingId) {
@@ -107,6 +116,7 @@ public class UnitController {
     /**
      * 获取单元下的房产列表
      */
+    @ApiOperation("获取单元下的房产列表")
     @GetMapping("/{id}/houses")
     @PreAuthorize("@ss.hasPermi('property:unit:list')")
     public AjaxResult getUnitHouses(@NotNull(message = "单元ID不能为空") @PathVariable Long id) {

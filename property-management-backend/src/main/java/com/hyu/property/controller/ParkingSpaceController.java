@@ -5,6 +5,8 @@ import com.hyu.common.core.domain.AjaxResult;
 import com.hyu.common.utils.SecurityUtils;
 import com.hyu.property.domain.ParkingSpace;
 import com.hyu.property.service.IParkingSpaceService;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -25,6 +27,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/parking/space")
 @Validated
+@Api(tags = "停车位管理")
 public class ParkingSpaceController {
 
     @Autowired
@@ -33,6 +36,7 @@ public class ParkingSpaceController {
     /**
      * 分页查询车位列表
      */
+    @ApiOperation("分页查询车位列表")
     @GetMapping("/list")
     @PreAuthorize("@ss.hasPermi('parking:space:list')")
     public AjaxResult list(@RequestParam(defaultValue = "1") Integer pageNum,
@@ -56,6 +60,7 @@ public class ParkingSpaceController {
     /**
      * 获取车位详细信息
      */
+    @ApiOperation("获取车位详细信息")
     @GetMapping(value = "/{id}")
     @PreAuthorize("@ss.hasPermi('parking:space:list')")
     public AjaxResult getInfo(@NotNull(message = "车位ID不能为空") @PathVariable Long id) {
@@ -71,6 +76,7 @@ public class ParkingSpaceController {
     /**
      * 新增车位
      */
+    @ApiOperation("新增车位")
     @PostMapping
     @PreAuthorize("@ss.hasPermi('parking:space:add')")
     public AjaxResult add(@Valid @RequestBody ParkingSpace parkingSpace) {
@@ -82,6 +88,7 @@ public class ParkingSpaceController {
     /**
      * 修改保存车位
      */
+    @ApiOperation("修改车位")
     @PutMapping
     @PreAuthorize("@ss.hasPermi('parking:space:edit')")
     public AjaxResult edit(@Valid @RequestBody ParkingSpace parkingSpace) {
@@ -93,6 +100,7 @@ public class ParkingSpaceController {
     /**
      * 删除车位
      */
+    @ApiOperation("删除车位")
     @DeleteMapping("/{ids}")
     @PreAuthorize("@ss.hasPermi('parking:space:delete')")
     public AjaxResult remove(@NotNull(message = "车位ID不能为空") @PathVariable Long[] ids) {
@@ -103,6 +111,7 @@ public class ParkingSpaceController {
     /**
      * 获取车位统计数据
      */
+    @ApiOperation("获取车位统计数据")
     @GetMapping("/statistics")
     @PreAuthorize("@ss.hasPermi('parking:space:list')")
     public AjaxResult getStatistics() {
@@ -114,6 +123,7 @@ public class ParkingSpaceController {
     /**
      * 查询可用车位（业主端使用，无需权限）
      */
+    @ApiOperation("查询可用车位")
     @GetMapping("/available")
     public AjaxResult getAvailableSpaces() {
         log.info("查询可用车位");

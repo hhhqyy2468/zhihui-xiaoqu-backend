@@ -5,6 +5,8 @@ import com.hyu.property.domain.dto.*;
 import com.hyu.property.domain.vo.*;
 import com.hyu.property.domain.RepairOrder;
 import com.hyu.property.service.IPortalService;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,6 +22,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/portal")
 @RequiredArgsConstructor
+@Api(tags = "业主门户")
 public class PortalController {
 
     private final IPortalService portalService;
@@ -33,6 +36,7 @@ public class PortalController {
     /**
      * 获取我的账单列表
      */
+    @ApiOperation("获取我的账单列表")
     @GetMapping("/bill/myList")
     public AjaxResult getMyBillList(@RequestParam(defaultValue = "1") Integer pageNum,
                                       @RequestParam(defaultValue = "10") Integer pageSize,
@@ -45,6 +49,7 @@ public class PortalController {
     /**
      * 批量缴费
      */
+    @ApiOperation("批量缴费")
     @PostMapping("/bill/payBatch")
     public AjaxResult payBillsBatch(@RequestBody BillPayBatchDTO payBatchDTO) {
         Map<String, Object> result = portalService.payBillsBatch(payBatchDTO);
@@ -56,6 +61,7 @@ public class PortalController {
     /**
      * 获取我的钱包信息
      */
+    @ApiOperation("获取我的钱包信息")
     @GetMapping("/wallet/myInfo")
     public AjaxResult getMyWalletInfo() {
         Object walletInfo = portalService.getMyWalletInfo();
@@ -65,6 +71,7 @@ public class PortalController {
     /**
      * 钱包充值
      */
+    @ApiOperation("钱包充值")
     @PostMapping("/wallet/recharge")
     public AjaxResult rechargeWallet(@RequestBody WalletRechargeDTO rechargeDTO) {
         Map<String, Object> result = portalService.rechargeWallet(rechargeDTO);
@@ -74,6 +81,7 @@ public class PortalController {
     /**
      * 设置支付密码
      */
+    @ApiOperation("设置支付密码")
     @PostMapping("/wallet/setPassword")
     public AjaxResult setPayPassword(@RequestBody WalletSetPasswordDTO setPasswordDTO) {
         Map<String, Object> result = portalService.setPayPassword(setPasswordDTO);
@@ -83,6 +91,7 @@ public class PortalController {
     /**
      * 修改支付密码
      */
+    @ApiOperation("修改支付密码")
     @PutMapping("/wallet/changePassword")
     public AjaxResult changePayPassword(@RequestBody WalletChangePasswordDTO changePasswordDTO) {
         Map<String, Object> result = portalService.changePayPassword(changePasswordDTO);
@@ -92,6 +101,7 @@ public class PortalController {
     /**
      * 获取我的交易明细
      */
+    @ApiOperation("获取我的交易明细")
     @GetMapping("/wallet/transactions")
     public AjaxResult getMyTransactionList(@RequestParam(defaultValue = "1") Integer pageNum,
                                              @RequestParam(defaultValue = "10") Integer pageSize,
@@ -105,6 +115,7 @@ public class PortalController {
     /**
      * 获取我的投诉列表
      */
+    @ApiOperation("获取我的投诉列表")
     @GetMapping("/complaint/myList")
     public AjaxResult getMyComplaintList(@RequestParam(defaultValue = "1") Integer pageNum,
                                            @RequestParam(defaultValue = "10") Integer pageSize,
@@ -116,6 +127,7 @@ public class PortalController {
     /**
      * 获取我的投诉详情
      */
+    @ApiOperation("获取我的投诉详情")
     @GetMapping("/complaint/detail/{complaintId}")
     public AjaxResult getMyComplaintDetail(@PathVariable Long complaintId) {
         Object detail = portalService.getMyComplaintDetail(complaintId);
@@ -127,6 +139,7 @@ public class PortalController {
     /**
      * 获取我的报修列表
      */
+    @ApiOperation("获取我的报修列表")
     @GetMapping("/repair/myList")
     public AjaxResult getMyRepairList(@RequestParam(defaultValue = "1") Integer pageNum,
                                       @RequestParam(defaultValue = "10") Integer pageSize,
@@ -138,6 +151,7 @@ public class PortalController {
     /**
      * 获取我的报修详情
      */
+    @ApiOperation("获取我的报修详情")
     @GetMapping("/repair/detail/{repairId}")
     public AjaxResult getMyRepairDetail(@PathVariable Long repairId) {
         RepairOrder detail = portalService.getMyRepairDetail(repairId);
@@ -149,6 +163,7 @@ public class PortalController {
     /**
      * 获取我的房产列表
      */
+    @ApiOperation("获取我的房产列表")
     @GetMapping("/house/myList")
     public AjaxResult getMyHouseList(@RequestParam(defaultValue = "1") Integer pageNum,
                                       @RequestParam(defaultValue = "10") Integer pageSize) {
@@ -161,6 +176,7 @@ public class PortalController {
     /**
      * 获取我的车位列表
      */
+    @ApiOperation("获取我的车位列表")
     @GetMapping("/parking/myList")
     public AjaxResult getMyParkingList(@RequestParam(defaultValue = "1") Integer pageNum,
                                         @RequestParam(defaultValue = "10") Integer pageSize,
@@ -172,6 +188,7 @@ public class PortalController {
     /**
      * 获取我的车位详情
      */
+    @ApiOperation("获取我的车位详情")
     @GetMapping("/parking/detail/{rentalId}")
     public AjaxResult getMyParkingDetail(@PathVariable Long rentalId) {
         Object detail = portalService.getMyParkingDetail(rentalId);
@@ -183,6 +200,7 @@ public class PortalController {
     /**
      * 获取业主门户首页统计数据
      */
+    @ApiOperation("获取业主门户首页统计数据")
     @GetMapping("/statistics")
     public AjaxResult getPortalStatistics() {
         Map<String, Object> stats = portalService.getPortalStatistics();
@@ -192,6 +210,7 @@ public class PortalController {
     /**
      * 获取待办事项统计
      */
+    @ApiOperation("获取待办事项统计")
     @GetMapping("/pending-count")
     public AjaxResult getPendingCount() {
         Map<String, Object> result = portalService.getPendingCount();

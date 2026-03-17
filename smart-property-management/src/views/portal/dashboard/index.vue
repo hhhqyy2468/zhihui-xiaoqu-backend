@@ -254,6 +254,9 @@ import {
   Star
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
+import { getWalletByUserId, virtualRecharge } from '@/api/wallet'
+import { getMyBillList } from '@/api/bill'
+import { getUserNotices } from '@/api/notice'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -388,27 +391,66 @@ const handleRecharge = () => {
 }
 
 // 提交充值
-const handleRechargeSubmit = () => {
-  ElMessage.success(`充值成功，充值金额：¥${rechargeForm.amount}`)
-  wallet.value.balance += rechargeForm.amount
-  rechargeDialogVisible.value = false
+const handleRechargeSubmit = async () => {
+  try {
+    const res = await virtualRecharge({ amount: rechargeForm.amount })
+    if (res && res.code === 200) {
+      ElMessage.success(`充值成功，充值金额：¥${rechargeForm.amount}`)
+      rechargeDialogVisible.value = false
+      loadWallet()
+    } else {
+      ElMessage.error((res && res.msg) || '充值失败')
+    }
+  } catch (e) {
+    console.error('充值失败:', e)
+  }
+}
+
+// 加载钱包信息
+const loadWallet = async () => {
+  try {
+    const res = await getWalletByUserId(userStore.userId)
+    if (res && res.code === 200 && res.data) {
+      wallet.value.balance = res.data.balance || 0
+    }
+  } catch (e) {
+    console.error('加载钱包失败:', e)
+  }
+}
+
+// 加载未缴账单数量
+const loadUnpaidCount = async () => {
+  try {
+    const res = await getMyBillList({ pageNum: 1, pageSize: 1, billStatus: 0 })
+    if (res && res.code === 200 && res.data) {
+      unpaidCount.value = res.data.total || 0
+    }
+  } catch (e) {
+    console.error('加载账单失败:', e)
+  }
+}
+
+// 加载未读公告数量
+const loadUnreadNoticeCount = async () => {
+  try {
+    const res = await getUserNotices({ pageNum: 1, pageSize: 1, isRead: 0 })
+    if (res && res.code === 200 && res.data) {
+      unreadNoticeCount.value = res.data.total || 0
+    }
+  } catch (e) {
+    console.error('加载公告失败:', e)
+  }
 }
 
 // 组件挂载
 onMounted(() => {
-  // 模拟获取用户信息
   userInfo.value = {
-    realName: userStore.realName || '张三',
-    houseInfo: '3号楼2单元501',
-    checkInDays: Math.floor(Math.random() * 1000) + 100,
-    creditPoints: Math.floor(Math.random() * 30) + 70
+    ...userInfo.value,
+    realName: userStore.realName || userStore.username || '用户'
   }
-
-  // 模拟获取未缴账单数量
-  unpaidCount.value = Math.floor(Math.random() * 5)
-
-  // 模拟获取未读公告数量
-  unreadNoticeCount.value = Math.floor(Math.random() * 5) + 1
+  loadWallet()
+  loadUnpaidCount()
+  loadUnreadNoticeCount()
 })
 </script>
 

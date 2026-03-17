@@ -3,6 +3,8 @@ package com.hyu.property.controller;
 import com.hyu.common.core.domain.AjaxResult;
 import com.hyu.property.domain.FeeType;
 import com.hyu.property.service.IFeeTypeService;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -20,6 +22,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/property/feetype")
 @Validated
+@Api(tags = "费用类型管理")
 public class FeeTypeController {
 
     @Autowired
@@ -28,6 +31,7 @@ public class FeeTypeController {
     /**
      * 分页查询费用类型列表
      */
+    @ApiOperation("分页查询费用类型列表")
     @GetMapping("/page")
     @PreAuthorize("@ss.hasPermi('property:feetype:list')")
     public AjaxResult list(@RequestParam(defaultValue = "1") Integer pageNum,
@@ -55,6 +59,7 @@ public class FeeTypeController {
     /**
      * 查询费用类型列表
      */
+    @ApiOperation("查询费用类型列表")
     @GetMapping("/list")
     @PreAuthorize("@ss.hasPermi('property:feetype:list')")
     public AjaxResult listAll(FeeType feeType) {
@@ -65,6 +70,7 @@ public class FeeTypeController {
     /**
      * 获取费用类型详细信息
      */
+    @ApiOperation("获取费用类型详细信息")
     @GetMapping("/{feeTypeId}")
     @PreAuthorize("@ss.hasPermi('property:feetype:query')")
     public AjaxResult getInfo(@PathVariable("feeTypeId") Long feeTypeId) {
@@ -75,6 +81,7 @@ public class FeeTypeController {
     /**
      * 新增费用类型
      */
+    @ApiOperation("新增费用类型")
     @PostMapping
     @PreAuthorize("@ss.hasPermi('property:feetype:add')")
     public AjaxResult add(@Validated @RequestBody FeeType feeType) {
@@ -88,6 +95,7 @@ public class FeeTypeController {
     /**
      * 修改费用类型
      */
+    @ApiOperation("修改费用类型")
     @PutMapping
     @PreAuthorize("@ss.hasPermi('property:feetype:edit')")
     public AjaxResult edit(@Validated @RequestBody FeeType feeType) {
@@ -101,6 +109,7 @@ public class FeeTypeController {
     /**
      * 删除费用类型
      */
+    @ApiOperation("删除费用类型")
     @DeleteMapping("/{feeTypeIds}")
     @PreAuthorize("@ss.hasPermi('property:feetype:remove')")
     public AjaxResult remove(@PathVariable Long[] feeTypeIds) {
@@ -111,6 +120,7 @@ public class FeeTypeController {
     /**
      * 获取所有费用类型（下拉框用）
      */
+    @ApiOperation("获取所有费用类型")
     @GetMapping("/all")
     public AjaxResult all() {
         List<FeeType> list = feeTypeService.selectFeeTypeAll();

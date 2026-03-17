@@ -363,7 +363,7 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus, Delete, Download } from '@element-plus/icons-vue'
-import { listHouses, getHouse, addHouse, updateHouse, deleteHouses, assignHouseByUsername, getBuildingOptions, getUnitOptions } from '@/api/house'
+import { listHouses, getHouse, addHouse, updateHouse, deleteHouses, assignHouseByUsername, getBuildingOptions, getUnitOptions, getHouseResidents } from '@/api/house'
 
 // 响应式数据
 const formRef = ref()
@@ -769,29 +769,11 @@ const handleBatchDelete = async () => {
 const handleViewResident = async (row) => {
   try {
     // 根据房产ID获取当前住户信息
-    const response = await fetch(`/api/v1/property/house/${row.id}/residents`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
-    })
+    const response = await getHouseResidents(row.id)
 
-    if (response.ok) {
-      const result = await response.json()
-      if (result.code === 200 && result.data) {
-        currentResident.value = result.data
-      } else {
-        // 如果没有住户数据，显示基本信息
-        currentResident.value = {
-          propertyOwner: row.propertyOwner || '暂无',
-          ownerPhone: '暂无',
-          checkInTime: null,
-          residentType: row.propertyOwnerId ? 1 : 0, // 有产权人就是业主，否则租户
-          residentStatus: row.houseStatus > 1 ? 1 : 0
-        }
-      }
+    if (response.code === 200 && response.data) {
+      currentResident.value = response.data
     } else {
-      // API调用失败，显示基本信息
       currentResident.value = {
         propertyOwner: row.propertyOwner || '暂无',
         ownerPhone: '暂无',

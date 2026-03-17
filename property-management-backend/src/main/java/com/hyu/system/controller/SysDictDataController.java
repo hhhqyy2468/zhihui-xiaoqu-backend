@@ -7,6 +7,8 @@ import com.hyu.common.utils.SecurityUtils;
 import com.hyu.common.utils.StringUtils;
 import com.hyu.system.domain.SysDictData;
 import com.hyu.system.service.ISysDictDataService;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -26,6 +28,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/system/dict/data")
 @Validated
+@Api(tags = "字典数据管理")
 public class SysDictDataController {
 
     @Autowired
@@ -34,6 +37,7 @@ public class SysDictDataController {
     /**
      * 分页查询字典数据列表
      */
+    @ApiOperation("分页查询字典数据列表")
     @GetMapping("/list")
     @PreAuthorize("@ss.hasPermi('system:dict:list')")
     public AjaxResult list(@RequestParam(defaultValue = "1") Integer pageNum,
@@ -57,6 +61,7 @@ public class SysDictDataController {
     /**
      * 查询字典数据详细
      */
+    @ApiOperation("查询字典数据详细")
     @GetMapping(value = "/{dictCode}")
     @PreAuthorize("@ss.hasPermi('system:dict:query')")
     public AjaxResult getInfo(@NotNull(message = "字典数据ID不能为空") @PathVariable Long dictCode) {
@@ -67,6 +72,7 @@ public class SysDictDataController {
     /**
      * 根据字典类型查询字典数据信息
      */
+    @ApiOperation("根据字典类型查询字典数据信息")
     @GetMapping("/type/{dictType}")
     public AjaxResult getDictDataByType(@PathVariable String dictType) {
         log.info("根据字典类型查询字典数据信息, dictType: {}", dictType);
@@ -77,6 +83,7 @@ public class SysDictDataController {
     /**
      * 新增字典数据
      */
+    @ApiOperation("新增字典数据")
     @PostMapping
     @PreAuthorize("@ss.hasPermi('system:dict:add')")
     public AjaxResult add(@Valid @RequestBody SysDictData dict) {
@@ -88,6 +95,7 @@ public class SysDictDataController {
     /**
      * 修改保存字典数据
      */
+    @ApiOperation("修改字典数据")
     @PutMapping
     @PreAuthorize("@ss.hasPermi('system:dict:edit')")
     public AjaxResult edit(@Valid @RequestBody SysDictData dict) {
@@ -99,6 +107,7 @@ public class SysDictDataController {
     /**
      * 删除字典数据
      */
+    @ApiOperation("删除字典数据")
     @DeleteMapping("/{dictCodes}")
     @PreAuthorize("@ss.hasPermi('system:dict:remove')")
     public AjaxResult remove(@NotNull(message = "字典数据ID不能为空") @PathVariable Long[] dictCodes) {
@@ -109,6 +118,7 @@ public class SysDictDataController {
     /**
      * 获取字典数据选择框列表
      */
+    @ApiOperation("获取字典数据选择框列表")
     @GetMapping("/optionselect")
     public AjaxResult optionselect(@RequestParam(required = false) String dictType) {
         log.info("获取字典数据选择框列表, dictType: {}", dictType);
@@ -122,6 +132,7 @@ public class SysDictDataController {
     /**
      * 查询所有字典数据列表
      */
+    @ApiOperation("查询所有字典数据列表")
     @GetMapping("/all")
     @PreAuthorize("@ss.hasPermi('system:dict:list')")
     public AjaxResult listAll() {
@@ -133,6 +144,7 @@ public class SysDictDataController {
     /**
      * 导出字典数据
      */
+    @ApiOperation("导出字典数据")
     @GetMapping("/export")
     @PreAuthorize("@ss.hasPermi('system:dict:export')")
     public AjaxResult export(SysDictData dict) {
@@ -144,6 +156,7 @@ public class SysDictDataController {
     /**
      * 批量导入字典数据
      */
+    @ApiOperation("批量导入字典数据")
     @PostMapping("/import")
     @PreAuthorize("@ss.hasPermi('system:dict:import')")
     public AjaxResult importData(@RequestBody List<SysDictData> dictDataList) {

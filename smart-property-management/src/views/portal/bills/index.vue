@@ -588,25 +588,16 @@ const getBillItemName = (billType) => {
 }
 
 // 获取账单类型名称
-const getBillTypeName = (type) => {
-  const typeMap = {
-    'property': '物业费',
-    'parking': '停车费',
-    'utility': '水电费',
-    'other': '其他'
-  }
-  return typeMap[type] || '未知'
+const getBillTypeName = (feeTypeId) => {
+  const option = feeTypeOptions.value.find(item => item.value === feeTypeId)
+  return option ? option.label : '未知'
 }
 
 // 获取账单类型标签
-const getBillTypeTag = (type) => {
-  const tagMap = {
-    'property': 'primary',
-    'parking': 'success',
-    'utility': 'warning',
-    'other': 'info'
-  }
-  return tagMap[type] || 'info'
+const getBillTypeTag = (feeTypeId) => {
+  const tags = ['primary', 'success', 'warning', 'danger', 'info']
+  if (!feeTypeId) return 'info'
+  return tags[(feeTypeId - 1) % tags.length]
 }
 
 // 获取状态名称

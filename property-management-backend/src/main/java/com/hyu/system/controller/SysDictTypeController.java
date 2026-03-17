@@ -7,6 +7,8 @@ import com.hyu.common.utils.SecurityUtils;
 import com.hyu.system.domain.SysDictData;
 import com.hyu.system.domain.SysDictType;
 import com.hyu.system.service.ISysDictTypeService;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -26,6 +28,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/system/dict/type")
 @Validated
+@Api(tags = "字典类型管理")
 public class SysDictTypeController {
 
     @Autowired
@@ -34,6 +37,7 @@ public class SysDictTypeController {
     /**
      * 分页查询字典类型列表
      */
+    @ApiOperation("分页查询字典类型列表")
     @GetMapping("/list")
     @PreAuthorize("@ss.hasPermi('system:dict:list')")
     public AjaxResult list(@RequestParam(defaultValue = "1") Integer pageNum,
@@ -57,6 +61,7 @@ public class SysDictTypeController {
     /**
      * 查询字典类型详细
      */
+    @ApiOperation("查询字典类型详细")
     @GetMapping(value = "/{dictId}")
     @PreAuthorize("@ss.hasPermi('system:dict:query')")
     public AjaxResult getInfo(@NotNull(message = "字典ID不能为空") @PathVariable Long dictId) {
@@ -67,6 +72,7 @@ public class SysDictTypeController {
     /**
      * 新增字典类型
      */
+    @ApiOperation("新增字典类型")
     @PostMapping
     @PreAuthorize("@ss.hasPermi('system:dict:add')")
     public AjaxResult add(@Valid @RequestBody SysDictType dict) {
@@ -81,6 +87,7 @@ public class SysDictTypeController {
     /**
      * 修改字典类型
      */
+    @ApiOperation("修改字典类型")
     @PutMapping
     @PreAuthorize("@ss.hasPermi('system:dict:edit')")
     public AjaxResult edit(@Valid @RequestBody SysDictType dict) {
@@ -95,6 +102,7 @@ public class SysDictTypeController {
     /**
      * 删除字典类型
      */
+    @ApiOperation("删除字典类型")
     @DeleteMapping("/{dictIds}")
     @PreAuthorize("@ss.hasPermi('system:dict:remove')")
     public AjaxResult remove(@NotNull(message = "字典ID不能为空") @PathVariable Long[] dictIds) {
@@ -106,6 +114,7 @@ public class SysDictTypeController {
     /**
      * 刷新字典缓存
      */
+    @ApiOperation("刷新字典缓存")
     @DeleteMapping("/refreshCache")
     @PreAuthorize("@ss.hasPermi('system:dict:remove')")
     public AjaxResult refreshCache() {
@@ -117,6 +126,7 @@ public class SysDictTypeController {
     /**
      * 获取字典选择框列表
      */
+    @ApiOperation("获取字典选择框列表")
     @GetMapping("/optionselect")
     public AjaxResult optionselect() {
         log.info("获取字典选择框列表");
@@ -127,6 +137,7 @@ public class SysDictTypeController {
     /**
      * 根据字典类型查询字典数据信息
      */
+    @ApiOperation("根据字典类型查询字典数据信息")
     @GetMapping("/data/{dictType}")
     public AjaxResult getDictDataByType(@PathVariable String dictType) {
         log.info("根据字典类型查询字典数据信息, dictType: {}", dictType);
@@ -137,6 +148,7 @@ public class SysDictTypeController {
     /**
      * 根据字典类型查询字典详细信息
      */
+    @ApiOperation("根据字典类型查询字典详细信息")
     @GetMapping("/type/{dictType}")
     @PreAuthorize("@ss.hasPermi('system:dict:query')")
     public AjaxResult getDictTypeByType(@PathVariable String dictType) {

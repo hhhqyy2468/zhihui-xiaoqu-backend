@@ -9,6 +9,8 @@ import com.hyu.property.domain.dto.WalletRechargeDTO;
 import com.hyu.property.domain.dto.WalletSetPasswordDTO;
 import com.hyu.property.domain.dto.WalletChangePasswordDTO;
 import com.hyu.property.service.IWalletService;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -30,6 +32,7 @@ import java.math.BigDecimal;
 @RestController
 @RequestMapping("/api/v1/property/wallet")
 @Validated
+@Api(tags = "钱包管理")
 public class WalletController {
 
     @Autowired
@@ -41,6 +44,7 @@ public class WalletController {
     /**
      * 分页查询钱包列表
      */
+    @ApiOperation("分页查询钱包列表")
     @GetMapping("/list")
     @PreAuthorize("@ss.hasPermi('property:wallet:list')")
     public AjaxResult list(@RequestParam(defaultValue = "1") Integer pageNum,
@@ -75,6 +79,7 @@ public class WalletController {
     /**
      * 获取钱包详细信息
      */
+    @ApiOperation("获取钱包详细信息")
     @GetMapping(value = "/{id}")
     @PreAuthorize("@ss.hasPermi('property:wallet:list')")
     public AjaxResult getInfo(@NotNull(message = "钱包ID不能为空") @PathVariable Long id) {
@@ -85,6 +90,7 @@ public class WalletController {
     /**
      * 新增钱包
      */
+    @ApiOperation("新增钱包")
     @PostMapping
     @PreAuthorize("@ss.hasPermi('property:wallet:add')")
     public AjaxResult add(@Valid @RequestBody Wallet wallet) {
@@ -95,6 +101,7 @@ public class WalletController {
     /**
      * 修改保存钱包
      */
+    @ApiOperation("修改钱包")
     @PutMapping
     @PreAuthorize("@ss.hasPermi('property:wallet:edit')")
     public AjaxResult edit(@Valid @RequestBody Wallet wallet) {
@@ -105,6 +112,7 @@ public class WalletController {
     /**
      * 删除钱包
      */
+    @ApiOperation("删除钱包")
     @DeleteMapping("/{ids}")
     @PreAuthorize("@ss.hasPermi('property:wallet:delete')")
     public AjaxResult remove(@NotNull(message = "钱包ID不能为空") @PathVariable Long[] ids) {
@@ -115,6 +123,7 @@ public class WalletController {
     /**
      * 根据用户ID获取钱包
      */
+    @ApiOperation("根据用户ID获取钱包")
     @GetMapping("/user/{userId}")
     public AjaxResult getByUserId(@NotNull(message = "用户ID不能为空") @PathVariable Long userId) {
         log.info("根据用户ID获取钱包, userId: {}", userId);
@@ -128,6 +137,7 @@ public class WalletController {
     /**
      * 设置支付密码
      */
+    @ApiOperation("设置支付密码")
     @PostMapping("/set-password")
     public AjaxResult setPayPassword(@Valid @RequestBody WalletSetPasswordDTO setPasswordDTO) {
         log.info("设置支付密码, userId: {}", setPasswordDTO.getUserId());
@@ -143,6 +153,7 @@ public class WalletController {
     /**
      * 修改支付密码
      */
+    @ApiOperation("修改支付密码")
     @PostMapping("/change-password")
     public AjaxResult changePayPassword(@Valid @RequestBody WalletChangePasswordDTO changePasswordDTO) {
         log.info("修改支付密码, userId: {}", changePasswordDTO.getUserId());
@@ -158,6 +169,7 @@ public class WalletController {
     /**
      * 虚拟充值（给自己充值）
      */
+    @ApiOperation("虚拟充值")
     @PostMapping("/virtual-recharge")
     public AjaxResult virtualRecharge(@Valid @RequestBody WalletRechargeDTO rechargeDTO) {
         Long userId = getCurrentUserId();
@@ -197,6 +209,7 @@ public class WalletController {
     /**
      * 管理员充值（给指定用户充值）
      */
+    @ApiOperation("管理员充值")
     @PostMapping("/admin-recharge")
     @PreAuthorize("@ss.hasPermi('property:wallet:recharge')")
     public AjaxResult adminRecharge(@RequestParam Long userId, @RequestParam BigDecimal amount) {
@@ -220,6 +233,7 @@ public class WalletController {
     /**
      * 批量充值（为所有业主充值）
      */
+    @ApiOperation("批量充值")
     @PostMapping("/batch-recharge")
     @PreAuthorize("@ss.hasPermi('property:wallet:batchRecharge')")
     public AjaxResult batchRecharge(@RequestParam BigDecimal amount) {
@@ -243,6 +257,7 @@ public class WalletController {
     /**
      * 冻结钱包
      */
+    @ApiOperation("冻结钱包")
     @PostMapping("/freeze/{id}")
     @PreAuthorize("@ss.hasPermi('property:wallet:freeze')")
     public AjaxResult freeze(@PathVariable Long id) {
@@ -259,6 +274,7 @@ public class WalletController {
     /**
      * 解冻钱包
      */
+    @ApiOperation("解冻钱包")
     @PostMapping("/unfreeze/{id}")
     @PreAuthorize("@ss.hasPermi('property:wallet:freeze')")
     public AjaxResult unfreeze(@PathVariable Long id) {
@@ -275,6 +291,7 @@ public class WalletController {
     /**
      * 重置支付密码
      */
+    @ApiOperation("重置支付密码")
     @PostMapping("/reset-password/{id}")
     @PreAuthorize("@ss.hasPermi('property:wallet:resetPassword')")
     public AjaxResult resetPayPassword(@PathVariable Long id) {

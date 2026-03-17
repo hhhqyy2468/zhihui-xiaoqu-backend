@@ -3,6 +3,8 @@ package com.hyu.property.controller;
 import com.hyu.common.core.domain.AjaxResult;
 import com.hyu.common.core.domain.PageResult;
 import com.hyu.common.utils.SecurityUtils;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import com.hyu.property.domain.ParkingRentalApplication;
 import com.hyu.property.service.IParkingRentalApplicationService;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +23,7 @@ import java.util.List;
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/parking/rental/application")
+@Api(tags = "车位租赁申请管理")
 public class ParkingRentalApplicationController {
 
     @Autowired
@@ -29,6 +32,7 @@ public class ParkingRentalApplicationController {
     /**
      * 查询租赁申请列表
      */
+    @ApiOperation("查询租赁申请列表")
     @GetMapping("/list")
     @PreAuthorize("@ss.hasPermi('parking:rental:list')")
     public AjaxResult list(@RequestParam(defaultValue = "1") Integer pageNum,
@@ -54,6 +58,7 @@ public class ParkingRentalApplicationController {
     /**
      * 获取租赁申请详细信息
      */
+    @ApiOperation("获取租赁申请详细信息")
     @GetMapping("/{id}")
     @PreAuthorize("@ss.hasPermi('parking:rental:query')")
     public AjaxResult getInfo(@PathVariable("id") Long id) {
@@ -65,6 +70,7 @@ public class ParkingRentalApplicationController {
     /**
      * 新增租赁申请
      */
+    @ApiOperation("新增租赁申请")
     @PostMapping
     @PreAuthorize("@ss.hasPermi('parking:rental:add')")
     public AjaxResult add(@RequestBody ParkingRentalApplication parkingRentalApplication) {
@@ -75,6 +81,7 @@ public class ParkingRentalApplicationController {
     /**
      * 修改租赁申请
      */
+    @ApiOperation("修改租赁申请")
     @PutMapping
     @PreAuthorize("@ss.hasPermi('parking:rental:edit')")
     public AjaxResult edit(@RequestBody ParkingRentalApplication parkingRentalApplication) {
@@ -85,6 +92,7 @@ public class ParkingRentalApplicationController {
     /**
      * 删除租赁申请
      */
+    @ApiOperation("删除租赁申请")
     @DeleteMapping("/{ids}")
     @PreAuthorize("@ss.hasPermi('parking:rental:remove')")
     public AjaxResult remove(@PathVariable Long[] ids) {
@@ -95,6 +103,7 @@ public class ParkingRentalApplicationController {
     /**
      * 审核租赁申请
      */
+    @ApiOperation("审核租赁申请")
     @PutMapping("/{id}/review")
     @PreAuthorize("@ss.hasPermi('parking:rental:review')")
     public AjaxResult review(@PathVariable("id") Long id,
@@ -115,6 +124,7 @@ public class ParkingRentalApplicationController {
     /**
      * 获取待审核申请列表
      */
+    @ApiOperation("获取待审核申请列表")
     @GetMapping("/pending")
     @PreAuthorize("@ss.hasPermi('parking:rental:list')")
     public AjaxResult getPendingApplications() {
@@ -126,6 +136,7 @@ public class ParkingRentalApplicationController {
     /**
      * 业主提交车位租赁申请（无需权限）
      */
+    @ApiOperation("业主提交车位租赁申请")
     @PostMapping("/my")
     public AjaxResult submitMyApplication(@RequestBody ParkingRentalApplication parkingRentalApplication) {
         log.info("业主提交车位租赁申请, parkingSpaceId: {}, vehicleNumber: {}",
@@ -145,6 +156,7 @@ public class ParkingRentalApplicationController {
     /**
      * 查询当前用户的租赁申请记录（我的申请）
      */
+    @ApiOperation("查询我的租赁申请记录")
     @GetMapping("/my")
     public AjaxResult getMyApplications() {
         Long currentUserId = SecurityUtils.getUserId();

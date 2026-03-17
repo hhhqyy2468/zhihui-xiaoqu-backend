@@ -123,6 +123,36 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                         permissions.add("property:feetype:remove");
                         permissions.add("property:feetype:query");
 
+                        // 添加账单管理权限
+                        permissions.add("property:bill:list");
+                        permissions.add("property:bill:query");
+                        permissions.add("property:bill:add");
+                        permissions.add("property:bill:edit");
+                        permissions.add("property:bill:remove");
+                        permissions.add("property:bill:generate");
+                        permissions.add("property:bill:pay");
+                        permissions.add("property:bill:view");
+                        permissions.add("property:bill:overdue");
+                        permissions.add("property:bill:export");
+                        permissions.add("property:bill:print");
+
+                        // 添加钱包管理权限
+                        permissions.add("property:wallet:list");
+                        permissions.add("property:wallet:view");
+                        permissions.add("property:wallet:add");
+                        permissions.add("property:wallet:edit");
+                        permissions.add("property:wallet:delete");
+                        permissions.add("property:wallet:recharge");
+                        permissions.add("property:wallet:batchRecharge");
+                        permissions.add("property:wallet:freeze");
+                        permissions.add("property:wallet:resetPassword");
+
+                        // 添加车位管理权限（Controller使用parking:space:*）
+                        permissions.add("parking:space:list");
+                        permissions.add("parking:space:add");
+                        permissions.add("parking:space:edit");
+                        permissions.add("parking:space:delete");
+
                         // 添加维修管理权限
                         permissions.add("property:repair:list");
                         permissions.add("property:repair:view");
@@ -132,6 +162,8 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                         permissions.add("property:repair:assign");
                         permissions.add("property:repair:accept");
                         permissions.add("property:repair:handle");
+                        permissions.add("property:repair:complete");
+                        permissions.add("property:repair:inspect");
                         permissions.add("property:repair:rate");
                         permissions.add("property:repair:archive"); // 归档权限
 
@@ -144,6 +176,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                         permissions.add("property:complaint:assign");
                         permissions.add("property:complaint:handle");
                         permissions.add("property:complaint:rate");
+                        permissions.add("property:complaint:close");
                         permissions.add("property:complaint:my");
                         permissions.add("property:complaint:upload");
 
@@ -154,6 +187,9 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                         permissions.add("property:notice:remove");
                         permissions.add("property:notice:publish");
                         permissions.add("property:notice:view");
+
+                        // 添加看板权限
+                        permissions.add("dashboard:manager:view");
                         break;
 
                     case 2: // 物业管理员
@@ -185,6 +221,32 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                         permissions.add("property:feetype:remove");
                         permissions.add("property:feetype:query");
 
+                        // 添加账单管理权限
+                        permissions.add("property:bill:list");
+                        permissions.add("property:bill:query");
+                        permissions.add("property:bill:add");
+                        permissions.add("property:bill:edit");
+                        permissions.add("property:bill:remove");
+                        permissions.add("property:bill:generate");
+                        permissions.add("property:bill:pay");
+                        permissions.add("property:bill:overdue");
+                        permissions.add("property:bill:export");
+                        permissions.add("property:bill:print");
+
+                        // 添加钱包管理权限
+                        permissions.add("property:wallet:list");
+                        permissions.add("property:wallet:view");
+                        permissions.add("property:wallet:recharge");
+                        permissions.add("property:wallet:batchRecharge");
+                        permissions.add("property:wallet:freeze");
+                        permissions.add("property:wallet:resetPassword");
+
+                        // 添加车位管理权限（Controller使用parking:space:*）
+                        permissions.add("parking:space:list");
+                        permissions.add("parking:space:add");
+                        permissions.add("parking:space:edit");
+                        permissions.add("parking:space:delete");
+
                         // 添加维修管理权限
                         permissions.add("property:repair:list");
                         permissions.add("property:repair:view");
@@ -194,6 +256,8 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                         permissions.add("property:repair:assign");
                         permissions.add("property:repair:accept");
                         permissions.add("property:repair:handle");
+                        permissions.add("property:repair:complete");
+                        permissions.add("property:repair:inspect");
                         permissions.add("property:repair:rate");
                         permissions.add("property:repair:archive"); // 归档权限
 
@@ -205,14 +269,25 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                         permissions.add("property:complaint:remove");
                         permissions.add("property:complaint:assign");
                         permissions.add("property:complaint:handle");
+                        permissions.add("property:complaint:rate");
+                        permissions.add("property:complaint:close");
                         permissions.add("property:complaint:upload");
 
                         // 添加公告管理权限
                         permissions.add("property:notice:list");
+                        permissions.add("property:notice:view");
                         permissions.add("property:notice:add");
                         permissions.add("property:notice:edit");
                         permissions.add("property:notice:remove");
                         permissions.add("property:notice:publish");
+
+                        // 添加用户只读权限（查看用户列表）
+                        permissions.add("system:user:list");
+                        permissions.add("system:user:query");
+                        permissions.add("system:user:view");
+
+                        // 添加看板权限
+                        permissions.add("dashboard:manager:view");
                         break;
 
                     case 3: // 业主
@@ -222,12 +297,15 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                         permissions.add("property:wallet:view");
                         permissions.add("property:wallet:recharge");
                         permissions.add("property:transaction:list");
-                        permissions.add("property:complaint:add");
+                        permissions.add("property:complaint:list"); // 查看自己的投诉列表
                         permissions.add("property:complaint:query");
+                        permissions.add("property:complaint:add");
                         permissions.add("property:complaint:my");
                         permissions.add("property:complaint:rate");
                         permissions.add("property:complaint:upload");
+                        permissions.add("property:repair:list"); // 查看工单列表（详情接口也用list权限）
                         permissions.add("property:repair:add");
+                        permissions.add("property:repair:view");
                         permissions.add("property:repair:accept");
                         permissions.add("property:repair:rate");
                         permissions.add("property:notice:view");
@@ -238,10 +316,14 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
                     case 4: // 维修人员
                         permissions.add("property:repair:view");
+                        permissions.add("property:repair:list");
                         permissions.add("property:repair:handle");
                         permissions.add("property:repair:accept");
+                        permissions.add("property:repair:complete");
+                        permissions.add("property:repair:inspect");
                         permissions.add("property:notice:view");
                         permissions.add("property:notice:list");
+                        permissions.add("workbench:view"); // 访问工作台
                         break;
                 }
             }
