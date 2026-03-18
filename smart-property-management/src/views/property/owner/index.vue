@@ -669,7 +669,13 @@ const getOwnershipTypeName = (type) => {
 
 // 格式化日期时间
 const formatDateTime = (dateTime) => {
-  return new Date(dateTime).toLocaleString('zh-CN')
+  if (!dateTime) return '-'
+  if (Array.isArray(dateTime)) {
+    const [y, mo, d, h = 0, mi = 0, s = 0] = dateTime
+    return new Date(y, mo - 1, d, h, mi, s).toLocaleString('zh-CN')
+  }
+  const date = new Date(dateTime)
+  return isNaN(date.getTime()) ? '-' : date.toLocaleString('zh-CN')
 }
 
 // 生成模拟业主数据

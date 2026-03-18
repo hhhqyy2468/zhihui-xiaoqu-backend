@@ -486,7 +486,12 @@ watch(() => form.buildingArea, (newValue) => {
 // 格式化日期时间
 const formatDateTime = (dateTime) => {
   if (!dateTime) return '-'
-  return new Date(dateTime).toLocaleString('zh-CN')
+  if (Array.isArray(dateTime)) {
+    const [y, mo, d, h = 0, mi = 0, s = 0] = dateTime
+    return new Date(y, mo - 1, d, h, mi, s).toLocaleString('zh-CN')
+  }
+  const date = new Date(dateTime)
+  return isNaN(date.getTime()) ? '-' : date.toLocaleString('zh-CN')
 }
 
 // 格式化面积显示
