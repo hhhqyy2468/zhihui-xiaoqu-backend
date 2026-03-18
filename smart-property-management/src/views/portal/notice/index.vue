@@ -178,9 +178,12 @@ const getNoticeTypeName = (type) => {
     'outage': '停水停电',
     'activity': '社区活动',
     'policy': '政策通知',
-    'reminder': '温馨提示'
+    'reminder': '温馨提示',
+    'maintenance': '维修通知',
+    'holiday': '节假日通知',
+    'construction': '施工公告'
   }
-  return typeMap[type] || '未知'
+  return typeMap[type] || type || '未知'
 }
 
 // 获取公告类型颜色
@@ -190,7 +193,10 @@ const getNoticeTypeColor = (type) => {
     'outage': 'warning',
     'activity': 'success',
     'policy': 'info',
-    'reminder': 'info'
+    'reminder': 'info',
+    'maintenance': 'danger',
+    'holiday': 'success',
+    'construction': 'warning'
   }
   return colorMap[type] || 'info'
 }

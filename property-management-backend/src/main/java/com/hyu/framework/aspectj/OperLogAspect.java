@@ -71,23 +71,55 @@ public class OperLogAspect {
             String methodName = sig.getName();
 
             // 业务类型
-            int businessType = resolveBusinessType(method);
+            int businessType = resolveBusinessType(method, url);
 
             // 操作人
-            String operName = "anonymous";
+            String operName = null;
             Long operUserId = null;
             try {
                 operName = SecurityUtils.getUsername();
                 operUserId = SecurityUtils.getUserId();
             } catch (Exception ignored) {}
 
-            // 请求参数（仅记录POST/PUT body）
+            // 登录/登出操作从请求体中提取用户名
+            if ((operName == null || "anonymous".equals(operName)) && request != null) {
+                try {
+                    Object[] args = joinPoint.getArgs();
+                    if (args != null && args.length > 0) {
+                        String argJson = JSON.toJSONString(args[0]);
+                        com.alibaba.fastjson.JSONObject obj = JSON.parseObject(argJson);
+                        if (obj != null && obj.containsKey("username")) {
+                            operName = obj.getString("username");
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
+            if (operName == null) operName = "anonymous";
+
+            // 请求参数（仅记录POST/PUT body，跳过文件上传参数）
             String operParam = "";
             try {
                 Object[] args = joinPoint.getArgs();
                 if (args != null && args.length > 0) {
-                    operParam = JSON.toJSONString(args[0]);
-                    if (operParam.length() > 2000) operParam = operParam.substring(0, 2000);
+                    // 找第一个非文件、非HttpServletRequest/Response的参数
+                    Object targetArg = null;
+                    boolean hasFile = false;
+                    for (Object arg : args) {
+                        if (arg instanceof org.springframework.web.multipart.MultipartFile
+                                || arg instanceof org.springframework.web.multipart.MultipartFile[]
+                                || arg instanceof javax.servlet.http.HttpServletRequest
+                                || arg instanceof javax.servlet.http.HttpServletResponse) {
+                            hasFile = true;
+                            continue;
+                        }
+                        if (targetArg == null) targetArg = arg;
+                    }
+                    if (hasFile && targetArg == null) {
+                        operParam = "[file]";
+                    } else if (targetArg != null) {
+                        operParam = JSON.toJSONString(targetArg);
+                        if (operParam.length() > 2000) operParam = operParam.substring(0, 2000);
+                    }
                 }
             } catch (Exception ignored) {}
 
@@ -104,7 +136,7 @@ public class OperLogAspect {
             String errorMsg = ex != null ? ex.getMessage() : null;
             if (errorMsg != null && errorMsg.length() > 500) errorMsg = errorMsg.substring(0, 500);
 
-            String title = className.replace("Controller", "");
+            String title = resolveTitle(url, className);
 
             operLogService.recordOperLog(
                     title, businessType,
@@ -119,8 +151,39 @@ public class OperLogAspect {
         }
     }
 
-    private int resolveBusinessType(String httpMethod) {
+    private String resolveTitle(String url, String className) {
+        if (url == null) return className.replace("Controller", "");
+        if (url.contains("/auth/login"))    return "用户登录";
+        if (url.contains("/auth/logout"))   return "用户登出";
+        if (url.contains("/auth/"))         return "认证管理";
+        if (url.contains("/property/bill")) return "账单管理";
+        if (url.contains("/property/repair")) return "维修工单";
+        if (url.contains("/property/notice")) return "公告管理";
+        if (url.contains("/property/owner")) return "业主管理";
+        if (url.contains("/property/house")) return "房产管理";
+        if (url.contains("/property/building")) return "楼栋管理";
+        if (url.contains("/property/unit")) return "单元管理";
+        if (url.contains("/property/fee-type")) return "费用类型";
+        if (url.contains("/parking/space")) return "车位管理";
+        if (url.contains("/parking/rental")) return "车位租赁";
+        if (url.contains("/system/user")) return "用户管理";
+        if (url.contains("/system/role")) return "角色管理";
+        if (url.contains("/system/menu")) return "菜单管理";
+        if (url.contains("/system/dict")) return "字典管理";
+        if (url.contains("/system/log")) return "日志管理";
+        if (url.contains("/wallet")) return "钱包管理";
+        if (url.contains("/complaint")) return "投诉建议";
+        if (url.contains("/workbench")) return "工作台";
+        if (url.contains("/portal")) return "业主门户";
+        if (url.contains("/common")) return "公共接口";
+        return className.replace("Controller", "");
+    }
+
+    private int resolveBusinessType(String httpMethod, String url) {
         if (httpMethod == null) return 0;
+        // 登录/登出特殊处理
+        if (url != null && url.contains("/auth/login"))  return 1;
+        if (url != null && url.contains("/auth/logout")) return 0;
         switch (httpMethod.toUpperCase()) {
             case "POST":   return 1; // 新增
             case "PUT":    return 2; // 修改

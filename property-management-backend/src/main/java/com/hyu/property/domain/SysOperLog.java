@@ -119,9 +119,9 @@ public class SysOperLog implements Serializable {
     private LocalDateTime operTime;
 
     /**
-     * 操作时间（创建时间）
+     * 操作时间（创建时间，与operTime相同字段，不参与insert）
      */
-    @TableField(value = "oper_time", fill = FieldFill.INSERT)
+    @TableField(exist = false)
     private LocalDateTime createTime;
 
     /**
@@ -153,4 +153,16 @@ public class SysOperLog implements Serializable {
      */
     @TableField(exist = false)
     private String resultSummary;
+
+    /**
+     * 开始时间（查询用）
+     */
+    @TableField(exist = false)
+    private String beginTime;
+
+    /**
+     * 结束时间（查询用）
+     */
+    @TableField(exist = false)
+    private String endTime;
 }

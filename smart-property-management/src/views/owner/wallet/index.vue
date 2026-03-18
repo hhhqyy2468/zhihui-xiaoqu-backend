@@ -457,13 +457,11 @@ const rechargeButtonDisabled = computed(() => {
 // 获取当前用户信息
 const userStore = useUserStore()
 const getCurrentUserId = () => {
-  // 确保从用户 store 中获取真实的用户 ID
-  const userId = userStore.userInfo?.id
+  const userId = userStore.userInfo?.id || userStore.userInfo?.userId
   if (!userId) {
     console.error('无法获取用户ID，用户信息:', userStore.userInfo)
     throw new Error('用户未登录或用户信息不完整')
   }
-  console.log('获取到用户ID:', userId)
   return userId
 }
 

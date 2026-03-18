@@ -57,12 +57,6 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="publisherId != null">
                 and publisher_id = #{publisherId}
             </if>
-            <if test="params.beginTime != null and params.beginTime != ''">
-                and date_format(publish_time,'%y%m%d') &gt;= date_format(#{params.beginTime},'%y%m%d')
-            </if>
-            <if test="params.endTime != null and params.endTime != ''">
-                and date_format(publish_time,'%y%m%d') &lt;= date_format(#{params.endTime},'%y%m%d')
-            </if>
         </where>
         order by is_top desc, publish_time desc
     </select>

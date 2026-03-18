@@ -211,6 +211,24 @@ public class RepairOrderServiceImpl extends ServiceImpl<RepairOrderMapper, Repai
         return list(queryWrapper);
     }
 
+    @Override
+    public List<RepairOrder> selectRepairOrdersByWorkerId(Long workerId) {
+        QueryWrapper<RepairOrder> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("worker_id", workerId)
+                   .eq("deleted", 0)
+                   .orderByDesc("create_time");
+        return list(queryWrapper);
+    }
+
+    @Override
+    public List<RepairOrder> selectPendingRepairOrders() {
+        QueryWrapper<RepairOrder> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("order_status", 1)
+                   .eq("deleted", 0)
+                   .orderByDesc("create_time");
+        return list(queryWrapper);
+    }
+
     /**
      * 获取维修人员列表
      */
@@ -386,8 +404,9 @@ public class RepairOrderServiceImpl extends ServiceImpl<RepairOrderMapper, Repai
     @Override
     public boolean rateOrder(Long id, Map<String, Object> params) {
         RepairOrder repairOrder = getById(id);
-        if (repairOrder == null || repairOrder.getOrderStatus() != 4) {
-            log.warn("维修工单状态不正确，无法评价: {}", id);
+        // 允许 status=4(待验收) 或 status=5(已完成但未评价) 进行评价
+        if (repairOrder == null || (repairOrder.getOrderStatus() != 4 && repairOrder.getOrderStatus() != 5)) {
+            log.warn("维修工单状态不正确，无法评价: {}, status={}", id, repairOrder == null ? null : repairOrder.getOrderStatus());
             return false;
         }
 

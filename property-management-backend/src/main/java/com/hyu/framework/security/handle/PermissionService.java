@@ -30,17 +30,31 @@ public class PermissionService {
             return true;
         }
 
-        // 物业管理员（userType=2）对物业相关权限放行
         com.hyu.common.domain.LoginUser loginUser = SecurityUtils.getLoginUser();
-        if (loginUser != null && loginUser.getUserType() != null && loginUser.getUserType() == 2) {
+        if (loginUser != null && loginUser.getUserType() != null) {
             String perm = StringUtils.trim(permission);
-            if (perm != null && (
+            int userType = loginUser.getUserType();
+            // 物业管理员（userType=2）对物业相关权限放行
+            if (userType == 2 && perm != null && (
                 perm.startsWith("property:") ||
                 perm.startsWith("finance:") ||
                 perm.startsWith("service:") ||
                 perm.startsWith("parking:") ||
                 perm.startsWith("notice:")
             )) {
+                return true;
+            }
+            // 业主（userType=3）对自身相关接口放行
+            if (userType == 3 && perm != null && (
+                perm.equals("property:owner:list") ||
+                perm.startsWith("finance:wallet:") ||
+                perm.startsWith("finance:bill:") ||
+                perm.startsWith("notice:")
+            )) {
+                return true;
+            }
+            // 维修人员（userType=4）对维修工单相关权限放行
+            if (userType == 4 && perm != null && perm.startsWith("property:repair:")) {
                 return true;
             }
         }

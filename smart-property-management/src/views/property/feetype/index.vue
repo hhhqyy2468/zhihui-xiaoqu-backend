@@ -120,13 +120,6 @@
             </el-button>
             <el-button
               link
-              type="info"
-              @click="handleViewBills(row)"
-            >
-              查看账单
-            </el-button>
-            <el-button
-              link
               type="danger"
               @click="handleDelete(row)"
             >

@@ -62,6 +62,15 @@ logging:
     org.springframework.security: debug
     com.baomidou.mybatisplus: debug
 
+# 文件上传基础路径
+file:
+  upload:
+    base-path: ./uploads
+
+repair:
+  upload:
+    path: ./uploads/repair
+
 # Knife4j配置
 knife4j:
   enable: true

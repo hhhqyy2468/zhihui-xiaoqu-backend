@@ -48,6 +48,16 @@ public interface IRepairOrderService extends IService<RepairOrder> {
     List<RepairOrder> selectRepairOrdersByUserId(Long userId);
 
     /**
+     * 根据维修人员ID查询工单列表
+     */
+    List<RepairOrder> selectRepairOrdersByWorkerId(Long workerId);
+
+    /**
+     * 查询所有待派工工单
+     */
+    List<RepairOrder> selectPendingRepairOrders();
+
+    /**
      * 获取维修人员列表
      *
      * @return 维修人员列表

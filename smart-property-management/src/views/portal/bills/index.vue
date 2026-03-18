@@ -468,7 +468,6 @@ const loadBillStatusOptions = async () => {
     console.log('Portal页面 - 账单状态API响应:', response)
     if (response.code === 200 && response.data) {
       billStatusOptions.value = response.data
-        .filter(item => item.status === 1 || item.status === '1' || item.status === true)
         .map(item => ({
           label: item.dictLabel,
           value: parseInt(item.dictValue)
@@ -775,7 +774,6 @@ const handleSubmitPay = async () => {
     }
   } catch (error) {
     console.error('缴费失败:', error)
-    ElMessage.error('缴费失败')
     payLoading.value = false
   }
 }
@@ -810,7 +808,6 @@ const handleSubmitBatchPay = async () => {
     }
   } catch (error) {
     console.error('批量缴费失败:', error)
-    ElMessage.error('批量缴费失败')
     batchPayLoading.value = false
   }
 }

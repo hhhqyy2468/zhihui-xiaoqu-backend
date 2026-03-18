@@ -33,8 +33,8 @@ public class WorkbenchServiceImpl implements IWorkbenchService {
         try {
             Long currentUserId = SecurityUtils.getUserId();
 
-            // 获取我的工单列表
-            List<RepairOrder> allOrders = repairOrderService.selectRepairOrdersByUserId(currentUserId);
+            // 获取分配给我的工单（包含所有状态）
+            List<RepairOrder> allOrders = repairOrderService.selectRepairOrdersByWorkerId(currentUserId);
 
             // 统计各状态工单数量
             int pendingCount = 0;        // 待接单
@@ -51,24 +51,22 @@ public class WorkbenchServiceImpl implements IWorkbenchService {
             for (RepairOrder order : allOrders) {
                 if (order.getOrderStatus() != null) {
                     switch (order.getOrderStatus()) {
-                        case 1: // 待接单
+                        case 2: // 待接单（已派工）
                             pendingCount++;
                             break;
-                        case 2: // 进行中
+                        case 3: // 进行中
                             processingCount++;
                             break;
-                        case 3: // 待验收
+                        case 4: // 待验收
                             pendingAcceptCount++;
                             break;
-                        case 4: // 已完成
+                        case 5: // 已完成
                             completedCount++;
-                            // 统计今日完成数量
                             if (order.getUpdateTime() != null) {
                                 String updateDate = order.getUpdateTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
                                 if (todayStr.equals(updateDate)) {
                                     todayCompleted++;
                                 }
-                                // 统计本月完成数量
                                 if (monthStr.equals(updateDate)) {
                                     monthCompleted++;
                                 }
@@ -103,7 +101,8 @@ public class WorkbenchServiceImpl implements IWorkbenchService {
     public List<RepairOrder> getMyRepairOrderList(Integer pageNum, Integer pageSize, Integer repairStatus) {
         try {
             Long currentUserId = SecurityUtils.getUserId();
-            List<RepairOrder> allOrders = repairOrderService.selectRepairOrdersByUserId(currentUserId);
+            // 获取分配给我的所有工单
+            List<RepairOrder> allOrders = repairOrderService.selectRepairOrdersByWorkerId(currentUserId);
 
             // 如果指定了状态，则进行过滤
             if (repairStatus != null) {

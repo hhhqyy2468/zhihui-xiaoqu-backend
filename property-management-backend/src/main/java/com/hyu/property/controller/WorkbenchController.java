@@ -72,7 +72,7 @@ public class WorkbenchController {
     @PostMapping("/order/{orderId}/accept")
     @PreAuthorize("@ss.hasPermi('property:repair:accept')")
     public AjaxResult acceptOrder(@PathVariable Long orderId) {
-        boolean ok = repairOrderService.acceptOrder(orderId) > 0;
+        boolean ok = repairOrderService.acceptOrder(orderId);
         return ok ? AjaxResult.success("接单成功") : AjaxResult.error("接单失败");
     }
 
@@ -84,7 +84,7 @@ public class WorkbenchController {
     @PreAuthorize("@ss.hasPermi('property:repair:handle')")
     public AjaxResult completeOrder(@PathVariable Long orderId,
                                     @RequestBody Map<String, Object> params) {
-        boolean ok = repairOrderService.completeOrder(orderId, params) > 0;
+        boolean ok = repairOrderService.completeOrder(orderId, params);
         return ok ? AjaxResult.success("提交成功") : AjaxResult.error("提交失败");
     }
 }

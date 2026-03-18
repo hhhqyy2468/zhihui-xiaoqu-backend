@@ -216,7 +216,7 @@ const selectedHouse = ref(null)
 
 // 获取当前用户ID
 const getCurrentUserId = () => {
-  const userId = userStore.userInfo?.id
+  const userId = userStore.userInfo?.id || userStore.userInfo?.userId
   if (!userId) {
     console.error('无法获取用户ID，用户信息:', userStore.userInfo)
     ElMessage.error('用户信息不完整，请重新登录')

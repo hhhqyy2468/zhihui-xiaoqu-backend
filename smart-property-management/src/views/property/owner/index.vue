@@ -162,14 +162,6 @@
             </el-button>
             <el-button
               link
-              type="info"
-              @click="handleViewBills(row)"
-              v-permission="'property:bill:view'"
-            >
-              账单
-            </el-button>
-              <el-button
-              link
               type="danger"
               @click="handleDelete(row)"
               v-permission="'property:owner:delete'"
@@ -362,20 +354,6 @@
           </el-table>
         </div>
 
-        <div class="detail-section">
-          <h4>费用统计</h4>
-          <el-row :gutter="20">
-            <el-col :span="8">
-              <el-statistic title="应缴费用" :value="ownerDetail.totalAmount" prefix="￥" />
-            </el-col>
-            <el-col :span="8">
-              <el-statistic title="已缴费用" :value="ownerDetail.paidAmount" prefix="￥" />
-            </el-col>
-            <el-col :span="8">
-              <el-statistic title="待缴费用" :value="ownerDetail.unpaidAmount" prefix="￥" />
-            </el-col>
-          </el-row>
-        </div>
       </div>
     </el-dialog>
 

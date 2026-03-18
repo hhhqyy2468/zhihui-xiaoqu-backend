@@ -88,7 +88,8 @@ public class NoticeController {
         log.info("新增公告, notice: {}", notice);
         notice.setCreateBy(SecurityUtils.getUsername());
         notice.setPublisherId(SecurityUtils.getUserId());
-        notice.setPublisherName(SecurityUtils.getUsername());
+        String realName = SecurityUtils.getLoginUser().getRealName();
+        notice.setPublisherName(realName != null ? realName : SecurityUtils.getUsername());
         return toAjax(noticeService.save(notice));
     }
 

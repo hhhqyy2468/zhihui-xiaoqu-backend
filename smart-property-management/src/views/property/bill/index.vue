@@ -178,14 +178,6 @@
               编辑
             </el-button>
             <el-button
-              v-if="row.billStatus === 1 || row.billStatus === 0"
-              link
-              type="success"
-              @click="handlePay(row)"
-            >
-              缴费
-            </el-button>
-            <el-button
               link
               type="info"
               @click="handleViewDetail(row)"

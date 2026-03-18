@@ -85,7 +85,7 @@
         {{ currentUserRole === 3 ? '新增报修' : '新增工单' }}
       </el-button>
             <el-button
-        v-if="currentUserRole === 1"
+        v-if="currentUserRole === 1 || currentUserRole === 2"
         type="warning"
         @click="handleViewArchives"
       >
@@ -176,7 +176,7 @@
             </el-button>
 
             <!-- 物业经理操作 -->
-            <template v-if="currentUserRole === 1">
+            <template v-if="currentUserRole === 1 || currentUserRole === 2">
               <el-button
                 v-if="row.orderStatus === 1"
                 link
@@ -948,8 +948,8 @@ const loadRepairTypeOptions = async () => {
     const response = await getDictDataByType('repair_type')
     if (response.code === 200) {
       // 只显示状态为启用的字典项 (status = '1' 或者 true)
+      console.log('加载到的维修类型字典原始数据:', response.data)
       repairTypeOptions.value = response.data
-        .filter(item => item.status === 1 || item.status === '1' || item.status === true)
         .map(item => ({
           label: item.dictLabel,
           value: item.dictValue
@@ -1748,7 +1748,7 @@ const handleViewArchiveDetail = (row) => {
       <div style="background: #fff3cd; padding: 20px; border-radius: 8px; border-left: 4px solid #ffc107; margin-top: 15px;">
         <h4 style="color: #856404; margin: 0 0 15px 0; font-size: 16px;">🔨 维修信息</h4>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px;">
-          <div><strong>维修类型：</strong>${row.repairType || '未分类'}</div>
+          <div><strong>维修类型：</strong>${getTypeName(row.repairType) || '未分类'}</div>
           <div><strong>维修人员：</strong>${row.workerName || '未分配'}</div>
           <div><strong>故障描述：</strong>${row.faultDescription || '无描述'}</div>
           <div><strong>维修费用：</strong><span style="color: #e74c3c; font-weight: bold;">￥${row.repairCost || '0'}</span></div>

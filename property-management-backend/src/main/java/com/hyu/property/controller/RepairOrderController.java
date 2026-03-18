@@ -348,11 +348,11 @@ public class RepairOrderController {
     public AjaxResult ownerReport(@Valid @RequestBody RepairOrder repairOrder) {
         log.info("业主报修, repairOrder: {}", repairOrder);
 
-        // 设置当前用户ID和用户名为报修人
+        // 设置当前用户ID和真实姓名为报修人
         Long currentUserId = SecurityUtils.getUserId();
-        String currentUsername = SecurityUtils.getUsername();
         repairOrder.setUserId(currentUserId);
-        repairOrder.setUserName(currentUsername);
+        String realName = SecurityUtils.getLoginUser().getRealName();
+        repairOrder.setUserName(realName != null ? realName : SecurityUtils.getUsername());
 
         // 从用户信息中获取联系电话
         String currentUserPhone = SecurityUtils.getLoginUser().getPhone();
@@ -463,11 +463,11 @@ public class RepairOrderController {
                 return AjaxResult.error("请选择要上传的图片");
             }
 
-            // 确保上传目录存在
-            File uploadDir = new File(uploadPath);
+            // 确保上传目录存在（转为绝对路径）
+            File uploadDir = new File(uploadPath).toPath().toAbsolutePath().toFile();
             if (!uploadDir.exists()) {
                 uploadDir.mkdirs();
-                log.info("创建上传目录: {}", uploadPath);
+                log.info("创建上传目录: {}", uploadDir.getAbsolutePath());
             }
 
             List<String> imageUrls = new ArrayList<>();

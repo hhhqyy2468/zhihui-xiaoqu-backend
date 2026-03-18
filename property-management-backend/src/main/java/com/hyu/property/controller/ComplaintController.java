@@ -138,7 +138,8 @@ public class ComplaintController {
 
         // 设置投诉人信息
         complaint.setUserId(SecurityUtils.getUserId());
-        complaint.setUserName(SecurityUtils.getUsername());
+        String realName = SecurityUtils.getLoginUser().getRealName();
+        complaint.setUserName(realName != null ? realName : SecurityUtils.getUsername());
         complaint.setCreateBy(SecurityUtils.getUsername());
         complaint.setUpdateBy(SecurityUtils.getUsername());
 

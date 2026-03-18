@@ -44,12 +44,6 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="userId != null">
                 and nr.user_id = #{userId}
             </if>
-            <if test="params.beginTime != null and params.beginTime != ''">
-                and date_format(nr.read_time,'%y%m%d') &gt;= date_format(#{params.beginTime},'%y%m%d')
-            </if>
-            <if test="params.endTime != null and params.endTime != ''">
-                and date_format(nr.read_time,'%y%m%d') &lt;= date_format(#{params.endTime},'%y%m%d')
-            </if>
         </where>
         order by nr.read_time desc
     </select>

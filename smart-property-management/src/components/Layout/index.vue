@@ -18,7 +18,7 @@
         active-text-color="#409eff"
         router
       >
-        <el-menu-item index="/dashboard" v-user-type="[1, 2, 4]">
+        <el-menu-item index="/dashboard" v-user-type="2">
           <el-icon><House /></el-icon>
           <template #title>工作台</template>
         </el-menu-item>
@@ -123,18 +123,10 @@
         </el-sub-menu>
 
         <!-- 系统日志 - 仅系统管理员可见 -->
-        <el-sub-menu index="/log" v-user-type="1">
-          <template #title>
-            <el-icon><View /></el-icon>
-            <span>系统日志</span>
-          </template>
-          <el-menu-item index="/log/operation">
-            操作日志
-          </el-menu-item>
-          <el-menu-item index="/log/login">
-            登录日志
-          </el-menu-item>
-        </el-sub-menu>
+        <el-menu-item index="/system/log" v-user-type="1">
+          <el-icon><View /></el-icon>
+          <template #title>系统日志</template>
+        </el-menu-item>
 
         <!-- 业主门户菜单 - 仅业主可见 -->
         <el-menu-item index="/portal/dashboard" v-user-type="3">
@@ -231,9 +223,8 @@
         <div class="navbar-right">
           <el-dropdown @command="handleCommand">
             <span class="user-info">
-              <el-avatar :size="32" :src="userStore.avatar">
-                {{ userStore.realName.charAt(0) }}
-              </el-avatar>
+              <el-avatar v-if="avatarUrl" :size="32" :src="avatarUrl" />
+              <el-avatar v-else :size="32">{{ userStore.realName.charAt(0) }}</el-avatar>
               <span class="username">{{ userStore.realName }}</span>
               <el-icon><ArrowDown /></el-icon>
             </span>
@@ -287,6 +278,14 @@ const userStore = useUserStore()
 const sidebarOpened = computed(() => appStore.sidebarStatus)
 const activeMenu = computed(() => route.path)
 const currentRoute = computed(() => route)
+
+const BASE_URL = (import.meta.env.VITE_APP_API_BASE_URL || 'http://localhost:8080/api/v1').replace(/\/api\/v1$/, '')
+const avatarUrl = computed(() => {
+  const av = userStore.avatar
+  if (!av) return ''
+  if (av.startsWith('http')) return av
+  return BASE_URL + av
+})
 
 
 const toggleSidebar = () => {

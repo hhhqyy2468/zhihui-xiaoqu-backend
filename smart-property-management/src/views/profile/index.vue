@@ -27,12 +27,16 @@
 
         <div class="profile-info">
           <div class="avatar-section">
-            <el-avatar :size="120" :src="profileForm.avatar">
-              {{ profileForm.realName.charAt(0) }}
-            </el-avatar>
-            <div class="avatar-actions" v-if="editMode">
-              <el-button size="small" type="primary">更换头像</el-button>
-            </div>
+            <el-upload
+              class="avatar-uploader"
+              :show-file-list="false"
+              :before-upload="beforeAvatarUpload"
+              :http-request="uploadAvatar"
+            >
+              <el-avatar v-if="avatarSrc" :size="120" :src="avatarSrc" class="avatar-hover" />
+              <el-avatar v-else :size="120" class="avatar-hover">{{ profileForm.realName.charAt(0) }}</el-avatar>
+              <div class="avatar-mask">点击更换</div>
+            </el-upload>
           </div>
 
           <div class="info-section">
@@ -169,42 +173,6 @@
         </div>
       </el-card>
 
-      <!-- 登录记录卡片 -->
-      <el-card class="login-record-card">
-        <template #header>
-          <span>登录记录</span>
-        </template>
-
-        <el-table :data="loginRecords" style="width: 100%">
-          <el-table-column prop="loginTime" label="登录时间" width="180">
-            <template #default="{ row }">
-              {{ formatDateTime(row.loginTime) }}
-            </template>
-          </el-table-column>
-          <el-table-column prop="ip" label="IP地址" width="140" />
-          <el-table-column prop="location" label="登录地点" />
-          <el-table-column prop="device" label="设备信息" />
-          <el-table-column prop="status" label="状态" width="100">
-            <template #default="{ row }">
-              <el-tag :type="row.status === 'success' ? 'success' : 'danger'">
-                {{ row.status === 'success' ? '成功' : '失败' }}
-              </el-tag>
-            </template>
-          </el-table-column>
-        </el-table>
-
-        <div class="pagination-wrapper">
-          <el-pagination
-            v-model:current-page="currentPage"
-            v-model:page-size="pageSize"
-            :page-sizes="[10, 20, 50, 100]"
-            :total="total"
-            layout="total, sizes, prev, pager, next, jumper"
-            @size-change="handleSizeChange"
-            @current-change="handleCurrentChange"
-          />
-        </div>
-      </el-card>
     </div>
 
     <!-- 修改密码对话框 -->
@@ -260,8 +228,56 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Lock, Iphone, Message } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { USER_TYPES, ROLES } from '@/utils/permission'
+import request from '@/utils/request'
 
 const userStore = useUserStore()
+
+// 头像
+const BASE_URL = (import.meta.env.VITE_APP_API_BASE_URL || 'http://localhost:8080/api/v1').replace(/\/api\/v1$/, '')
+const avatarSrc = computed(() => {
+  const av = profileForm.avatar
+  console.log('[Avatar Debug] profileForm.avatar:', av)
+  console.log('[Avatar Debug] BASE_URL:', BASE_URL)
+  if (!av) {
+    console.log('[Avatar Debug] avatar为空，显示文字头像')
+    return ''
+  }
+  if (av.startsWith('http')) {
+    console.log('[Avatar Debug] 完整URL，直接使用:', av)
+    return av
+  }
+  const full = BASE_URL + av
+  console.log('[Avatar Debug] 拼接URL:', full)
+  return full
+})
+
+const beforeAvatarUpload = (file) => {
+  const isImage = file.type.startsWith('image/')
+  const isLt2M = file.size / 1024 / 1024 < 2
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件')
+    return false
+  }
+  if (!isLt2M) {
+    ElMessage.error('图片大小不能超过 2MB')
+    return false
+  }
+  return true
+}
+
+const uploadAvatar = async ({ file }) => {
+  const formData = new FormData()
+  formData.append('avatar', file)
+  try {
+    const res = await request({ url: '/auth/avatar', method: 'post', data: formData, headers: { 'Content-Type': 'multipart/form-data' } })
+    const url = res.data
+    profileForm.avatar = url
+    userStore.updateUserInfo({ avatar: url })
+    ElMessage.success('头像上传成功')
+  } catch (e) {
+    ElMessage.error('头像上传失败')
+  }
+}
 
 // 编辑模式
 const editMode = ref(false)
@@ -331,12 +347,6 @@ const passwordRules = {
   ]
 }
 
-// 登录记录
-const loginRecords = ref([])
-const currentPage = ref(1)
-const pageSize = ref(10)
-const total = ref(0)
-
 // 获取用户类型名称
 const getUserTypeName = (userType) => {
   const typeMap = {
@@ -372,12 +382,15 @@ const getRoleName = (role) => {
 
 // 手机号脱敏
 const maskPhone = (phone) => {
+  if (!phone) return '未绑定'
   return phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')
 }
 
 // 邮箱脱敏
 const maskEmail = (email) => {
+  if (!email) return '未绑定'
   const [username, domain] = email.split('@')
+  if (!domain) return email
   const maskedUsername = username.length > 2
     ? username.substring(0, 2) + '***' + username.substring(username.length - 1)
     : username
@@ -396,48 +409,7 @@ const initProfileInfo = () => {
     houseInfo: '3号楼2单元501',
     checkInDays: Math.floor(Math.random() * 1000) + 100
   })
-}
-
-// 加载登录记录
-const loadLoginRecords = () => {
-  // 模拟登录记录数据
-  const mockRecords = [
-    {
-      id: 1,
-      loginTime: new Date(),
-      ip: '192.168.1.100',
-      location: '北京市朝阳区',
-      device: 'Chrome 118.0 / Windows 10',
-      status: 'success'
-    },
-    {
-      id: 2,
-      loginTime: new Date(Date.now() - 86400000),
-      ip: '192.168.1.101',
-      location: '北京市朝阳区',
-      device: 'Chrome 118.0 / Windows 10',
-      status: 'success'
-    },
-    {
-      id: 3,
-      loginTime: new Date(Date.now() - 172800000),
-      ip: '192.168.1.102',
-      location: '北京市朝阳区',
-      device: 'Chrome 117.0 / Windows 10',
-      status: 'success'
-    },
-    {
-      id: 4,
-      loginTime: new Date(Date.now() - 259200000),
-      ip: '192.168.1.103',
-      location: '北京市朝阳区',
-      device: 'Chrome 117.0 / Windows 10',
-      status: 'failed'
-    }
-  ]
-
-  loginRecords.value = mockRecords
-  total.value = mockRecords.length
+  console.log('[Avatar Debug] initProfileInfo userStore.userInfo:', JSON.stringify(userStore.userInfo))
 }
 
 // 保存个人信息
@@ -499,20 +471,17 @@ const handlePasswordChange = async () => {
   }
 }
 
-// 分页处理
-const handleSizeChange = (val) => {
-  pageSize.value = val
-  loadLoginRecords()
-}
-
-const handleCurrentChange = (val) => {
-  currentPage.value = val
-  loadLoginRecords()
-}
-
-onMounted(() => {
+onMounted(async () => {
+  // 先从本地初始化，再从后端拉取最新信息（确保 avatar 等字段是最新的）
   initProfileInfo()
-  loadLoginRecords()
+  if (!userStore.token.startsWith('mock_token_')) {
+    try {
+      await userStore.getUserInfo()
+      initProfileInfo()
+    } catch (e) {
+      console.warn('获取用户信息失败:', e)
+    }
+  }
 })
 </script>
 
@@ -614,15 +583,47 @@ onMounted(() => {
   }
 }
 
-.login-record-card {
-  .pagination-wrapper {
-    margin-top: 20px;
-    text-align: right;
-  }
-}
-
 .mr-1 {
   margin-right: 4px;
+}
+
+.avatar-section {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+
+  .avatar-uploader {
+    position: relative;
+    cursor: pointer;
+
+    &:hover .avatar-mask {
+      opacity: 1;
+    }
+  }
+
+  .avatar-hover {
+    display: block;
+  }
+
+  .avatar-mask {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.45);
+    color: #fff;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
 }
 
 @media (max-width: 768px) {

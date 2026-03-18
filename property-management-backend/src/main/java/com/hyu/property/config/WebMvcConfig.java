@@ -16,16 +16,22 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
 
-    @Value("${repair.upload.path:./uploads/images}")
-    private String uploadPath;
+    @Value("${file.upload.base-path:./uploads}")
+    private String uploadBasePath;
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // 配置外部上传目录的静态资源映射
-        registry.addResourceHandler("/images/**")
-                .addResourceLocations("file:" + uploadPath + "/");
+        String base = new java.io.File(uploadBasePath).toPath().toAbsolutePath().toString().replace("\\", "/");
 
-        // 保持原有的classpath资源映射（兼容旧图片）
+        // 维修/投诉图片
+        registry.addResourceHandler("/images/**")
+                .addResourceLocations("file:" + base + "/repair/");
+
+        // 用户头像
+        registry.addResourceHandler("/avatar/**")
+                .addResourceLocations("file:" + base + "/avatar/");
+
+        // 保持原有的classpath资源映射
         registry.addResourceHandler("/static/images/**")
                 .addResourceLocations("classpath:/static/images/");
     }

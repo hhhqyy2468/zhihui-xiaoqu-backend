@@ -12,6 +12,8 @@ export const useUserStore = defineStore('user', {
 
   getters: {
     isLogin: (state) => !!state.token,
+    id: (state) => state.userInfo.id || state.userInfo.userId || null,
+    userId: (state) => state.userInfo.id || state.userInfo.userId || null,
     username: (state) => state.userInfo.username || '',
     realName: (state) => state.userInfo.realName || '',
     userType: (state) => state.userInfo.userType || '',

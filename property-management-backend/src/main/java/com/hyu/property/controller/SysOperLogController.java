@@ -44,6 +44,8 @@ public class SysOperLogController {
         SysOperLog sysOperLog = new SysOperLog();
         sysOperLog.setOperName(username);
         sysOperLog.setStatus(status);
+        sysOperLog.setBeginTime(beginTime);
+        sysOperLog.setEndTime(endTime);
 
         PageResult<SysOperLogVO> page = sysOperLogService.selectOperLogList(sysOperLog, pageNum, pageSize);
         return AjaxResult.success(page);

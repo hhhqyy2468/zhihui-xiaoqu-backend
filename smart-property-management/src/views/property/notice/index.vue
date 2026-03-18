@@ -33,6 +33,9 @@
             <el-option label="社区活动" value="activity" />
             <el-option label="政策通知" value="policy" />
             <el-option label="温馨提示" value="reminder" />
+            <el-option label="维修通知" value="maintenance" />
+            <el-option label="节假日通知" value="holiday" />
+            <el-option label="施工公告" value="construction" />
           </el-select>
         </el-form-item>
         <el-form-item label="公告状态">
@@ -133,7 +136,6 @@
           </template>
         </el-table-column>
         <el-table-column prop="publisherName" label="发布人" width="120" />
-        <el-table-column prop="readCount" label="阅读次数" width="100" />
         <el-table-column prop="publishTime" label="发布时间" width="180">
           <template #default="{ row }">
             {{ formatDateTime(row.publishTime) }}
@@ -216,6 +218,9 @@
             <el-option label="社区活动" value="activity" />
             <el-option label="政策通知" value="policy" />
             <el-option label="温馨提示" value="reminder" />
+            <el-option label="维修通知" value="maintenance" />
+            <el-option label="节假日通知" value="holiday" />
+            <el-option label="施工公告" value="construction" />
           </el-select>
         </el-form-item>
         <el-form-item label="公告内容" prop="noticeContent">
@@ -362,7 +367,6 @@
         <el-descriptions-item label="是否置顶">
           {{ currentNotice.isTop ? '置顶' : '否' }}
         </el-descriptions-item>
-        <el-descriptions-item label="阅读次数">{{ currentNotice.readCount }}次</el-descriptions-item>
         <el-descriptions-item label="发布时间">{{ formatDateTime(currentNotice.publishTime) }}</el-descriptions-item>
         <el-descriptions-item label="有效期至">
           {{ currentNotice.effectiveEndTime ? formatDateTime(currentNotice.effectiveEndTime) : '永久有效' }}
@@ -518,9 +522,12 @@ const getNoticeTypeName = (type) => {
     'outage': '停水停电',
     'activity': '社区活动',
     'policy': '政策通知',
-    'reminder': '温馨提示'
+    'reminder': '温馨提示',
+    'maintenance': '维修通知',
+    'holiday': '节假日通知',
+    'construction': '施工公告'
   }
-  return typeMap[type] || '未知'
+  return typeMap[type] || type || '未知'
 }
 
 // 获取公告类型颜色
@@ -530,7 +537,10 @@ const getNoticeTypeColor = (type) => {
     'outage': 'warning',
     'activity': 'success',
     'policy': 'info',
-    'reminder': 'info'
+    'reminder': 'info',
+    'maintenance': 'danger',
+    'holiday': 'success',
+    'construction': 'warning'
   }
   return colorMap[type] || 'info'
 }

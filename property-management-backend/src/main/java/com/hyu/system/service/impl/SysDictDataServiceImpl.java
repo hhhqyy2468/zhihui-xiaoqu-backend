@@ -50,7 +50,9 @@ public class SysDictDataServiceImpl extends ServiceImpl<SysDictDataMapper, SysDi
      */
     @Override
     public List<SysDictData> selectDictDataByType(String dictType) {
-        return dictDataMapper.selectDictDataByType(dictType);
+        return dictDataMapper.selectDictDataByType(dictType).stream()
+                .filter(d -> "1".equals(d.getStatus()))
+                .collect(java.util.stream.Collectors.toList());
     }
 
     /**

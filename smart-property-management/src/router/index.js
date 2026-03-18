@@ -18,6 +18,8 @@ const routes = [
         return '/portal/dashboard'
       } else if (userType === '4') {
         return '/work/pending'
+      } else if (userType === '1') {
+        return '/analytics/dashboard'
       } else {
         return '/dashboard'
       }
@@ -208,27 +210,6 @@ const routes = [
       }
     ]
   },
-  // 系统日志
-  {
-    path: '/log',
-    name: 'Log',
-    component: () => import('@/components/Layout/index.vue'),
-    meta: { title: '系统日志', icon: 'View' },
-    children: [
-      {
-        path: 'operation',
-        name: 'LogOperation',
-        component: () => import('@/views/system/log/index.vue'),
-        meta: { title: '操作日志', icon: 'View' }
-      },
-      {
-        path: 'login',
-        name: 'LogLogin',
-        component: () => import('@/views/system/log/index.vue'),
-        meta: { title: '登录日志', icon: 'View' }
-      }
-    ]
-  },
   // 业主门户（重构）
   {
     path: '/portal',
@@ -353,7 +334,13 @@ const routes = [
   {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
-    redirect: '/dashboard',
+    redirect: () => {
+      const userType = localStorage.getItem('userType')
+      if (userType === '1') return '/analytics/dashboard'
+      if (userType === '3') return '/portal/dashboard'
+      if (userType === '4') return '/work/pending'
+      return '/dashboard'
+    },
     meta: { hideInMenu: true }
   }
 ]
@@ -362,6 +349,15 @@ const router = createRouter({
   history: createWebHistory(),
   routes
 })
+
+// 根据 userType 获取首页路径
+function getHomePath() {
+  const userType = localStorage.getItem('userType')
+  if (userType === '1') return '/analytics/dashboard'
+  if (userType === '3') return '/portal/dashboard'
+  if (userType === '4') return '/work/pending'
+  return '/dashboard'
+}
 
 // 路由守卫
 router.beforeEach((to, from, next) => {
@@ -372,7 +368,15 @@ router.beforeEach((to, from, next) => {
 
   if (to.path === '/login') {
     if (token) {
-      next('/')
+      next(getHomePath())
+    } else {
+      next()
+    }
+  } else if (to.path === '/dashboard') {
+    // /dashboard 只有 userType=2 的物业管理员才应该看到，其他角色重定向到正确首页
+    const userType = localStorage.getItem('userType')
+    if (userType && userType !== '2') {
+      next(getHomePath())
     } else {
       next()
     }

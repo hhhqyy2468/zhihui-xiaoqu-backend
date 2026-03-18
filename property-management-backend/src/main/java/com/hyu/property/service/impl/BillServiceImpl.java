@@ -450,16 +450,31 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill> implements IB
                 }
 
                 // 验证支付密码
-                boolean passwordValid = walletService.verifyPayPassword(userId, payPassword);
-                if (!passwordValid) {
+                try {
+                    boolean passwordValid = walletService.verifyPayPassword(userId, payPassword);
+                    if (!passwordValid) {
+                        Map<String, Object> result = new HashMap<>();
+                        result.put("code", 400);
+                        result.put("msg", "支付密码错误");
+                        return result;
+                    }
+                } catch (RuntimeException e) {
                     Map<String, Object> result = new HashMap<>();
                     result.put("code", 400);
-                    result.put("msg", "支付密码错误");
+                    result.put("msg", e.getMessage());
                     return result;
                 }
 
                 // 调用钱包服务扣款
-                Map<String, Object> deductResult = walletService.deduct(userId, bill.getAmount(), billId, bill.getBillNo());
+                Map<String, Object> deductResult;
+                try {
+                    deductResult = walletService.deduct(userId, bill.getAmount(), billId, bill.getBillNo());
+                } catch (RuntimeException e) {
+                    Map<String, Object> result = new HashMap<>();
+                    result.put("code", 400);
+                    result.put("msg", e.getMessage());
+                    return result;
+                }
                 if ((Integer) deductResult.get("code") != 200) {
                     return deductResult;
                 }
@@ -577,18 +592,33 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill> implements IB
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
 
                 // 验证支付密码
-                boolean passwordValid = walletService.verifyPayPassword(userId, payPassword);
-                if (!passwordValid) {
+                try {
+                    boolean passwordValid = walletService.verifyPayPassword(userId, payPassword);
+                    if (!passwordValid) {
+                        Map<String, Object> result = new HashMap<>();
+                        result.put("code", 400);
+                        result.put("msg", "支付密码错误");
+                        return result;
+                    }
+                } catch (RuntimeException e) {
                     Map<String, Object> result = new HashMap<>();
                     result.put("code", 400);
-                    result.put("msg", "支付密码错误");
+                    result.put("msg", e.getMessage());
                     return result;
                 }
 
                 // 调用钱包服务批量扣款（为每个账单分别扣款并创建交易记录）
                 List<String> transactionNos = new ArrayList<>();
                 for (Bill bill : validBills) {
-                    Map<String, Object> deductResult = walletService.deduct(userId, bill.getAmount(), bill.getBillId(), bill.getBillNo());
+                    Map<String, Object> deductResult;
+                    try {
+                        deductResult = walletService.deduct(userId, bill.getAmount(), bill.getBillId(), bill.getBillNo());
+                    } catch (RuntimeException e) {
+                        Map<String, Object> result = new HashMap<>();
+                        result.put("code", 400);
+                        result.put("msg", e.getMessage());
+                        return result;
+                    }
                     if ((Integer) deductResult.get("code") != 200) {
                         Map<String, Object> result = new HashMap<>();
                         result.put("code", 500);

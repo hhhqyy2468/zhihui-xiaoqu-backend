@@ -1042,6 +1042,9 @@ const getTypeTag = (type) => {
 }
 
 const getTypeName = (type) => {
+  const option = complaintTypeOptions.value.find(item => item.dictValue === type)
+  if (option) return option.dictLabel
+  // 备用静态映射
   const typeMap = {
     'sanitation': '环境卫生',
     'noise': '噪音扰民',

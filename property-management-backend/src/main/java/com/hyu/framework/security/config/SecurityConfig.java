@@ -119,6 +119,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                     "/swagger-ui/**",
                     "/swagger-ui.html",
                     "/images/**",
+                    "/avatar/**",
                     "/static/**"
                 ).permitAll()
                 // 除上面外的所有请求全部需要鉴权认证

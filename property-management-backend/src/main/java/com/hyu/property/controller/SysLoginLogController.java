@@ -43,6 +43,8 @@ public class SysLoginLogController {
         SysLoginLog sysLoginLog = new SysLoginLog();
         sysLoginLog.setUsername(username);
         sysLoginLog.setStatus(status);
+        sysLoginLog.setBeginTime(beginTime);
+        sysLoginLog.setEndTime(endTime);
 
         PageResult<SysLoginLogVO> page = sysLoginLogService.selectLoginLogList(sysLoginLog, pageNum, pageSize);
         return AjaxResult.success(page);

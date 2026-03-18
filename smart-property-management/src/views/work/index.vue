@@ -57,7 +57,7 @@
     <el-card class="list-card" shadow="never">
       <el-tabs v-model="activeTab" @tab-change="handleTabChange">
         <el-tab-pane label="全部" name="all" />
-        <el-tab-pane label="待派工" name="1" />
+        <el-tab-pane label="待接单" name="2" />
         <el-tab-pane label="进行中" name="3" />
         <el-tab-pane label="待验收" name="4" />
         <el-tab-pane label="已完成" name="5" />
@@ -82,10 +82,11 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="140" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
+            <el-button type="info" size="small" @click="openDetailDrawer(row)">详情</el-button>
             <el-button
-              v-if="row.orderStatus === 1"
+              v-if="row.orderStatus === 2"
               type="primary"
               size="small"
               @click="handleAccept(row)"
@@ -137,14 +138,95 @@
         <el-button type="primary" :loading="submitting" @click="handleComplete">确认提交</el-button>
       </template>
     </el-dialog>
-  </div>
+  <!-- 工单详情抽屉 -->
+  <el-drawer v-model="detailDrawerVisible" title="工单详情" size="520px" direction="rtl">
+    <template v-if="detailOrder">
+      <el-descriptions :column="1" border>
+        <el-descriptions-item label="工单号">{{ detailOrder.orderNo }}</el-descriptions-item>
+        <el-descriptions-item label="报修人">{{ detailOrder.userName }}</el-descriptions-item>
+        <el-descriptions-item label="联系电话">{{ detailOrder.phone || '未填写' }}</el-descriptions-item>
+        <el-descriptions-item label="房间号">{{ detailOrder.houseNo }}</el-descriptions-item>
+        <el-descriptions-item label="维修类型">{{ getRepairTypeName(detailOrder.repairType) }}</el-descriptions-item>
+        <el-descriptions-item label="紧急程度">
+          <el-tag :type="detailOrder.urgencyLevel === 3 ? 'danger' : detailOrder.urgencyLevel === 2 ? 'warning' : 'info'" size="small">
+            {{ detailOrder.urgencyLevel === 3 ? '紧急' : detailOrder.urgencyLevel === 2 ? '较急' : '一般' }}
+          </el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="故障描述">{{ detailOrder.faultDescription }}</el-descriptions-item>
+        <el-descriptions-item label="维修费用">
+          <span style="color:#e74c3c;font-weight:bold">¥{{ detailOrder.repairCost ? Number(detailOrder.repairCost).toFixed(2) : '0.00' }}</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="状态">
+          <el-tag :type="getStatusType(detailOrder.orderStatus)" size="small">{{ getStatusLabel(detailOrder.orderStatus) }}</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="报修时间">{{ detailOrder.createTime }}</el-descriptions-item>
+        <el-descriptions-item label="派工时间" v-if="detailOrder.assignTime">{{ detailOrder.assignTime }}</el-descriptions-item>
+        <el-descriptions-item label="完成时间" v-if="detailOrder.finishTime">{{ detailOrder.finishTime }}</el-descriptions-item>
+      </el-descriptions>
+
+      <div v-if="detailOrder.imageUrls" style="margin-top:16px">
+        <div style="font-weight:600;margin-bottom:8px">报修图片</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <el-image
+            v-for="(url, i) in parseImages(detailOrder.imageUrls)"
+            :key="i"
+            :src="getImageUrl(url)"
+            :preview-src-list="parseImages(detailOrder.imageUrls).map(getImageUrl)"
+            style="width:100px;height:100px;object-fit:cover;border-radius:4px"
+            fit="cover"
+          />
+        </div>
+      </div>
+
+      <div v-if="detailOrder.repairImageUrls" style="margin-top:16px">
+        <div style="font-weight:600;margin-bottom:8px">维修后图片</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <el-image
+            v-for="(url, i) in parseImages(detailOrder.repairImageUrls)"
+            :key="i"
+            :src="getImageUrl(url)"
+            :preview-src-list="parseImages(detailOrder.repairImageUrls).map(getImageUrl)"
+            style="width:100px;height:100px;object-fit:cover;border-radius:4px"
+            fit="cover"
+          />
+        </div>
+      </div>
+
+      <div v-if="detailOrder.repairContent" style="margin-top:16px">
+        <div style="font-weight:600;margin-bottom:8px">维修内容</div>
+        <div style="color:#606266">{{ detailOrder.repairContent }}</div>
+      </div>
+    </template>
+  </el-drawer>
+</div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { Clock, Tools, Checked, CircleCheck } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request'
+
+const route = useRoute()
+const router = useRouter()
+
+// 路由路径 -> tab name 映射
+// status: 1=待派工 2=已派工(待接单) 3=进行中 4=待验收 5=已完成
+const routeTabMap = {
+  'pending': '2',
+  'processing': '3',
+  'pending-accept': '4',
+  'completed': '5'
+}
+// tab name -> 路由路径 映射
+const tabRouteMap = {
+  'all': '/work/pending',
+  '2': '/work/pending',
+  '3': '/work/processing',
+  '4': '/work/pending-accept',
+  '5': '/work/completed'
+}
 
 // 统计数据
 const stats = reactive({
@@ -154,8 +236,9 @@ const stats = reactive({
   completedCount: 0
 })
 
-// 标签页
-const activeTab = ref('all')
+// 标签页 - 根据当前路由初始化
+const getTabFromRoute = () => routeTabMap[route.path.split('/').pop()] ?? 'all'
+const activeTab = ref(getTabFromRoute())
 
 // 列表数据
 const loading = ref(false)
@@ -165,6 +248,47 @@ const pagination = reactive({
   pageSize: 10,
   total: 0
 })
+
+// 详情抽屉
+const detailDrawerVisible = ref(false)
+const detailOrder = ref(null)
+
+const BASE_URL = (import.meta.env.VITE_APP_API_BASE_URL || 'http://localhost:8080/api/v1').replace(/\/api\/v1$/, '')
+
+function openDetailDrawer(row) {
+  detailOrder.value = row
+  detailDrawerVisible.value = true
+}
+
+function parseImages(str) {
+  if (!str) return []
+  try {
+    const arr = JSON.parse(str)
+    return Array.isArray(arr) ? arr : [str]
+  } catch {
+    return str.split(',').filter(Boolean)
+  }
+}
+
+function getImageUrl(url) {
+  if (!url) return ''
+  if (url.startsWith('http')) return url
+  return BASE_URL + url
+}
+
+const repairTypeMap = {
+  water_electric: '水电维修',
+  door_window: '门窗维修',
+  elevator: '电梯维修',
+  public_facility: '公共设施',
+  other: '其他维修',
+  appliance: '家电维修',
+  plumbing: '管道维修',
+  painting: '油漆粉刷'
+}
+function getRepairTypeName(type) {
+  return repairTypeMap[type] || type || '未知'
+}
 
 // 完成处理弹窗
 const completeDialogVisible = ref(false)
@@ -197,7 +321,7 @@ function getStatusType(status) {
 // 加载统计
 async function loadStats() {
   try {
-    const res = await request({ url: '/api/v1/workbench/stats', method: 'get' })
+    const res = await request({ url: '/workbench/stats', method: 'get' })
     if (res.data) {
       Object.assign(stats, res.data)
     }
@@ -212,7 +336,7 @@ async function loadOrders() {
   try {
     const repairStatus = activeTab.value === 'all' ? undefined : Number(activeTab.value)
     const res = await request({
-      url: '/api/v1/workbench/my-orders',
+      url: '/workbench/my-orders',
       method: 'get',
       params: {
         pageNum: pagination.pageNum,
@@ -222,8 +346,15 @@ async function loadOrders() {
     })
     const data = res.data
     if (data) {
-      orderList.value = data.records ?? data.list ?? []
-      pagination.total = data.total ?? 0
+      // 后端返回直接列表（非分页对象）
+      if (Array.isArray(data)) {
+        console.log('[Work] 第一条工单数据:', JSON.stringify(data[0]))
+        orderList.value = data
+        pagination.total = data.length
+      } else {
+        orderList.value = data.records ?? data.list ?? []
+        pagination.total = data.total ?? 0
+      }
     }
   } catch (e) {
     console.error('加载工单失败', e)
@@ -232,16 +363,34 @@ async function loadOrders() {
   }
 }
 
-function handleTabChange() {
+// 监听 activeTab 变化 -> 同步路由 + 加载数据
+watch(activeTab, (tab) => {
   pagination.pageNum = 1
+  const targetPath = tabRouteMap[tab] || '/work/pending'
+  if (route.path !== targetPath) {
+    router.replace(targetPath)
+  }
   loadOrders()
+})
+
+// 监听路由变化 -> 同步 tab（侧边栏点击触发）
+watch(() => route.path, (newPath) => {
+  const seg = newPath.split('/').pop()
+  const tab = routeTabMap[seg] ?? 'all'
+  if (activeTab.value !== tab) {
+    activeTab.value = tab
+  }
+})
+
+function handleTabChange() {
+  // 由 watch(activeTab) 处理，此处留空
 }
 
 // 接单
 async function handleAccept(row) {
   try {
     await ElMessageBox.confirm(`确认接单「${row.orderNo}」？`, '接单确认', { type: 'warning' })
-    await request({ url: `/api/v1/workbench/order/${row.id}/accept`, method: 'post' })
+    await request({ url: `/workbench/order/${row.id}/accept`, method: 'post' })
     ElMessage.success('接单成功')
     loadStats()
     loadOrders()
@@ -264,9 +413,9 @@ async function handleComplete() {
   submitting.value = true
   try {
     await request({
-      url: `/api/v1/workbench/order/${currentOrder.value.id}/complete`,
+      url: `/workbench/order/${currentOrder.value.id}/complete`,
       method: 'post',
-      data: { repairResult: completeForm.repairResult }
+      data: { faultReason: completeForm.repairResult }
     })
     ElMessage.success('处理完成')
     completeDialogVisible.value = false

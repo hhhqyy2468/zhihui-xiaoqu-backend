@@ -219,13 +219,6 @@
             {{ formatDateTime(row.createTime) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="120" fixed="right">
-          <template #default="{ row }">
-            <el-button link type="primary" @click="handleViewHouseDetail(row)">
-              查看详情
-            </el-button>
-          </template>
-        </el-table-column>
       </el-table>
 
       <template #footer>

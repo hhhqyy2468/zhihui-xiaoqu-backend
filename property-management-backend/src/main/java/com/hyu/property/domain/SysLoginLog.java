@@ -135,4 +135,16 @@ public class SysLoginLog implements Serializable {
      */
     @TableField(exist = false)
     private String riskLevelName;
+
+    /**
+     * 开始时间（查询用）
+     */
+    @TableField(exist = false)
+    private String beginTime;
+
+    /**
+     * 结束时间（查询用）
+     */
+    @TableField(exist = false)
+    private String endTime;
 }

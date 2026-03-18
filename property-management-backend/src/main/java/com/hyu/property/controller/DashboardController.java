@@ -51,7 +51,7 @@ public class DashboardController {
                     new LambdaQueryWrapper<House>().eq(House::getDeleted, 0)));
 
             stats.put("userCount", userMapper.selectCount(
-                    new LambdaQueryWrapper<SysUser>().eq(SysUser::getDeleted, 0)));
+                    new LambdaQueryWrapper<SysUser>().eq(SysUser::getStatus, 1)));
 
             stats.put("logCount", operLogMapper.selectCount(null));
 
@@ -83,7 +83,7 @@ public class DashboardController {
             stats.put("ownerCount", userMapper.selectCount(
                     new LambdaQueryWrapper<SysUser>()
                             .eq(SysUser::getUserType, 3)
-                            .eq(SysUser::getDeleted, 0)));
+                            .eq(SysUser::getStatus, 1)));
 
             stats.put("unpaidBills", billMapper.selectCount(
                     new LambdaQueryWrapper<Bill>().in(Bill::getBillStatus, 1, 0)));
