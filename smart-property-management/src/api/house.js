@@ -63,7 +63,7 @@ export function getHouseStats(params) {
 // 获取住户信息
 export function getHouseResidents(houseId) {
   return request({
-    url: `/house/${houseId}/residents`,
+    url: `/property/house/${houseId}/residents`,
     method: 'get'
   })
 }

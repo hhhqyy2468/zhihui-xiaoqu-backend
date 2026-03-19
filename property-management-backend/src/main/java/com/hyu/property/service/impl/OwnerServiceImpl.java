@@ -92,6 +92,9 @@ public class OwnerServiceImpl extends ServiceImpl<OwnerMapper, Owner> implements
             OwnerVO ownerVO = new OwnerVO();
             BeanUtils.copyProperties(user, ownerVO);
             ownerVO.setUserId(user.getUserId()); // 使用userId字段
+            if (user.getCreateTime() != null) {
+                ownerVO.setCreateTime(java.sql.Timestamp.valueOf(user.getCreateTime()));
+            }
             // 添加房产信息
             List<OwnerVO.HouseInfo> houseList = getUserHouseInfo(user.getUserId());
             ownerVO.setHouseList(houseList);
@@ -134,6 +137,9 @@ public class OwnerServiceImpl extends ServiceImpl<OwnerMapper, Owner> implements
             OwnerVO ownerVO = new OwnerVO();
             BeanUtils.copyProperties(user, ownerVO);
             ownerVO.setUserId(user.getUserId()); // 使用userId字段
+            if (user.getCreateTime() != null) {
+                ownerVO.setCreateTime(java.sql.Timestamp.valueOf(user.getCreateTime()));
+            }
             // 添加房产信息
             List<OwnerVO.HouseInfo> houseList = getUserHouseInfo(user.getUserId());
             ownerVO.setHouseList(houseList);
@@ -179,6 +185,9 @@ public class OwnerServiceImpl extends ServiceImpl<OwnerMapper, Owner> implements
         OwnerVO ownerVO = new OwnerVO();
         BeanUtils.copyProperties(user, ownerVO);
         ownerVO.setUserId(user.getUserId()); // 使用userId字段
+        if (user.getCreateTime() != null) {
+            ownerVO.setCreateTime(java.sql.Timestamp.valueOf(user.getCreateTime()));
+        }
         // 添加房产信息
         List<OwnerVO.HouseInfo> houseList = getUserHouseInfo(user.getUserId());
         ownerVO.setHouseList(houseList);

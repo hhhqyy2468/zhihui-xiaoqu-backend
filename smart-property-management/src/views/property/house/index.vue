@@ -330,9 +330,13 @@
       title="住户信息"
       width="600px"
     >
-      <el-descriptions :column="2" border>
+      <div v-if="!currentResident.propertyOwner" style="text-align: center; padding: 30px 0; color: #909399;">
+        <el-icon style="font-size: 48px; margin-bottom: 12px;"><User /></el-icon>
+        <div>该房产暂无住户</div>
+      </div>
+      <el-descriptions v-else :column="2" border>
         <el-descriptions-item label="居住人">
-          {{ currentResident.propertyOwner || '暂无' }}
+          {{ currentResident.propertyOwner }}
         </el-descriptions-item>
         <el-descriptions-item label="联系电话">
           {{ currentResident.ownerPhone || '暂无' }}
@@ -346,9 +350,7 @@
           </el-tag>
         </el-descriptions-item>
         <el-descriptions-item label="住户状态">
-          <el-tag :type="currentResident.residentStatus === 1 ? 'success' : 'danger'">
-            {{ currentResident.residentStatus === 1 ? '在住' : '已搬离' }}
-          </el-tag>
+          <el-tag type="success">在住</el-tag>
         </el-descriptions-item>
       </el-descriptions>
 
@@ -362,7 +364,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, Plus, Delete, Download } from '@element-plus/icons-vue'
+import { Search, Refresh, Plus, Delete, Download, User } from '@element-plus/icons-vue'
 import { listHouses, getHouse, addHouse, updateHouse, deleteHouses, assignHouseByUsername, getBuildingOptions, getUnitOptions, getHouseResidents } from '@/api/house'
 
 // 响应式数据
@@ -702,6 +704,7 @@ const handleAdd = () => {
 const handleEdit = async (row) => {
   isEdit.value = true
   Object.assign(form, row)
+  form.buildingArea = row.buildingAreaNum
   // 设置单元选项
   await loadUnitOptions(row.buildingId)
   dialogVisible.value = true
@@ -779,24 +782,11 @@ const handleViewResident = async (row) => {
     if (response.code === 200 && response.data) {
       currentResident.value = response.data
     } else {
-      currentResident.value = {
-        propertyOwner: row.propertyOwner || '暂无',
-        ownerPhone: '暂无',
-        checkInTime: null,
-        residentType: row.propertyOwnerId ? 1 : 0,
-        residentStatus: row.houseStatus > 1 ? 1 : 0
-      }
+      currentResident.value = {}
     }
   } catch (error) {
     console.error('获取住户信息失败:', error)
-    // 出错时显示基本信息
-    currentResident.value = {
-      propertyOwner: row.propertyOwner || '暂无',
-      ownerPhone: '暂无',
-      checkInTime: null,
-      residentType: row.propertyOwnerId ? 1 : 0,
-      residentStatus: row.houseStatus > 1 ? 1 : 0
-    }
+    currentResident.value = {}
   }
 
   residentDialogVisible.value = true
