@@ -174,32 +174,23 @@
     <!-- 权限分配对话框 -->
     <el-dialog
       v-model="permissionDialogVisible"
-      title="权限分配"
-      width="800px"
+      title="角色权限"
+      width="600px"
     >
-      <el-form :model="permissionForm" label-width="100px">
-        <el-form-item label="角色名称">
-          <el-input v-model="permissionForm.roleName" disabled />
-        </el-form-item>
-        <el-form-item label="权限列表">
-          <el-tree
-            ref="permissionTreeRef"
-            :data="permissionTreeData"
-            :props="treeProps"
-            show-checkbox
-            node-key="id"
-            :default-checked-keys="permissionForm.permissionIds"
-            :default-expanded-keys="[1, 2, 3]"
-            class="permission-tree"
-          />
-        </el-form-item>
-      </el-form>
-
+      <el-descriptions :column="1" border>
+        <el-descriptions-item label="角色名称">{{ permissionForm.roleName }}</el-descriptions-item>
+        <el-descriptions-item label="角色标识">{{ permissionForm.roleKey }}</el-descriptions-item>
+        <el-descriptions-item label="权限范围">
+          <el-tag
+            v-for="perm in permissionForm.permList"
+            :key="perm"
+            style="margin: 2px 4px 2px 0"
+            size="small"
+          >{{ perm }}</el-tag>
+        </el-descriptions-item>
+      </el-descriptions>
       <template #footer>
-        <el-button @click="permissionDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handlePermissionSubmit">
-          确定
-        </el-button>
+        <el-button @click="permissionDialogVisible = false">关闭</el-button>
       </template>
     </el-dialog>
   </div>
@@ -213,7 +204,6 @@ import * as systemApi from '@/api/system'
 
 // 响应式数据
 const formRef = ref()
-const permissionTreeRef = ref()
 const loading = ref(false)
 const dialogVisible = ref(false)
 const permissionDialogVisible = ref(false)
@@ -265,79 +255,9 @@ const formRules = {
 const permissionForm = reactive({
   roleId: null,
   roleName: '',
-  permissionIds: []
+  roleKey: '',
+  permList: []
 })
-
-// 权限树数据
-const permissionTreeData = ref([
-  {
-    id: 1,
-    label: '系统管理',
-    children: [
-      {
-        id: 11,
-        label: '用户管理',
-        children: [
-          { id: 111, label: '用户查看' },
-          { id: 112, label: '用户新增' },
-          { id: 113, label: '用户编辑' },
-          { id: 114, label: '用户删除' }
-        ]
-      },
-      {
-        id: 12,
-        label: '角色管理',
-        children: [
-          { id: 121, label: '角色查看' },
-          { id: 122, label: '角色新增' },
-          { id: 123, label: '角色编辑' },
-          { id: 124, label: '角色删除' }
-        ]
-      }
-    ]
-  },
-  {
-    id: 2,
-    label: '物业管理',
-    children: [
-      {
-        id: 21,
-        label: '楼栋管理',
-        children: [
-          { id: 211, label: '楼栋查看' },
-          { id: 212, label: '楼栋新增' },
-          { id: 213, label: '楼栋编辑' },
-          { id: 214, label: '楼栋删除' }
-        ]
-      },
-      {
-        id: 22,
-        label: '房产管理',
-        children: [
-          { id: 221, label: '房产查看' },
-          { id: 222, label: '房产新增' },
-          { id: 223, label: '房产编辑' },
-          { id: 224, label: '房产删除' }
-        ]
-      }
-    ]
-  },
-  {
-    id: 3,
-    label: '业主门户',
-    children: [
-      { id: 31, label: '我的账单' },
-      { id: 32, label: '我的钱包' },
-      { id: 33, label: '我的投诉' }
-    ]
-  }
-])
-
-// 树形控件配置
-const treeProps = {
-  children: 'children',
-  label: 'label'
-}
 
 // 计算属性
 const dialogTitle = computed(() => isEdit.value ? '编辑角色' : '新增角色')
@@ -455,35 +375,21 @@ const handleDelete = async (row) => {
   }
 }
 
-// 权限分配
-const handleAssignPermission = async (row) => {
-  try {
-    permissionForm.roleId = row.roleId
-    permissionForm.roleName = row.roleName
-    permissionForm.permissionIds = [] // 初始化为空
-
-    // 获取角色菜单列表
-    const response = await systemApi.getRoleMenus(row.roleId)
-    if (response.code === 200) {
-      // 转换菜单数据为权限树格式
-      permissionTreeData.value = convertMenusToPermissionTree(response.data || [])
-      permissionDialogVisible.value = true
-    } else {
-      ElMessage.error('获取菜单数据失败')
-    }
-  } catch (error) {
-    console.error('获取菜单数据失败:', error)
-    ElMessage.error('获取菜单数据失败')
-  }
+// 各角色权限说明
+const rolePermMap = {
+  admin:   ['系统管理', '用户管理', '角色管理', '物业管理', '财务管理', '服务管理', '停车管理', '公告管理', '日志管理', '数据大屏'],
+  manager: ['物业管理', '楼栋/单元/房产/业主', '费用类型', '账单管理', '钱包管理', '投诉管理', '维修管理', '停车管理', '公告管理'],
+  owner:   ['业主门户', '我的账单', '我的公告', '我的房产'],
+  worker:  ['维修工作台', '查看/处理维修工单']
 }
 
-// 转换菜单数据为权限树格式
-const convertMenusToPermissionTree = (menus) => {
-  return menus.map(menu => ({
-    id: menu.menuId,
-    label: menu.menuName,
-    children: menu.children ? convertMenusToPermissionTree(menu.children) : []
-  }))
+// 权限分配
+const handleAssignPermission = (row) => {
+  permissionForm.roleId = row.roleId
+  permissionForm.roleName = row.roleName
+  permissionForm.roleKey = row.roleKey
+  permissionForm.permList = rolePermMap[row.roleKey] || ['暂无权限定义']
+  permissionDialogVisible.value = true
 }
 
 // 提交表单
@@ -515,25 +421,6 @@ const handleSubmit = async () => {
   }
 }
 
-// 提交权限分配
-const handlePermissionSubmit = async () => {
-  try {
-    const checkedKeys = permissionTreeRef.value?.getCheckedKeys() || []
-    const halfCheckedKeys = permissionTreeRef.value?.getHalfCheckedKeys() || []
-    const allCheckedKeys = [...checkedKeys, ...halfCheckedKeys]
-
-    const response = await systemApi.assignRoleMenus(permissionForm.roleId, allCheckedKeys)
-    if (response.code === 200) {
-      ElMessage.success('权限分配成功')
-      permissionDialogVisible.value = false
-    } else {
-      ElMessage.error(response.msg || '权限分配失败')
-    }
-  } catch (error) {
-    console.error('权限分配失败:', error)
-    ElMessage.error('权限分配失败，请稍后重试')
-  }
-}
 
 // 分页处理
 const handleSizeChange = (val) => {
