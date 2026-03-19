@@ -91,7 +91,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
      */
     @Override
     public List<SysRole> selectRoleAll() {
-        return roleMapper.selectRoleAll();
+        return roleMapper.selectList(null);
     }
 
     /**
@@ -113,7 +113,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
      */
     @Override
     public SysRole selectRoleById(Long roleId) {
-        return roleMapper.selectRoleById(roleId);
+        return roleMapper.selectById(roleId);
     }
 
     /**
@@ -125,7 +125,9 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
     @Override
     public boolean checkRoleNameUnique(SysRole role) {
         Long roleId = StringUtils.isNull(role.getRoleId()) ? -1L : role.getRoleId();
-        SysRole info = roleMapper.checkRoleNameUnique(role.getRoleName());
+        QueryWrapper<SysRole> qw = new QueryWrapper<>();
+        qw.eq("role_name", role.getRoleName());
+        SysRole info = roleMapper.selectOne(qw);
         if (StringUtils.isNotNull(info) && info.getRoleId().longValue() != roleId.longValue()) {
             return false;
         }
@@ -141,7 +143,9 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
     @Override
     public boolean checkRoleKeyUnique(SysRole role) {
         Long roleId = StringUtils.isNull(role.getRoleId()) ? -1L : role.getRoleId();
-        SysRole info = roleMapper.checkRoleKeyUnique(role.getRoleKey());
+        QueryWrapper<SysRole> qw = new QueryWrapper<>();
+        qw.eq("role_key", role.getRoleKey());
+        SysRole info = roleMapper.selectOne(qw);
         if (StringUtils.isNotNull(info) && info.getRoleId().longValue() != roleId.longValue()) {
             return false;
         }
@@ -192,8 +196,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int insertRole(SysRole role) {
-        // 新增角色信息
-        return roleMapper.insertRole(role);
+        return roleMapper.insert(role);
     }
 
     /**
@@ -205,8 +208,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int updateRole(SysRole role) {
-        // 修改角色信息
-        return roleMapper.updateRole(role);
+        return roleMapper.updateById(role);
     }
 
     /**
@@ -217,7 +219,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
      */
     @Override
     public int updateRoleStatus(SysRole role) {
-        return roleMapper.updateRole(role);
+        return roleMapper.updateById(role);
     }
 
     /**
@@ -229,8 +231,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int authDataScope(SysRole role) {
-        // 修改角色信息
-        return roleMapper.updateRole(role);
+        return roleMapper.updateById(role);
     }
 
     /**
@@ -242,7 +243,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int deleteRoleById(Long roleId) {
-        return roleMapper.deleteRoleById(roleId);
+        return roleMapper.deleteById(roleId);
     }
 
     /**
@@ -254,7 +255,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int deleteRoleByIds(Long[] roleIds) {
-        return roleMapper.deleteRoleByIds(roleIds);
+        return roleMapper.deleteBatchIds(Arrays.asList(roleIds));
     }
 
     /**
