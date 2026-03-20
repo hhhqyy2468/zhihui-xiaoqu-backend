@@ -85,7 +85,7 @@ public class SysLoginLog implements Serializable {
     /**
      * 访问时间（创建时间）
      */
-    @TableField(value = "login_time", fill = FieldFill.INSERT)
+    @TableField(exist = false)
     private LocalDateTime createTime;
 
     /**

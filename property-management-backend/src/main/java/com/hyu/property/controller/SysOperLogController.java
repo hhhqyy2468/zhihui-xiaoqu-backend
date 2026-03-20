@@ -39,11 +39,13 @@ public class SysOperLogController {
                           @RequestParam(required = false) String username,
                           @RequestParam(required = false) String operation,
                           @RequestParam(required = false) Integer status,
+                          @RequestParam(required = false) Integer businessType,
                           @RequestParam(required = false) String beginTime,
                           @RequestParam(required = false) String endTime) {
         SysOperLog sysOperLog = new SysOperLog();
         sysOperLog.setOperName(username);
         sysOperLog.setStatus(status);
+        sysOperLog.setBusinessType(businessType);
         sysOperLog.setBeginTime(beginTime);
         sysOperLog.setEndTime(endTime);
 

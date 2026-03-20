@@ -103,7 +103,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, onActivated, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { OfficeBuilding, House, User, Refresh, Odometer, Tools, Loading } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
@@ -113,7 +113,7 @@ import { listHouses } from '@/api/house'
 import { getRepairOrderPage } from '@/api/repair'
 import { getAllBills } from '@/api/bill'
 import { getParkingSpaceStats } from '@/api/parkingSpace'
-import { listLoginLog } from '@/api/log'
+import { listOperLog } from '@/api/log'
 
 const statCards = [
   { key: 'buildingCount',   label: '总楼栋数',   icon: 'OfficeBuilding', colorClass: 'blue' },
@@ -142,6 +142,10 @@ const loadStats = async () => {
   try {
     const res = await getAdminStats()
     if (res?.data) statsData.value = { ...statsData.value, ...res.data }
+    // 今日登录数从操作日志（title=用户登录, businessType=1）统计
+    const today = new Date().toISOString().slice(0, 10)
+    const loginRes = await listOperLog({ pageNum: 1, pageSize: 1, businessType: 1, beginTime: today + ' 00:00:00', endTime: today + ' 23:59:59' })
+    statsData.value.todayLoginCount = loginRes?.data?.total ?? 0
   } catch (e) { ElMessage.warning('统计数据加载失败') }
   finally { statsLoading.value = false }
 }
@@ -151,10 +155,10 @@ const loadOccupancyData = async () => {
   let names = [], rates = [], totalArr = [], occupiedArr = []
   try {
     const buildRes = await listBuildings({ pageNum: 1, pageSize: 100 })
-    const buildings = buildRes?.data?.records || buildRes?.data?.list || (Array.isArray(buildRes?.data) ? buildRes.data : [])
+    const buildings = buildRes?.data?.records || buildRes?.data?.rows || buildRes?.data?.list || (Array.isArray(buildRes?.data) ? buildRes.data : [])
     for (const b of buildings) {
       const hr = await listHouses({ buildingId: b.id, pageNum: 1, pageSize: 1000 })
-      const houses = hr?.data?.records || hr?.data?.list || (Array.isArray(hr?.data) ? hr.data : [])
+      const houses = hr?.data?.records || hr?.data?.rows || hr?.data?.list || (Array.isArray(hr?.data) ? hr.data : [])
       const total = houses.length
       const occupied = houses.filter(h => h.houseStatus === 2).length
       names.push(b.buildingName || b.name || ('楼栋' + b.id))
@@ -354,6 +358,7 @@ const resizeCharts = () => {
 }
 
 onMounted(() => { loadAllData(); window.addEventListener('resize', resizeCharts) })
+onActivated(() => { loadAllData() })
 onUnmounted(() => {
   window.removeEventListener('resize', resizeCharts)
   occupancyChart?.dispose(); loginTrendChart?.dispose()

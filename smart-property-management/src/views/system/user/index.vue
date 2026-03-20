@@ -606,8 +606,10 @@ const handleSubmit = async () => {
 
     let response
     if (isEdit.value) {
-      // 编辑用户
-      response = await systemApi.updateUser(form)
+      // 编辑用户，密码为空时不传该字段
+      const updateData = { ...form }
+      if (!updateData.password) delete updateData.password
+      response = await systemApi.updateUser(updateData)
     } else {
       // 新增用户
       response = await systemApi.addUser(form)
