@@ -294,6 +294,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                         permissions.add("property:owner:list");
                         permissions.add("property:bill:view");
                         permissions.add("property:bill:pay");
+                        permissions.add("property:bill:export");
                         permissions.add("property:wallet:view");
                         permissions.add("property:wallet:recharge");
                         permissions.add("property:transaction:list");

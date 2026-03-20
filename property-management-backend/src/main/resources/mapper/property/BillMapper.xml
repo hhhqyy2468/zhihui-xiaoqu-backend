@@ -45,8 +45,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         from bill b
         left join house h on b.house_id = h.id
         left join building bd on h.building_id = bd.id
+        left join sys_user u on b.user_id = u.id and u.deleted = 0
         left join user_house uh on b.house_id = uh.house_id and uh.is_current = 1
-        left join sys_user u on uh.user_id = u.id and u.status = 1 and u.deleted = 0
         left join sys_user_role sur on u.id = sur.user_id
         left join sys_role r on sur.role_id = r.id
         left join fee_type ft on b.fee_type_id = ft.id

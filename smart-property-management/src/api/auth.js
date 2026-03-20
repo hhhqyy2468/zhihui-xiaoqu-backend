@@ -32,3 +32,12 @@ export function refreshToken() {
     method: 'post'
   })
 }
+
+// 注册（默认业主角色）
+export function register(data) {
+  return request({
+    url: '/auth/register',
+    method: 'post',
+    data
+  })
+}

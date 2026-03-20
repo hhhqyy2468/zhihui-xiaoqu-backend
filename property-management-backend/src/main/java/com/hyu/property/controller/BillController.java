@@ -166,6 +166,12 @@ public class BillController {
     @PreAuthorize("@ss.hasPermi('property:bill:export')")
     public void exportBillsToExcel(Bill bill, HttpServletResponse response) {
         try {
+            // 业主只能导出自己的账单
+            com.hyu.common.domain.LoginUser loginUser = (com.hyu.common.domain.LoginUser)
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            if (loginUser.getUserType() != null && loginUser.getUserType() == 3) {
+                bill.setUserId(loginUser.getUserId());
+            }
             // 查询账单数据
             List<Bill> billList = billService.selectBillList(bill);
 
@@ -191,11 +197,14 @@ public class BillController {
     @PreAuthorize("@ss.hasPermi('property:bill:export')")
     public void exportBillsBatchToExcel(@RequestBody Map<String, Object> params, HttpServletResponse response) {
         try {
-            // 获取账单ID列表
-            Long[] billIds = (Long[]) params.get("billIds");
-            if (billIds == null || billIds.length == 0) {
+            // 获取账单ID列表（JSON反序列化为ArrayList<Integer>，需转换）
+            java.util.List<?> rawIds = (java.util.List<?>) params.get("billIds");
+            if (rawIds == null || rawIds.isEmpty()) {
                 throw new IllegalArgumentException("账单ID列表不能为空");
             }
+            Long[] billIds = rawIds.stream()
+                .map(id -> Long.valueOf(id.toString()))
+                .toArray(Long[]::new);
 
             // 查询指定账单
             List<Bill> billList = billService.selectBillByIds(billIds);

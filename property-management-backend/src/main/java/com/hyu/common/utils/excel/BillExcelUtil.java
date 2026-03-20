@@ -193,6 +193,7 @@ public class BillExcelUtil {
                 case "houseCode": return bill.getHouseCode();
                 case "feeTypeName": return bill.getFeeTypeName();
                 case "billPeriod": return bill.getBillPeriod();
+                case "billingCycle": return bill.getBillPeriod();
                 case "amount": return bill.getAmount();
                 case "paidAmount": return bill.getPaidAmount();
                 case "discountAmount": return bill.getDiscountAmount();

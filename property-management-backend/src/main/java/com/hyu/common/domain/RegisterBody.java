@@ -28,7 +28,7 @@ public class RegisterBody {
     private String password;
 
     /**
-     * 确认密码
+     * 确认密码（可选，后端校验一致性）
      */
     @NotBlank(message = "确认密码不能为空")
     private String confirmPassword;
@@ -48,14 +48,12 @@ public class RegisterBody {
     private String phone;
 
     /**
-     * 验证码
+     * 验证码（可选）
      */
-    @NotBlank(message = "验证码不能为空")
     private String captchaCode;
 
     /**
-     * 验证码key
+     * 验证码key（可选）
      */
-    @NotBlank(message = "验证码key不能为空")
     private String captchaKey;
 }

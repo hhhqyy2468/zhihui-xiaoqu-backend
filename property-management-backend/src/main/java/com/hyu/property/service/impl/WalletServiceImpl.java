@@ -128,8 +128,8 @@ public class WalletServiceImpl extends ServiceImpl<WalletMapper, Wallet> impleme
             throw new RuntimeException("钱包不存在");
         }
 
-        // 系统采用明文密码策略，直接存储明文
-        wallet.setPayPassword(setPasswordDTO.getPayPassword());
+        // 使用BCrypt加密存储支付密码
+        wallet.setPayPassword(passwordEncoder.encode(setPasswordDTO.getPayPassword()));
         // 设置密码状态为已设置
         wallet.setPasswordStatus(1);
         wallet.setUpdateTime(LocalDateTime.now());
@@ -161,14 +161,14 @@ public class WalletServiceImpl extends ServiceImpl<WalletMapper, Wallet> impleme
             throw new RuntimeException("钱包不存在");
         }
 
-        // 验证原密码（系统采用明文密码策略）
+        // 验证原密码（BCrypt比对）
         if (wallet.getPayPassword() != null &&
-            !changePasswordDTO.getOldPassword().equals(wallet.getPayPassword())) {
+            !passwordEncoder.matches(changePasswordDTO.getOldPassword(), wallet.getPayPassword())) {
             throw new RuntimeException("原支付密码错误");
         }
 
-        // 系统采用明文密码策略，直接存储明文
-        wallet.setPayPassword(changePasswordDTO.getNewPassword());
+        // 使用BCrypt加密存储支付密码
+        wallet.setPayPassword(passwordEncoder.encode(changePasswordDTO.getNewPassword()));
         // 设置密码状态为已设置
         wallet.setPasswordStatus(1);
         wallet.setUpdateTime(LocalDateTime.now());
@@ -203,8 +203,8 @@ public class WalletServiceImpl extends ServiceImpl<WalletMapper, Wallet> impleme
             throw new RuntimeException("支付密码已被锁定，请稍后再试");
         }
 
-        // 系统采用明文密码策略，直接比较字符串
-        boolean isValid = payPassword.equals(wallet.getPayPassword());
+        // 使用BCrypt比对支付密码
+        boolean isValid = passwordEncoder.matches(payPassword, wallet.getPayPassword());
 
         if (!isValid) {
             // 增加错误次数
@@ -518,10 +518,10 @@ public class WalletServiceImpl extends ServiceImpl<WalletMapper, Wallet> impleme
             throw new RuntimeException("钱包不存在");
         }
 
-        // 重置支付密码为null，表示需要重新设置
-        wallet.setPayPassword(null);
-        // 设置密码状态为未设置
-        wallet.setPasswordStatus(0);
+        // 重置支付密码为BCrypt加密的默认密码123456
+        wallet.setPayPassword(passwordEncoder.encode("123456"));
+        // 设置密码状态为已设置
+        wallet.setPasswordStatus(1);
         wallet.setPayPasswordErrorCount(0);
         wallet.setPayPasswordLockTime(null);
         wallet.setUpdateTime(LocalDateTime.now());

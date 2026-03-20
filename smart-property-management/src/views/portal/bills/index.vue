@@ -407,7 +407,7 @@ import {
   Document,
   Clock
 } from '@element-plus/icons-vue'
-import { getMyBillList, getMyBillDetail, payBill as payBillApi, batchPayBills, getMyBillStatistics } from '@/api/bill'
+import { getMyBillList, getMyBillDetail, payBill as payBillApi, batchPayBills, getMyBillStatistics, exportBillsToExcel } from '@/api/bill'
 import { getAllFeeTypes } from '@/api/feeType'
 import { getDictDataByType } from '@/api/dict'
 
@@ -812,14 +812,44 @@ const handleSubmitBatchPay = async () => {
   }
 }
 
-// 下载账单
-const handleDownload = (row) => {
-  ElMessage.success(`正在下载账单 ${row.billNo}`)
+// 下载单个账单
+const handleDownload = async (row) => {
+  try {
+    const res = await exportBillsToExcel({ billId: row.billId })
+    const blob = new Blob([res.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `账单_${row.billNo}.xlsx`
+    link.click()
+    window.URL.revokeObjectURL(url)
+  } catch (e) {
+    ElMessage.error('下载失败')
+  }
 }
 
-// 导出账单
-const handleExport = () => {
-  ElMessage.success('账单导出成功')
+// 导出全部账单（按当前筛选条件）
+const handleExport = async () => {
+  try {
+    const params = {
+      billNo: filterForm.billNo || undefined,
+      billStatus: filterForm.status || undefined,
+      feeTypeId: filterForm.billType || undefined,
+      beginTime: filterForm.dateRange?.[0] || undefined,
+      endTime: filterForm.dateRange?.[1] || undefined
+    }
+    const res = await exportBillsToExcel(params)
+    const blob = new Blob([res.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `我的账单_${new Date().toLocaleDateString('zh-CN')}.xlsx`
+    link.click()
+    window.URL.revokeObjectURL(url)
+    ElMessage.success('导出成功')
+  } catch (e) {
+    ElMessage.error('导出失败')
+  }
 }
 
 // 组件挂载

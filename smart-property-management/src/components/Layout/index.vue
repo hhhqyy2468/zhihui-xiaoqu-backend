@@ -242,6 +242,17 @@
       <div class="app-main">
         <router-view />
       </div>
+
+      <!-- 页脚 -->
+      <div class="app-footer">
+        <span>©2026 胡浩宇 版权所有</span>
+        <span class="footer-divider">|</span>
+        <span>河南科技职业大学·信息工程学院</span>
+        <span class="footer-divider">|</span>
+        <span>基于Spring Boot + Vue的社区物业管理系统</span>
+        <span class="footer-divider">|</span>
+        <span>仅供毕设展示使用</span>
+      </div>
     </div>
   </div>
 </template>
@@ -420,5 +431,22 @@ const handleCommand = async (command) => {
   padding: 16px;
   overflow-y: auto;
   background: #f0f2f5;
+}
+
+.app-footer {
+  height: 40px;
+  background: #fff;
+  border-top: 1px solid #e8e8e8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: #999;
+  flex-shrink: 0;
+
+  .footer-divider {
+    margin: 0 8px;
+    color: #d9d9d9;
+  }
 }
 </style>

@@ -88,14 +88,14 @@
         <el-card shadow="never" class="chart-card">
           <template #header>
             <div class="card-header">
-              <span class="card-title">近7天登录趋势</span>
-              <el-button size="small" text :loading="loginTrendLoading" @click="loadLoginTrend">
+              <span class="card-title">投诉状态分布</span>
+              <el-button size="small" text :loading="complaintLoading" @click="loadComplaintData">
                 <el-icon><Refresh /></el-icon>
               </el-button>
             </div>
           </template>
-          <div v-if="loginTrendLoading" class="chart-placeholder"><el-icon class="is-loading" :size="32"><Loading /></el-icon><span>加载中...</span></div>
-          <div v-else ref="loginTrendChartRef" class="chart-box"></div>
+          <div v-if="complaintLoading" class="chart-placeholder"><el-icon class="is-loading" :size="32"><Loading /></el-icon><span>加载中...</span></div>
+          <div v-else ref="complaintChartRef" class="chart-box"></div>
         </el-card>
       </el-col>
     </el-row>
@@ -114,6 +114,7 @@ import { getRepairOrderPage } from '@/api/repair'
 import { getAllBills } from '@/api/bill'
 import { getParkingSpaceStats } from '@/api/parkingSpace'
 import { listOperLog } from '@/api/log'
+import { getComplaintPage } from '@/api/complaint'
 
 const statCards = [
   { key: 'buildingCount',   label: '总楼栋数',   icon: 'OfficeBuilding', colorClass: 'blue' },
@@ -124,18 +125,18 @@ const statCards = [
 ]
 
 const occupancyChartRef  = ref()
-const loginTrendChartRef = ref()
+const complaintChartRef  = ref()
 const repairChartRef     = ref()
 const billChartRef       = ref()
 const parkingChartRef    = ref()
 const statsLoading      = ref(false)
 const occupancyLoading  = ref(false)
-const loginTrendLoading = ref(false)
+const complaintLoading  = ref(false)
 const repairLoading     = ref(false)
 const billLoading       = ref(false)
 const parkingLoading    = ref(false)
 const statsData = ref({ buildingCount: null, houseCount: null, userCount: null, todayLoginCount: null, pendingRepairs: null })
-let occupancyChart = null, loginTrendChart = null, repairChart = null, billChart = null, parkingChart = null
+let occupancyChart = null, complaintChart = null, repairChart = null, billChart = null, parkingChart = null
 
 const loadStats = async () => {
   statsLoading.value = true
@@ -192,40 +193,41 @@ const renderOccupancyChart = (names, rates, totalArr, occupiedArr) => {
   })
 }
 
-const loadLoginTrend = async () => {
-  loginTrendLoading.value = true
-  let days = [], counts = [], successCounts = []
+const loadComplaintData = async () => {
+  complaintLoading.value = true
+  let pieData = []
   try {
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(); d.setDate(d.getDate() - i)
-      const ds = d.toISOString().slice(0, 10)
-      days.push(ds.slice(5))
+    const statusList = [
+      { value: 1, name: '待处理', color: '#F56C6C' },
+      { value: 2, name: '处理中', color: '#E6A23C' },
+      { value: 3, name: '已处理', color: '#409EFF' },
+      { value: 4, name: '已评价', color: '#67C23A' },
+      { value: 5, name: '已关闭', color: '#909399' }
+    ]
+    for (const s of statusList) {
       try {
-        const r1 = await listLoginLog({ pageNum: 1, pageSize: 1, beginTime: ds + ' 00:00:00', endTime: ds + ' 23:59:59' })
-        const r2 = await listLoginLog({ pageNum: 1, pageSize: 1, beginTime: ds + ' 00:00:00', endTime: ds + ' 23:59:59', status: 0 })
-        counts.push(r1?.data?.total ?? 0); successCounts.push(r2?.data?.total ?? 0)
-      } catch { counts.push(0); successCounts.push(0) }
+        const res = await getComplaintPage({ pageNum: 1, pageSize: 1, complaintStatus: s.value })
+        const cnt = res?.data?.total ?? 0
+        if (cnt > 0) pieData.push({ value: cnt, name: s.name, itemStyle: { color: s.color } })
+      } catch {}
     }
-  } catch (e) { ElMessage.warning('登录趋势加载失败') }
-  finally { loginTrendLoading.value = false }
+  } catch (e) { ElMessage.warning('投诉数据加载失败') }
+  finally { complaintLoading.value = false }
   await nextTick()
-  renderLoginTrendChart(days, counts, successCounts)
+  renderComplaintChart(pieData)
 }
 
-const renderLoginTrendChart = (days, counts, successCounts) => {
-  if (!loginTrendChartRef.value) return
-  if (loginTrendChart) loginTrendChart.dispose()
-  loginTrendChart = echarts.init(loginTrendChartRef.value)
-  loginTrendChart.setOption({
-    tooltip: { trigger: 'axis' },
-    legend: { data: ['总登录', '成功'], top: 4 },
-    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-    xAxis: { type: 'category', boundaryGap: false, data: days },
-    yAxis: { type: 'value', minInterval: 1 },
-    series: [
-      { name: '总登录', type: 'line', smooth: true, data: counts, itemStyle: { color: '#409EFF' }, areaStyle: { opacity: 0.1 } },
-      { name: '成功', type: 'line', smooth: true, data: successCounts, itemStyle: { color: '#67C23A' }, areaStyle: { opacity: 0.1 } }
-    ]
+const renderComplaintChart = (pieData) => {
+  if (!complaintChartRef.value) return
+  if (complaintChart) complaintChart.dispose()
+  complaintChart = echarts.init(complaintChartRef.value)
+  complaintChart.setOption({
+    tooltip: { trigger: 'item', formatter: '{b}: {c}件 ({d}%)' },
+    legend: { orient: 'vertical', left: 'left', top: 'middle', textStyle: { fontSize: 12 } },
+    series: [{ name: '投诉状态', type: 'pie', radius: ['40%', '70%'], center: ['62%', '50%'],
+      itemStyle: { borderRadius: 5, borderColor: '#fff', borderWidth: 2 },
+      label: { show: false }, emphasis: { label: { show: true, fontSize: 13, fontWeight: 'bold' } },
+      data: pieData.length ? pieData : [{ value: 1, name: '暂无数据', itemStyle: { color: '#e0e0e0' } }] }]
   })
 }
 
@@ -346,14 +348,14 @@ const renderParkingChart = (pieData, totalCount) => {
 const loadAllData = async () => {
   await loadStats()
   loadOccupancyData()
-  loadLoginTrend()
+  loadComplaintData()
   loadRepairData()
   loadBillData()
   loadParkingData()
 }
 
 const resizeCharts = () => {
-  occupancyChart?.resize(); loginTrendChart?.resize()
+  occupancyChart?.resize(); complaintChart?.resize()
   repairChart?.resize(); billChart?.resize(); parkingChart?.resize()
 }
 
@@ -361,7 +363,7 @@ onMounted(() => { loadAllData(); window.addEventListener('resize', resizeCharts)
 onActivated(() => { loadAllData() })
 onUnmounted(() => {
   window.removeEventListener('resize', resizeCharts)
-  occupancyChart?.dispose(); loginTrendChart?.dispose()
+  occupancyChart?.dispose(); complaintChart?.dispose()
   repairChart?.dispose(); billChart?.dispose(); parkingChart?.dispose()
 })
 </script>

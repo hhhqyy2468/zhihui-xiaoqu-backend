@@ -13,8 +13,10 @@ import com.hyu.common.utils.PasswordUtils;
 import com.hyu.common.utils.RedisUtils;
 import com.hyu.system.domain.SysUser;
 import com.hyu.property.service.ISysLoginLogService;
+import com.hyu.property.service.IWalletService;
 import com.hyu.system.service.IAuthService;
 import com.hyu.system.service.ISysUserService;
+import java.math.BigDecimal;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -46,6 +48,9 @@ public class AuthServiceImpl implements IAuthService {
 
     @Autowired
     private ISysUserService userService;
+
+    @Autowired
+    private IWalletService walletService;
 
     @Autowired
     private JwtUtils jwtUtils;
@@ -138,13 +143,15 @@ public class AuthServiceImpl implements IAuthService {
 
     @Override
     public AjaxResult register(RegisterBody registerBody) {
-        // 校验验证码
-        String captchaKey = CAPTCHA_PREFIX + registerBody.getCaptchaKey();
-        String storedCaptcha = (String) redisUtils.get(captchaKey);
-        if (!CaptchaUtils.validateCaptcha(registerBody.getCaptchaKey(), registerBody.getCaptchaCode(), storedCaptcha)) {
-            throw new BusinessException("验证码错误", 1201);
+        // 如果提供了验证码则校验，否则跳过
+        if (registerBody.getCaptchaKey() != null && registerBody.getCaptchaCode() != null) {
+            String captchaKey = CAPTCHA_PREFIX + registerBody.getCaptchaKey();
+            String storedCaptcha = (String) redisUtils.get(captchaKey);
+            if (!CaptchaUtils.validateCaptcha(registerBody.getCaptchaKey(), registerBody.getCaptchaCode(), storedCaptcha)) {
+                throw new BusinessException("验证码错误", 1201);
+            }
+            redisUtils.delete(captchaKey);
         }
-        redisUtils.delete(captchaKey);
 
         // 校验两次密码是否一致
         if (!registerBody.getPassword().equals(registerBody.getConfirmPassword())) {
@@ -174,6 +181,13 @@ public class AuthServiceImpl implements IAuthService {
 
         if (!userService.save(user)) {
             throw new BusinessException("注册失败，请稍后重试", 1401);
+        }
+
+        // 为新注册业主自动创建钱包
+        try {
+            walletService.createWallet(user.getUserId(), BigDecimal.ZERO);
+        } catch (Exception e) {
+            log.warn("为用户{}创建钱包失败: {}", user.getUserId(), e.getMessage());
         }
 
         return AjaxResult.success("注册成功");
