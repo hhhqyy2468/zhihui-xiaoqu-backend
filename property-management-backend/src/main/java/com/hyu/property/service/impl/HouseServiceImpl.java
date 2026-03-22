@@ -241,6 +241,9 @@ public class HouseServiceImpl extends ServiceImpl<HouseMapper, House> implements
 
             // 批量创建用户房产关联记录
             for (Long houseId : houseIds) {
+                // 清理该房产已有的旧关联记录（is_current=0 的历史记录），避免脏数据
+                userHouseService.unassignHouseFromUser(userId, houseId);
+
                 UserHouse userHouse = new UserHouse();
                 userHouse.setUserId(userId);
                 userHouse.setHouseId(houseId);

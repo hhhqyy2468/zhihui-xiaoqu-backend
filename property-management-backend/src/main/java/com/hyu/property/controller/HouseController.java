@@ -241,7 +241,10 @@ public class HouseController {
             UserHouse currentResident = userHouses.stream()
                     .filter(uh -> uh.getIsCurrent() != null && uh.getIsCurrent())
                     .findFirst()
-                    .orElse(userHouses.get(0)); // 如果没有当前居住的，获取第一个
+                    .orElse(null);
+            if (currentResident == null) {
+                return AjaxResult.success(null);
+            }
 
             // 获取用户详细信息
             SysUser user = sysUserService.getById(currentResident.getUserId());
