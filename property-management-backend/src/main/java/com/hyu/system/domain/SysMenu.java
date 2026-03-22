@@ -36,9 +36,9 @@ public class SysMenu implements Serializable {
     private String menuName;
 
     /**
-     * 父菜单名称
+     * 父菜单名称（表中不存在，仅用于业务传输）
      */
-    @TableField("parent_name")
+    @TableField(exist = false)
     private String parentName;
 
     /**
@@ -62,28 +62,28 @@ public class SysMenu implements Serializable {
     private String path;
 
     /**
-     * 组件路径
+     * 组件路径（表中不存在，仅用于业务传输）
      */
     @Size(max = 200, message = "组件路径长度不能超过200")
-    @TableField("component")
+    @TableField(exist = false)
     private String component;
 
     /**
-     * 路由参数
+     * 路由参数（表中不存在，仅用于业务传输）
      */
-    @TableField("query")
+    @TableField(exist = false)
     private String query;
 
     /**
-     * 是否为外链（0是 1否）
+     * 是否为外链（表中不存在，仅用于业务传输）
      */
-    @TableField("is_frame")
+    @TableField(exist = false)
     private Integer isFrame;
 
     /**
-     * 是否缓存（0缓存 1不缓存）
+     * 是否缓存（表中不存在，仅用于业务传输）
      */
-    @TableField("is_cache")
+    @TableField(exist = false)
     private Integer isCache;
 
     /**
@@ -94,16 +94,16 @@ public class SysMenu implements Serializable {
     private String menuType;
 
     /**
-     * 菜单状态（0显示 1隐藏）
+     * 菜单状态（表中不存在，仅用于业务传输）
      */
-    @TableField("visible")
+    @TableField(exist = false)
     private String visible;
 
     /**
      * 菜单状态（0正常 1停用）
      */
     @TableField("status")
-    private String status;
+    private Integer status;
 
     /**
      * 权限标识
@@ -143,9 +143,9 @@ public class SysMenu implements Serializable {
     private Date updateTime;
 
     /**
-     * 备注
+     * 备注（表中不存在，仅用于业务传输）
      */
-    @TableField("remark")
+    @TableField(exist = false)
     private String remark;
 
     /**

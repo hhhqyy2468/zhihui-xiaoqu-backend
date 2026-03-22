@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hyu.system.mapper.SysRoleMenuMapper">
+
+    <select id="selectMenuIdsByRoleId" parameterType="Long" resultType="Long">
+        SELECT menu_id FROM sys_role_menu WHERE role_id = #{roleId}
+    </select>
+
+    <insert id="batchInsertRoleMenu">
+        INSERT INTO sys_role_menu (role_id, menu_id) VALUES
+        <foreach item="menuId" collection="menuIds" separator=",">
+            (#{roleId}, #{menuId})
+        </foreach>
+    </insert>
+
+    <delete id="deleteByRoleId" parameterType="Long">
+        DELETE FROM sys_role_menu WHERE role_id = #{roleId}
+    </delete>
+
+</mapper>

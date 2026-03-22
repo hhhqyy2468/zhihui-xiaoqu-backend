@@ -174,30 +174,41 @@
     <!-- 权限分配对话框 -->
     <el-dialog
       v-model="permissionDialogVisible"
-      title="角色权限"
+      title="权限分配"
       width="600px"
+      @close="handlePermissionDialogClose"
     >
-      <el-descriptions :column="1" border>
-        <el-descriptions-item label="角色名称">{{ permissionForm.roleName }}</el-descriptions-item>
-        <el-descriptions-item label="角色标识">{{ permissionForm.roleKey }}</el-descriptions-item>
-        <el-descriptions-item label="权限范围">
-          <el-tag
-            v-for="perm in permissionForm.permList"
-            :key="perm"
-            style="margin: 2px 4px 2px 0"
-            size="small"
-          >{{ perm }}</el-tag>
-        </el-descriptions-item>
-      </el-descriptions>
+      <div style="margin-bottom: 12px;">
+        <span style="font-weight:600;">角色名称：</span>{{ permissionForm.roleName }}
+        &nbsp;&nbsp;
+        <span style="font-weight:600;">角色标识：</span>{{ permissionForm.roleKey }}
+      </div>
+      <div style="margin-bottom: 8px; display: flex; gap: 8px;">
+        <el-checkbox v-model="menuExpand" @change="handleExpand">展开/折叠</el-checkbox>
+        <el-checkbox v-model="menuCheckAll" @change="handleCheckAll">全选/全不选</el-checkbox>
+        <el-checkbox v-model="menuCheckStrictly">父子联动</el-checkbox>
+      </div>
+      <el-tree
+        ref="menuTreeRef"
+        v-loading="permissionLoading"
+        :data="menuTreeData"
+        :props="{ label: 'menuName', children: 'children' }"
+        node-key="menuId"
+        show-checkbox
+        :check-strictly="!menuCheckStrictly"
+        default-expand-all
+        style="max-height: 400px; overflow-y: auto; border: 1px solid #ebeef5; border-radius: 4px; padding: 8px;"
+      />
       <template #footer>
-        <el-button @click="permissionDialogVisible = false">关闭</el-button>
+        <el-button @click="permissionDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="permissionSaving" @click="handleSavePermission">保存</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus } from '@element-plus/icons-vue'
 import * as systemApi from '@/api/system'
@@ -251,13 +262,19 @@ const formRules = {
   ]
 }
 
-// 权限表单
+// 权限分配相关
 const permissionForm = reactive({
   roleId: null,
   roleName: '',
-  roleKey: '',
-  permList: []
+  roleKey: ''
 })
+const menuTreeRef = ref()
+const menuTreeData = ref([])
+const permissionLoading = ref(false)
+const permissionSaving = ref(false)
+const menuExpand = ref(true)
+const menuCheckAll = ref(false)
+const menuCheckStrictly = ref(true)
 
 // 计算属性
 const dialogTitle = computed(() => isEdit.value ? '编辑角色' : '新增角色')
@@ -375,21 +392,90 @@ const handleDelete = async (row) => {
   }
 }
 
-// 各角色权限说明
-const rolePermMap = {
-  admin:   ['系统管理', '用户管理', '角色管理', '物业管理', '财务管理', '服务管理', '停车管理', '公告管理', '日志管理', '数据大屏'],
-  manager: ['物业管理', '楼栋/单元/房产/业主', '费用类型', '账单管理', '钱包管理', '投诉管理', '维修管理', '停车管理', '公告管理'],
-  owner:   ['业主门户', '我的账单', '我的公告', '我的房产'],
-  worker:  ['维修工作台', '查看/处理维修工单']
-}
-
-// 权限分配
-const handleAssignPermission = (row) => {
+// 权限分配 - 打开对话框并加载菜单树
+const handleAssignPermission = async (row) => {
   permissionForm.roleId = row.roleId
   permissionForm.roleName = row.roleName
   permissionForm.roleKey = row.roleKey
-  permissionForm.permList = rolePermMap[row.roleKey] || ['暂无权限定义']
   permissionDialogVisible.value = true
+  permissionLoading.value = true
+  menuExpand.value = true
+  menuCheckAll.value = false
+  menuCheckStrictly.value = true
+  try {
+    const response = await systemApi.getRoleMenus(row.roleId)
+    if (response.code === 200) {
+      menuTreeData.value = response.data.menus || []
+      const checkedKeys = response.data.checkedKeys || []
+      await nextTick()
+      if (menuTreeRef.value) {
+        menuTreeRef.value.setCheckedKeys(checkedKeys)
+      }
+    } else {
+      ElMessage.error(response.msg || '获取菜单数据失败')
+    }
+  } catch (error) {
+    console.error('获取菜单数据失败:', error)
+    ElMessage.error('网络错误，请稍后重试')
+  } finally {
+    permissionLoading.value = false
+  }
+}
+
+// 展开/折叠
+const handleExpand = (val) => {
+  const nodes = menuTreeRef.value?.store?.nodesMap
+  if (nodes) {
+    Object.values(nodes).forEach(node => { node.expanded = val })
+  }
+}
+
+// 全选/全不选
+const handleCheckAll = (val) => {
+  if (menuTreeRef.value) {
+    const allKeys = getAllMenuIds(menuTreeData.value)
+    menuTreeRef.value.setCheckedKeys(val ? allKeys : [])
+  }
+}
+
+const getAllMenuIds = (menus) => {
+  let ids = []
+  menus.forEach(m => {
+    ids.push(m.menuId)
+    if (m.children && m.children.length) {
+      ids = ids.concat(getAllMenuIds(m.children))
+    }
+  })
+  return ids
+}
+
+// 关闭对话框时重置
+const handlePermissionDialogClose = () => {
+  menuTreeData.value = []
+  menuCheckAll.value = false
+}
+
+// 保存权限分配
+const handleSavePermission = async () => {
+  if (!menuTreeRef.value) return
+  const checkedKeys = menuTreeRef.value.getCheckedKeys()
+  const halfCheckedKeys = menuTreeRef.value.getHalfCheckedKeys()
+  const menuIds = [...checkedKeys, ...halfCheckedKeys]
+  permissionSaving.value = true
+  try {
+    const response = await systemApi.assignRoleMenus(permissionForm.roleId, menuIds)
+    if (response.code === 200) {
+      ElMessage.success('权限分配成功')
+      permissionDialogVisible.value = false
+    } else {
+      ElMessage.error(response.msg || '权限分配失败')
+    }
+  } catch (error) {
+    console.error('权限分配失败:', error)
+    ElMessage.error('网络错误，请稍后重试')
+  } finally {
+    permissionSaving.value = false
+  }
 }
 
 // 提交表单

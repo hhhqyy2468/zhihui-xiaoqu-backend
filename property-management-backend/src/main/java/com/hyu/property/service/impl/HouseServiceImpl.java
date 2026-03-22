@@ -224,8 +224,16 @@ public class HouseServiceImpl extends ServiceImpl<HouseMapper, House> implements
                 }
             }
 
-            // 如果设置为当前居住，先取消该用户的其他当前居住状态
+            // 如果设置为当前居住，先取消该用户的其他当前居住状态，并将旧房产改回空置
             if (isCurrent != null && isCurrent) {
+                // 查出当前居住的旧房产，先将其状态改回空置
+                List<UserHouse> currentHouses = userHouseService.selectCurrentUserHouseByUserId(userId);
+                for (UserHouse oldHouse : currentHouses) {
+                    House oldHouseRecord = new House();
+                    oldHouseRecord.setId(oldHouse.getHouseId());
+                    oldHouseRecord.setHouseStatus(1); // 空置
+                    baseMapper.updateById(oldHouseRecord);
+                }
                 UserHouse updateRecord = new UserHouse();
                 updateRecord.setIsCurrent(false);
                 userHouseService.updateUserHouseByCondition(updateRecord, userId, true);

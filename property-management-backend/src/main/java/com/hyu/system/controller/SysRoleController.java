@@ -9,6 +9,7 @@ import com.hyu.system.domain.SysRole;
 import com.hyu.system.service.ISysRoleService;
 import com.hyu.system.service.ISysMenuService;
 import com.hyu.system.domain.SysMenu;
+import com.hyu.system.mapper.SysRoleMenuMapper;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +39,9 @@ public class SysRoleController {
 
     @Autowired
     private ISysMenuService menuService;
+
+    @Autowired
+    private SysRoleMenuMapper roleMenuMapper;
 
     /**
      * 分页查询角色列表
@@ -231,14 +235,17 @@ public class SysRoleController {
     public AjaxResult getRoleMenus(@NotNull(message = "角色ID不能为空") @PathVariable Long roleId) {
         log.info("获取角色菜单列表, roleId: {}", roleId);
 
-        // 查询所有菜单
+        // 查询所有菜单并构建树结构
         List<SysMenu> menus = menuService.list();
-        // 构建树结构
         List<SysMenu> menuTree = menuService.buildMenuTree(menus);
 
-        // TODO: 查询角色已分配的菜单ID列表
+        // 查询角色已分配的菜单ID列表
+        List<Long> checkedMenuIds = roleMenuMapper.selectMenuIdsByRoleId(roleId);
 
-        return AjaxResult.success(menuTree);
+        java.util.Map<String, Object> result = new java.util.HashMap<>();
+        result.put("menus", menuTree);
+        result.put("checkedKeys", checkedMenuIds);
+        return AjaxResult.success(result);
     }
 
     /**
@@ -251,8 +258,12 @@ public class SysRoleController {
                                      @RequestBody List<Long> menuIds) {
         log.info("分配角色菜单权限, roleId: {}, menuIds: {}", roleId, menuIds);
 
-        // TODO: 实现角色菜单分配逻辑
-
+        // 先删除原有角色菜单关联
+        roleMenuMapper.deleteByRoleId(roleId);
+        // 批量插入新的角色菜单关联
+        if (menuIds != null && !menuIds.isEmpty()) {
+            roleMenuMapper.batchInsertRoleMenu(roleId, menuIds);
+        }
         return AjaxResult.success("权限分配成功");
     }
 

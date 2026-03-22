@@ -28,13 +28,15 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
                b.building_name, u.unit_name,
                (SELECT su.real_name FROM user_house uh
                 LEFT JOIN sys_user su ON uh.user_id = su.id
-                WHERE uh.house_id = h.id AND uh.is_current = 1
+                WHERE uh.house_id = h.id
                 AND su.status = 1 AND su.deleted = 0
+                ORDER BY uh.create_time DESC
                 LIMIT 1) as current_resident,
                (SELECT su.id FROM user_house uh
                 LEFT JOIN sys_user su ON uh.user_id = su.id
-                WHERE uh.house_id = h.id AND uh.is_current = 1
+                WHERE uh.house_id = h.id
                 AND su.status = 1 AND su.deleted = 0
+                ORDER BY uh.create_time DESC
                 LIMIT 1) as current_resident_id
         from house h
         left join building b on h.building_id = b.id
